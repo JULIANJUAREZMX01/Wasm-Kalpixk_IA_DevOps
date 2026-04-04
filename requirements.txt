@@ -1,0 +1,38 @@
+# Wasm-Kalpixk_IA_DevOps — Requirements
+# Motor de detección de anomalías en WASM sobre AMD MI300X
+
+# Core ML / PyTorch (ROCm)
+torch>=2.1.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+scipy>=1.13.0
+
+# WASM Runtime
+wasmtime>=20.0.0
+
+# API / Serving
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+httpx>=0.27.0
+
+# Monitoring
+loguru>=0.7.0
+prometheus-client>=0.20.0
+psutil>=5.9.0
+
+# Config
+pydantic>=2.4.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+tenacity>=8.2.0
+
+# Notifications (KynicOS)
+python-telegram-bot>=21.0
+groq>=0.11.0
+anthropic>=0.34.0
+
+# Dev / Benchmarks
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+memory-profiler>=0.61.0
