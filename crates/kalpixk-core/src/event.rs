@@ -11,34 +11,34 @@ use std::collections::HashMap;
 pub struct KalpixkEvent {
     /// Timestamp en millisegundos epoch UTC
     pub timestamp_ms: i64,
-    
+
     /// Tipo de evento (login, file_access, network_conn, db_query, process_exec)
     pub event_type: EventType,
-    
+
     /// Severidad calculada por heurísticas locales (0.0 - 1.0)
     pub local_severity: f64,
-    
+
     /// IP o hostname de origen
     pub source: String,
-    
+
     /// IP o hostname de destino (si aplica)
     pub destination: Option<String>,
-    
+
     /// Usuario asociado al evento
     pub user: Option<String>,
-    
+
     /// Proceso que generó el evento
     pub process: Option<String>,
-    
+
     /// Campos adicionales específicos del tipo de log (key→value)
     pub metadata: HashMap<String, serde_json::Value>,
-    
+
     /// Log original sin procesar (para forensics)
     pub raw: String,
-    
+
     /// Fuente del log (syslog, windows_event, db2_audit, netflow)
     pub source_type: String,
-    
+
     /// Hash del evento para deduplicación
     pub fingerprint: String,
 }
@@ -93,7 +93,7 @@ impl EventType {
 pub struct EventFeatures {
     /// 32 features numéricas — el contrato con el modelo PyTorch
     pub vector: Vec<f64>,
-    
+
     /// Nombre de cada feature (para interpretabilidad)
     pub names: Vec<String>,
 }
@@ -106,13 +106,13 @@ pub struct UebaSessionFeatures {
     pub event_count: usize,
     pub unique_resources: usize,
     pub failed_auth_ratio: f64,
-    pub off_hours_ratio: f64,          // Ratio de eventos fuera de horario laboral
+    pub off_hours_ratio: f64, // Ratio de eventos fuera de horario laboral
     pub data_transfer_bytes: i64,
     pub unique_destinations: usize,
     pub privilege_escalation_attempts: usize,
     pub db_query_volume: usize,
-    pub db_unusual_tables: usize,      // Tablas poco consultadas por este usuario
-    pub lateral_movement_score: f64,   // Heurística de movimiento lateral
+    pub db_unusual_tables: usize, // Tablas poco consultadas por este usuario
+    pub lateral_movement_score: f64, // Heurística de movimiento lateral
     /// Vector completo para el modelo
     pub feature_vector: Vec<f64>,
 }

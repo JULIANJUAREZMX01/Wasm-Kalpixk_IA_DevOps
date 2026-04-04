@@ -9,7 +9,10 @@ import time
 import threading
 from pathlib import Path
 from loguru import logger
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Security, HTTPException, status
+from fastapi.security import APIKeyHeader
+from pydantic import BaseModel, Field
+from typing import List, Optional
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,7 +29,8 @@ KalpixkTheme.print_banner()
 KalpixkTheme.print_boot()
 
 # ── Inicializar componentes ───────────────────────────────
-detector = AnomalyDetector(threshold=0.5)
+detector = AnomalyDetector()
+detector.threshold = 0.5
 monitor_wasm = WasmRuntimeMonitor()
 telegram = KalpixkTelegramBot(detector=detector, monitor=monitor_wasm)
 whatsapp = KalpixkWhatsApp()
@@ -42,6 +46,36 @@ logger.info("Entrenando detector con baseline normal...")
 normal_data = monitor_wasm.generate_normal_baseline(n_samples=500)
 detector.train(normal_data, epochs=50)
 telegram.send_message("🚀 *Kalpixk iniciado*\nMotor entrenado y listo.\nAMD MI300X online ✅")
+
+# ── Models & Security ─────────────────────────────────────
+class DetectPayload(BaseModel):
+    features: List[float] = Field(..., min_length=10, max_length=10, description="10 features for anomaly detection")
+
+class TrainPayload(BaseModel):
+    n_samples: int = Field(500, ge=10, le=2000)
+    epochs: int = Field(50, ge=1, le=200)
+
+API_KEY_NAME = "X-Kalpixk-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    expected_key = os.getenv("KALPIXK_API_KEY")
+    if not expected_key:
+        # If no key is configured, we allow access in dev, but warn
+        if os.getenv("ENV") == "production":
+            logger.error("KALPIXK_API_KEY not set in production!")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="API Key not configured"
+            )
+        return None
+
+    if api_key != expected_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials"
+        )
+    return api_key
 
 # ── FastAPI App ───────────────────────────────────────────
 app = FastAPI(
@@ -82,14 +116,13 @@ def get_metrics():
     return {"metrics": m.__dict__, "detection": result}
 
 @app.post("/detect")
-def detect(payload: dict):
+def detect(payload: DetectPayload, api_key: str = Depends(verify_api_key)):
     import numpy as np
-    features = payload.get("features", [])
-    X = __import__('numpy').array([features], dtype='float32')
+    X = np.array([payload.features], dtype='float32')
     return detector.predict(X)
 
 @app.get("/simulate/{anomaly_type}")
-def simulate(anomaly_type: str):
+def simulate(anomaly_type: str, api_key: str = Depends(verify_api_key)):
     m = monitor_wasm.simulate_anomaly(anomaly_type)
     result = detector.predict(m.to_array())
     return {
@@ -100,26 +133,25 @@ def simulate(anomaly_type: str):
     }
 
 @app.post("/train")
-def train_model(payload: dict = {}):
-    n = payload.get("n_samples", 500)
-    epochs = payload.get("epochs", 50)
+def train_model(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
+    n = payload.n_samples
+    epochs = payload.epochs
     data = monitor_wasm.generate_normal_baseline(n_samples=n)
     detector.train(data, epochs=epochs)
     telegram.send_message(f"🧠 Modelo re-entrenado\n{n} samples, {epochs} epochs")
     return {"success": True, "samples": n, "epochs": epochs}
 
 @app.get("/benchmark")
-def benchmark():
+def benchmark(api_key: str = Depends(verify_api_key)):
     import torch, time
     device = str(detector.device)
-    import torch.nn as nn
     model = detector.model
-    data = __import__('torch').randn(10000, 10).to(detector.device)
+    data = torch.randn(10000, 10).to(detector.device)
     start = time.perf_counter()
-    with __import__('torch').no_grad():
+    with torch.no_grad():
         _ = model(data)
-    if __import__('torch').cuda.is_available():
-        __import__('torch').cuda.synchronize()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
     elapsed = (time.perf_counter() - start) * 1000
     throughput = 10000 / (elapsed / 1000)
     result = {"throughput": throughput, "elapsed_ms": elapsed, "device": device}
@@ -127,12 +159,12 @@ def benchmark():
     return result
 
 @app.get("/status/telegram")
-def check_telegram():
+def check_telegram(api_key: str = Depends(verify_api_key)):
     ok = telegram.send_message("🔔 Test Kalpixk → Telegram OK")
     return {"sent": ok, "token_configured": bool(telegram.token)}
 
 @app.get("/status/whatsapp")
-def check_whatsapp():
+def check_whatsapp(api_key: str = Depends(verify_api_key)):
     ok = whatsapp.send("🔔 Test Kalpixk → WhatsApp OK")
     return {"sent": ok, "enabled": whatsapp.enabled}
 
