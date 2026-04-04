@@ -1,9 +1,6 @@
 [workspace]
 members = [
     "crates/kalpixk-core",
-    "crates/kalpixk-sensors",
-    "crates/kalpixk-ml-bridge",
-    "crates/kalpixk-cli",
 ]
 resolver = "2"
 
