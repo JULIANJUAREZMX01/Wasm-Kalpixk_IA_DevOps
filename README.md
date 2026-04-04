@@ -9,7 +9,7 @@
 
 ## ¿Qué hace?
 
-Kalpixk (del náhuatl: *"el que cuenta"*) monitorea el comportamiento de módulos WebAssembly en tiempo real y detecta anomalías usando un autoencoder entrenado en PyTorch sobre GPU AMD.
+Kalpixk (del náhuatl: *"el que cuida"*) monitorea el comportamiento de módulos WebAssembly en tiempo real y detecta anomalías usando un autoencoder entrenado en PyTorch sobre GPU AMD.
 
 ## Arquitectura
 
