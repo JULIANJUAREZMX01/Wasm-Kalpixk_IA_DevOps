@@ -1,0 +1,79 @@
+// kalpixk.wit — Contrato de interfaz WASM<->JS para Kalpixk
+// Version: 1.0.0 — CONTRATO SELLADO (no modificar sin re-entrenar el modelo Python)
+//
+// Define la frontera exacta entre:
+//   - Runtime WASM (Rust/Zig — corre en el host objetivo)
+//   - Backend GPU (Python FastAPI — AMD MI300X)
+
+package kalpixk:core@1.0.0;
+
+/// Tipo canonico de evento de seguridad
+record security-event {
+    timestamp-ms: s64,
+    event-type: event-kind,
+    local-severity: f64,
+    source: string,
+    destination: option<string>,
+    user: option<string>,
+    process: option<string>,
+    raw: string,
+    source-type: string,
+}
+
+/// Tipos de eventos clasificables
+enum event-kind {
+    login,
+    file-access,
+    network-conn,
+    db-query,
+    process-exec,
+    wasm-module-load,
+    unknown,
+}
+
+/// Vector de 32 features normalizadas [0.0, 1.0]
+/// INVARIANTE: len == 32. El modelo Python fue entrenado con esta dimension.
+type feature-vector = list<f64>;
+
+/// Resultado del motor de deteccion
+record detection-result {
+    anomaly-score: f64,
+    is-anomaly: bool,
+    severity: severity-level,
+    feature-vector: feature-vector,
+    latency-us: u64,
+}
+
+enum severity-level { low, medium, high, critical, }
+
+/// Metricas del sistema en tiempo real
+record system-metrics {
+    files-scanned: u64,
+    anomalies-detected: u64,
+    false-positives: u32,
+    uptime-ms: u64,
+    entropy-avg: f64,
+    entropy-max: f64,
+}
+
+/// Interfaz del sensor de I/O (Kalpixk-Core WASM)
+interface sensor {
+    parse-and-extract: func(raw-log: string) -> result<feature-vector, string>;
+    health-check: func() -> string;
+    contract-version: func() -> string;
+    shannon-entropy: func(data: list<u8>) -> f64;
+    classify-entropy: func(data: list<u8>) -> u8;
+}
+
+/// Interfaz del monitor de directorio
+interface monitor {
+    watch-directory: func(path: string) -> result<_, string>;
+    stop: func();
+    get-metrics: func() -> system-metrics;
+}
+
+/// World exportado al host JS/TS
+world kalpixk-core {
+    export sensor;
+    export monitor;
+}
