@@ -100,7 +100,24 @@ _Kalpixk motor OK_"""
 
     # ── Handlers async (para polling) ──────────────────────────
 
+    def _is_authorized(self, update: Update) -> bool:
+        """Verifica si el remitente es el administrador configurado."""
+        if not self.chat_id:
+            # Si no hay chat_id configurado, no permitimos nada por seguridad
+            logger.warning("TELEGRAM_CHAT_ID no configurado. Acceso denegado.")
+            return False
+
+        current_chat_id = str(update.effective_chat.id)
+        if current_chat_id != str(self.chat_id):
+            logger.warning(f"Intento de acceso no autorizado desde chat_id: {current_chat_id}")
+            return False
+        return True
+
     async def cmd_start(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        if not self._is_authorized(update):
+            await update.message.reply_text("⛔ *Acceso denegado*", parse_mode="Markdown")
+            return
+
         keyboard = [
             [InlineKeyboardButton("📊 Status", callback_data="status"),
              InlineKeyboardButton("🔍 Detectar", callback_data="detect")],
@@ -119,6 +136,11 @@ _Kalpixk motor OK_"""
         )
 
     async def cmd_status(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        if not self._is_authorized(update):
+            if update.callback_query:
+                await update.callback_query.answer("Acceso denegado", show_alert=True)
+            return
+
         import torch
         gpu_ok = torch.cuda.is_available()
         status = {
@@ -133,6 +155,11 @@ _Kalpixk motor OK_"""
             await update.callback_query.answer("Status enviado")
 
     async def cmd_detect(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        if not self._is_authorized(update):
+            if update.callback_query:
+                await update.callback_query.answer("Acceso denegado", show_alert=True)
+            return
+
         if not self.detector or not self.monitor:
             await update.effective_message.reply_text("❌ Motor no inicializado")
             return
@@ -149,6 +176,10 @@ _Kalpixk motor OK_"""
             )
 
     async def button_handler(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        if not self._is_authorized(update):
+            await update.callback_query.answer("Acceso denegado", show_alert=True)
+            return
+
         query = update.callback_query
         await query.answer()
         if query.data == "status":
