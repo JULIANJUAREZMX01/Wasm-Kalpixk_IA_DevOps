@@ -1,0 +1,27 @@
+# Wasm-Kalpixk — LLM Router Config
+# Igual que KynicOS: AMD-first
+
+providers:
+  amd_vllm:
+    enabled: false  # activar con AMD_VLLM_URL
+    url: "${AMD_VLLM_URL}"
+    model: "meta-llama/Llama-3.3-70B-Instruct"
+    priority: 1
+    cost_per_token: 0.0
+
+  groq:
+    enabled: true
+    model: "llama-3.3-70b-versatile"
+    priority: 2
+    rpm_limit: 30
+
+  anthropic:
+    enabled: true
+    model: "claude-3-5-haiku-20241022"
+    priority: 3
+    fallback: true
+
+router:
+  strategy: "priority_with_fallback"
+  retry_on_failure: true
+  max_retries: 2
