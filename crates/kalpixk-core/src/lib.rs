@@ -34,13 +34,14 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": features::FEATURE_DIM,
         "contract_version": FEATURE_CONTRACT_VERSION,
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::event::{KalpixkEvent, EventType};
+    use crate::event::{EventType, KalpixkEvent};
     use std::collections::HashMap;
 
     fn make_test_event() -> KalpixkEvent {
@@ -70,9 +71,13 @@ mod tests {
         let event = make_test_event();
         let features = features::extract(&event);
         for (i, f) in features.iter().enumerate() {
-            assert!(*f >= 0.0 && *f <= 1.0,
+            assert!(
+                *f >= 0.0 && *f <= 1.0,
                 "Feature {} ({}) out of range: {}",
-                i, features::FEATURE_NAMES[i], f);
+                i,
+                features::FEATURE_NAMES[i],
+                f
+            );
         }
     }
 }

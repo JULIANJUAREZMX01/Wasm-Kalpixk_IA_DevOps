@@ -39,12 +39,12 @@ def log_gpu_info(device: torch.device) -> None:
         props = torch.cuda.get_device_properties(0)
         total_memory_gb = props.total_memory / (1024 ** 3)
         
-        logger.info(f"=== GPU Info ===")
+        logger.info("=== GPU Info ===")
         logger.info(f"Nombre: {props.name}")
         logger.info(f"VRAM: {total_memory_gb:.1f} GB")
         logger.info(f"Multi-processors: {props.multi_processor_count}")
         logger.info(f"ROCm/CUDA version: {torch.version.cuda}")
-        logger.info(f"================")
+        logger.info("================")
 
 
 def get_memory_info() -> dict:

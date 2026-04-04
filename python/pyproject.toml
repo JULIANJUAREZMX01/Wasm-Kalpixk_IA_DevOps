@@ -45,4 +45,4 @@ target-version = "py311"
 asyncio_mode = "auto"
 
 [tool.hatch.build.targets.wheel]
-packages = ["python/api", "python/models", "python/utils"]
+packages = ["api", "models", "utils"]

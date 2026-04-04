@@ -8,7 +8,6 @@ Endpoints:
   GET  /features    → Nombres de las 32 features (XAI)
 """
 
-import asyncio
 import time
 from typing import Optional, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -158,7 +157,6 @@ async def ws_stream(ws: WebSocket):
 @app.get("/features")
 async def get_feature_names():
     """Retorna los nombres de las 32 features para XAI."""
-    from python.utils.device import get_device
     return {
         "feature_dim": 32,
         "contract_version": "1.0.0",
