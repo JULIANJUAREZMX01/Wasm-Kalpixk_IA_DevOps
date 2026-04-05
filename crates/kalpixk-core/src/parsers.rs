@@ -331,7 +331,7 @@ impl LogParser for Db2AuditParser {
         ];
         for table in &sensitive_tables {
             if lower.contains(table) {
-                local_severity = (local_severity + 0.20).min(1.0);
+                local_severity = f64::min(local_severity + 0.20, 1.0);
                 metadata.insert("sensitive_table".to_string(), serde_json::json!(table));
                 break;
             }
@@ -395,7 +395,7 @@ impl LogParser for NetflowParser {
 
         // Transferencia masiva de datos — potencial exfiltración
         if bytes > 100_000_000 {  // >100MB
-            local_severity = (local_severity + 0.30).min(1.0);
+            local_severity = f64::min(local_severity + 0.30, 1.0);
             event_type = EventType::DbAnomalousQuery; // Reutilizamos este tipo
             metadata.insert("large_transfer_bytes".to_string(), serde_json::json!(bytes));
         }

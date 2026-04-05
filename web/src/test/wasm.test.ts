@@ -1,7 +1,21 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { initWasm, parse_log_line, process_batch, version, health_check } from "../wasm/index";
+import fs from "fs";
+import path from "path";
 
 beforeAll(async () => {
+  // Mock global fetch for testing WASM
+  global.fetch = async (url) => {
+    if (url.toString().endsWith('.wasm')) {
+      const wasmPath = path.resolve(__dirname, '../../../crates/kalpixk-core/pkg/kalpixk_core_bg.wasm');
+      const buffer = fs.readFileSync(wasmPath);
+      return new Response(buffer, {
+        headers: { 'Content-Type': 'application/wasm' }
+      });
+    }
+    throw new Error(`fetch not mocked for ${url}`);
+  };
+
   await initWasm();
 });
 
