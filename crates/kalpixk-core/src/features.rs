@@ -4,18 +4,41 @@
 
 use crate::event::{EventType, KalpixkEvent, UebaSessionFeatures};
 use chrono::Timelike;
-use std::collections::HashMap;
 
 pub const FEATURE_DIM: usize = 32;
 pub const FEATURE_NAMES: &[&str] = &[
-    "event_type_encoded", "local_severity", "is_internal_source", "is_cloud_source",
-    "has_user", "is_off_hours", "has_destination", "is_lateral_potential",
-    "raw_length_norm", "shannon_entropy", "failed_auth_flag", "privileged_user_flag",
-    "known_process_flag", "dst_port_risk", "bytes_transfer_norm", "sql_keyword_flag",
-    "destructive_op_flag", "base64_pattern_flag", "powershell_sig_flag", "windows_event_risk",
-    "db2_op_risk", "netflow_risk", "recon_node_score", "lateral_node_score",
-    "credential_node_score", "payload_node_score", "combined_offense_score", "threat_density",
-    "user_risk_historical", "source_reputation", "comp_severity_offhours", "comp_destructive_user"
+    "event_type_encoded",
+    "local_severity",
+    "is_internal_source",
+    "is_cloud_source",
+    "has_user",
+    "is_off_hours",
+    "has_destination",
+    "is_lateral_potential",
+    "raw_length_norm",
+    "shannon_entropy",
+    "failed_auth_flag",
+    "privileged_user_flag",
+    "known_process_flag",
+    "dst_port_risk",
+    "bytes_transfer_norm",
+    "sql_keyword_flag",
+    "destructive_op_flag",
+    "base64_pattern_flag",
+    "powershell_sig_flag",
+    "windows_event_risk",
+    "db2_op_risk",
+    "netflow_risk",
+    "recon_node_score",
+    "lateral_node_score",
+    "credential_node_score",
+    "payload_node_score",
+    "combined_offense_score",
+    "threat_density",
+    "user_risk_historical",
+    "source_reputation",
+    "comp_severity_offhours",
+    "comp_destructive_user",
 ];
 
 /// Extrae el vector de 32 features desde un evento
@@ -26,36 +49,92 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     // F0-F7: Features básicas
     f[0] = encode_event_type(&event.event_type);
     f[1] = event.local_severity;
-    f[2] = if is_internal_ip(&event.source) { 1.0 } else { 0.0 };
+    f[2] = if is_internal_ip(&event.source) {
+        1.0
+    } else {
+        0.0
+    };
     f[3] = if is_cloud_ip(&event.source) { 1.0 } else { 0.0 };
     f[4] = if event.user.is_some() { 1.0 } else { 0.0 };
 
     let hour = chrono::Utc::now().hour();
     f[5] = if !(8..18).contains(&hour) { 1.0 } else { 0.0 };
-    f[6] = if event.destination.is_some() { 1.0 } else { 0.0 };
-    f[7] = if has_lateral_movement_sig(event) { 1.0 } else { 0.0 };
+    f[6] = if event.destination.is_some() {
+        1.0
+    } else {
+        0.0
+    };
+    f[7] = if has_lateral_movement_sig(event) {
+        1.0
+    } else {
+        0.0
+    };
 
     // F8-F15: Features de contenido y red
     f[8] = (event.raw.len() as f64 / 1000.0).min(1.0);
     f[9] = string_entropy(&event.raw);
-    f[10] = if event.event_type == EventType::LoginFailure { 1.0 } else { 0.0 };
-    f[11] = if is_privileged_account(event.user.as_deref()) { 1.0 } else { 0.0 };
-    f[12] = if is_known_process(event.process.as_deref()) { 1.0 } else { 0.0 };
+    f[10] = if event.event_type == EventType::LoginFailure {
+        1.0
+    } else {
+        0.0
+    };
+    f[11] = if is_privileged_account(event.user.as_deref()) {
+        1.0
+    } else {
+        0.0
+    };
+    f[12] = if is_known_process(event.process.as_deref()) {
+        1.0
+    } else {
+        0.0
+    };
 
-    let dst_port = event.metadata.get("dst_port").and_then(|v| v.as_u64()).unwrap_or(0);
-    f[13] = if [22, 3389, 445].contains(&dst_port) { 0.8 } else { 0.1 };
+    let dst_port = event
+        .metadata
+        .get("dst_port")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    f[13] = if [22, 3389, 445].contains(&dst_port) {
+        0.8
+    } else {
+        0.1
+    };
 
-    let bytes = event.metadata.get("bytes").and_then(|v| v.as_u64()).unwrap_or(0);
+    let bytes = event
+        .metadata
+        .get("bytes")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
     f[14] = (bytes as f64 / 1_000_000.0).min(1.0);
-    f[15] = if has_sql_keyword(&raw_lower) { 1.0 } else { 0.0 };
+    f[15] = if has_sql_keyword(&raw_lower) {
+        1.0
+    } else {
+        0.0
+    };
 
     // F16-F21: Riesgos específicos
-    f[16] = if has_destructive_op(&raw_lower) { 1.0 } else { 0.0 };
-    f[17] = if has_base64_pattern(&event.raw) { 1.0 } else { 0.0 };
-    f[18] = if has_powershell_signature(&raw_lower) { 1.0 } else { 0.0 };
+    f[16] = if has_destructive_op(&raw_lower) {
+        1.0
+    } else {
+        0.0
+    };
+    f[17] = if has_base64_pattern(&event.raw) {
+        1.0
+    } else {
+        0.0
+    };
+    f[18] = if has_powershell_signature(&raw_lower) {
+        1.0
+    } else {
+        0.0
+    };
     f[19] = get_windows_event_risk(event);
     f[20] = get_db2_operation_risk(&raw_lower);
-    f[21] = if event.source_type == "netflow" { f[13] * f[14] } else { 0.0 };
+    f[21] = if event.source_type == "netflow" {
+        f[13] * f[14]
+    } else {
+        0.0
+    };
 
     // F22-F26: [ATLATL-ORDNANCE] Offensive Node Scores
     f[22] = crate::defense_nodes::detect_recon(event);
@@ -98,7 +177,11 @@ fn encode_event_type(et: &EventType) -> f64 {
 }
 
 fn is_internal_ip(ip: &str) -> bool {
-    ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") || ip == "localhost" || ip == "127.0.0.1"
+    ip.starts_with("10.")
+        || ip.starts_with("192.168.")
+        || ip.starts_with("172.16.")
+        || ip == "localhost"
+        || ip == "127.0.0.1"
 }
 
 fn is_cloud_ip(ip: &str) -> bool {
@@ -106,18 +189,30 @@ fn is_cloud_ip(ip: &str) -> bool {
 }
 
 pub fn string_entropy(s: &str) -> f64 {
-    if s.is_empty() { return 0.0; }
+    if s.is_empty() {
+        return 0.0;
+    }
     let mut freq = [0u32; 256];
-    for b in s.bytes() { freq[b as usize] += 1; }
+    for b in s.bytes() {
+        freq[b as usize] += 1;
+    }
     let len = s.len() as f64;
-    -freq.iter().filter(|&&c| c > 0).map(|&c| {
-        let p = c as f64 / len;
-        p * p.log2()
-    }).sum::<f64>() / 8.0
+    -freq
+        .iter()
+        .filter(|&&c| c > 0)
+        .map(|&c| {
+            let p = c as f64 / len;
+            p * p.log2()
+        })
+        .sum::<f64>()
+        / 8.0
 }
 
 fn has_sql_keyword(lower: &str) -> bool {
-    lower.contains("select") || lower.contains("insert") || lower.contains("update") || lower.contains("delete")
+    lower.contains("select")
+        || lower.contains("insert")
+        || lower.contains("update")
+        || lower.contains("delete")
 }
 
 fn has_destructive_op(lower: &str) -> bool {
@@ -129,7 +224,7 @@ fn is_privileged_account(user: Option<&str>) -> bool {
         Some(u) => {
             let u = u.to_lowercase();
             u == "root" || u == "admin" || u == "administrator" || u == "system"
-        },
+        }
         None => false,
     }
 }
@@ -151,29 +246,51 @@ fn has_lateral_movement_sig(event: &KalpixkEvent) -> bool {
 }
 
 fn has_base64_pattern(raw: &str) -> bool {
-    let b64_chars: std::collections::HashSet<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=".chars().collect();
+    let b64_chars: std::collections::HashSet<char> =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+            .chars()
+            .collect();
     let mut max_consecutive = 0;
     let mut current = 0;
     for c in raw.chars() {
-        if b64_chars.contains(&c) { current += 1; } else { current = 0; }
+        if b64_chars.contains(&c) {
+            current += 1;
+        } else {
+            current = 0;
+        }
         max_consecutive = max_consecutive.max(current);
     }
     max_consecutive > 60
 }
 
 fn has_powershell_signature(lower: &str) -> bool {
-    lower.contains("powershell") || lower.contains("-encodedcommand") || lower.contains("invoke-expression")
+    lower.contains("powershell")
+        || lower.contains("-encodedcommand")
+        || lower.contains("invoke-expression")
 }
 
 fn get_windows_event_risk(event: &KalpixkEvent) -> f64 {
-    let id = event.metadata.get("windows_event_id").and_then(|v| v.as_u64()).unwrap_or(0);
+    let id = event
+        .metadata
+        .get("windows_event_id")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
     match id {
-        4625 => 0.5, 4672 => 0.8, 7045 => 0.9, _ => 0.2
+        4625 => 0.5,
+        4672 => 0.8,
+        7045 => 0.9,
+        _ => 0.2,
     }
 }
 
 fn get_db2_operation_risk(lower: &str) -> f64 {
-    if lower.contains("drop") { 0.9 } else if lower.contains("grant") { 0.8 } else { 0.15 }
+    if lower.contains("drop") {
+        0.9
+    } else if lower.contains("grant") {
+        0.8
+    } else {
+        0.15
+    }
 }
 
 impl Default for UebaSessionFeatures {

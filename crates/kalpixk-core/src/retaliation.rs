@@ -2,11 +2,11 @@
 //!
 //! Orquesta la respuesta ofensiva de Kalpixk contra atacantes confirmados.
 
-use crate::severity::{OffenseLevel, RetaliationType, get_redteam_mapping};
 use crate::event::KalpixkEvent;
-use std::sync::Mutex;
-use std::collections::HashMap;
+use crate::severity::{get_redteam_mapping, OffenseLevel, RetaliationType};
 use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 lazy_static! {
     /// Registro de agresores activos y su nivel de represalia
@@ -23,19 +23,26 @@ struct AttackerState {
 }
 
 /// Ejecuta la lógica de represalia basada en el evento detectado
-pub fn execute_retaliation(event: &KalpixkEvent, level: OffenseLevel, score: f64, node: &str) -> Option<String> {
+pub fn execute_retaliation(
+    event: &KalpixkEvent,
+    level: OffenseLevel,
+    score: f64,
+    node: &str,
+) -> Option<String> {
     if level < OffenseLevel::Anomaly {
         return None;
     }
 
     let mut registry = ATTACKER_REGISTRY.lock().unwrap();
-    let state = registry.entry(event.source.clone()).or_insert(AttackerState {
-        ip: event.source.clone(),
-        score: 0.0,
-        last_node: node.to_string(),
-        retaliation: RetaliationType::None,
-        threat_count: 0,
-    });
+    let state = registry
+        .entry(event.source.clone())
+        .or_insert(AttackerState {
+            ip: event.source.clone(),
+            score: 0.0,
+            last_node: node.to_string(),
+            retaliation: RetaliationType::None,
+            threat_count: 0,
+        });
 
     state.score = (state.score + score).min(1.0);
     state.threat_count += 1;

@@ -1,10 +1,10 @@
 //! kalpixk-core — WASM-native log parser & feature extractor
+pub mod defense_nodes;
 pub mod event;
 pub mod features;
 pub mod parsers;
-pub mod severity;
-pub mod defense_nodes;
 pub mod retaliation;
+pub mod severity;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use wasm_bindgen::prelude::*;
@@ -55,7 +55,8 @@ pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
         "event_summary": event_json.chars().take(100).collect::<String>(),
         "status": "CRITICAL_BLOCK",
         "timestamp": chrono::Utc::now().timestamp_millis(),
-    }).to_string()
+    })
+    .to_string()
 }
 
 /// Parsea una línea de log y retorna JSON con el evento + severidad.
@@ -87,7 +88,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let lines: Vec<String> = serde_json::from_str(logs_json).unwrap_or_default();
     let parser = match parsers::get_parser(source_type) {
         Some(p) => p,
-        None => return serde_json::json!({"error": "unknown source", "parsed_count": 0}).to_string(),
+        None => {
+            return serde_json::json!({"error": "unknown source", "parsed_count": 0}).to_string()
+        }
     };
 
     let mut feature_matrix: Vec<Vec<f64>> = Vec::new();
@@ -109,7 +112,8 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         "anomaly_count": anomaly_count,
         "feature_matrix": feature_matrix,
         "feature_names": features::FEATURE_NAMES,
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -119,7 +123,8 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "offensive_mode": true,
         "nodes": ["recon", "lateral", "credential", "payload"],
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[cfg(test)]
