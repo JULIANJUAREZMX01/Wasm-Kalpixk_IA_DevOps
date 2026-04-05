@@ -41,11 +41,13 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
 pub struct SyslogParser;
 
 impl SyslogParser {
-    pub fn new() -> Self { SyslogParser }
-    
+    pub fn new() -> Self {
+        SyslogParser
+    }
+
     fn fingerprint(raw: &str) -> String {
-        use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
         raw.hash(&mut hasher);
         format!("{:x}", hasher.finish())
@@ -53,11 +55,15 @@ impl SyslogParser {
 }
 
 impl LogParser for SyslogParser {
-    fn source_type(&self) -> &'static str { "syslog" }
+    fn source_type(&self) -> &'static str {
+        "syslog"
+    }
 
     fn parse(&self, raw: &str) -> Result<KalpixkEvent, ParseError> {
         let raw = raw.trim();
-        if raw.is_empty() { return Err(ParseError::EmptyLine); }
+        if raw.is_empty() {
+            return Err(ParseError::EmptyLine);
+        }
 
         let mut metadata = HashMap::new();
         let mut event_type = EventType::Unknown;
@@ -68,11 +74,11 @@ impl LogParser for SyslogParser {
 
         // Detectar patrones comunes de syslog
         let lower = raw.to_lowercase();
-        
+
         if lower.contains("failed password") || lower.contains("authentication failure") {
             event_type = EventType::LoginFailure;
             local_severity = 0.45;
-            
+
             if let Some(u) = extract_syslog_user(raw) {
                 user = Some(u.clone());
                 metadata.insert("auth_user".to_string(), serde_json::json!(u));
@@ -107,10 +113,12 @@ impl LogParser for SyslogParser {
             process = Some(proc_name.clone());
             metadata.insert("process".to_string(), serde_json::json!(proc_name));
         }
-        
+
         // Extraer hostname
         if let Some(host) = extract_syslog_hostname(raw) {
-            if source == "unknown" { source = host.clone(); }
+            if source == "unknown" {
+                source = host.clone();
+            }
             metadata.insert("hostname".to_string(), serde_json::json!(host));
         }
 
@@ -135,32 +143,41 @@ impl LogParser for SyslogParser {
 pub struct JsonStructuredParser;
 
 impl JsonStructuredParser {
-    pub fn new() -> Self { JsonStructuredParser }
+    pub fn new() -> Self {
+        JsonStructuredParser
+    }
 }
 
 impl LogParser for JsonStructuredParser {
-    fn source_type(&self) -> &'static str { "json" }
-    
+    fn source_type(&self) -> &'static str {
+        "json"
+    }
+
     fn parse(&self, raw: &str) -> Result<KalpixkEvent, ParseError> {
         let raw = raw.trim();
-        if raw.is_empty() { return Err(ParseError::EmptyLine); }
+        if raw.is_empty() {
+            return Err(ParseError::EmptyLine);
+        }
 
-        let value: serde_json::Value = serde_json::from_str(raw)
-            .map_err(|e| ParseError::ParseFailed(e.to_string()))?;
+        let value: serde_json::Value =
+            serde_json::from_str(raw).map_err(|e| ParseError::ParseFailed(e.to_string()))?;
 
-        let source = value.get("src_ip")
+        let source = value
+            .get("src_ip")
             .or(value.get("source"))
             .or(value.get("host"))
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
 
-        let user = value.get("user")
+        let user = value
+            .get("user")
             .or(value.get("username"))
             .and_then(|v| v.as_str())
             .map(String::from);
 
-        let event_type_str = value.get("event_type")
+        let event_type_str = value
+            .get("event_type")
             .or(value.get("action"))
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
@@ -177,7 +194,8 @@ impl LogParser for JsonStructuredParser {
             _ => EventType::Unknown,
         };
 
-        let local_severity = value.get("severity")
+        let local_severity = value
+            .get("severity")
             .and_then(|v| v.as_f64())
             .unwrap_or(event_type.base_severity());
 
@@ -193,13 +211,19 @@ impl LogParser for JsonStructuredParser {
             event_type,
             local_severity,
             source,
-            destination: value.get("dst_ip").and_then(|v| v.as_str()).map(String::from),
+            destination: value
+                .get("dst_ip")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             user,
-            process: value.get("process").and_then(|v| v.as_str()).map(String::from),
+            process: value
+                .get("process")
+                .and_then(|v| v.as_str())
+                .map(String::from),
             metadata,
             raw: raw.to_string(),
             source_type: "json".to_string(),
-            fingerprint: format!("{:x}", raw.len()),  // Simplified
+            fingerprint: format!("{:x}", raw.len()), // Simplified
         })
     }
 }
@@ -209,15 +233,21 @@ impl LogParser for JsonStructuredParser {
 pub struct WindowsEventParser;
 
 impl WindowsEventParser {
-    pub fn new() -> Self { WindowsEventParser }
+    pub fn new() -> Self {
+        WindowsEventParser
+    }
 }
 
 impl LogParser for WindowsEventParser {
-    fn source_type(&self) -> &'static str { "windows" }
-    
+    fn source_type(&self) -> &'static str {
+        "windows"
+    }
+
     fn parse(&self, raw: &str) -> Result<KalpixkEvent, ParseError> {
         let raw = raw.trim();
-        if raw.is_empty() { return Err(ParseError::EmptyLine); }
+        if raw.is_empty() {
+            return Err(ParseError::EmptyLine);
+        }
 
         let mut metadata = HashMap::new();
         let mut event_type = EventType::Unknown;
@@ -227,27 +257,48 @@ impl LogParser for WindowsEventParser {
 
         // Windows Event IDs críticos para Blue Team
         let event_id = extract_windows_event_id(raw).unwrap_or(0);
-        
+
         match event_id {
-            4624 => { event_type = EventType::LoginSuccess; local_severity = 0.15; }
-            4625 => { event_type = EventType::LoginFailure; local_severity = 0.50; }
-            4634 => { event_type = EventType::LoginSuccess; local_severity = 0.10; } // Logoff
-            4648 => { event_type = EventType::LoginSuccess; local_severity = 0.40; } // Logon con creds explícitas
-            4672 => { event_type = EventType::PrivilegeEscalation; local_severity = 0.75; }
+            4624 => {
+                event_type = EventType::LoginSuccess;
+                local_severity = 0.15;
+            }
+            4625 => {
+                event_type = EventType::LoginFailure;
+                local_severity = 0.50;
+            }
+            4634 => {
+                event_type = EventType::LoginSuccess;
+                local_severity = 0.10;
+            } // Logoff
+            4648 => {
+                event_type = EventType::LoginSuccess;
+                local_severity = 0.40;
+            } // Logon con creds explícitas
+            4672 => {
+                event_type = EventType::PrivilegeEscalation;
+                local_severity = 0.75;
+            }
             4698 | 4699 | 4700 | 4702 => {
                 // Scheduled task creada/modificada/habilitada
                 event_type = EventType::ServiceChange;
                 local_severity = 0.80;
             }
-            4720 => { event_type = EventType::UserCreation; local_severity = 0.70; }
-            4726 => { event_type = EventType::UserDeletion; local_severity = 0.75; }
+            4720 => {
+                event_type = EventType::UserCreation;
+                local_severity = 0.70;
+            }
+            4726 => {
+                event_type = EventType::UserDeletion;
+                local_severity = 0.75;
+            }
             4732 | 4733 => {
                 // Usuario agregado/removido de grupo
                 event_type = EventType::PolicyChange;
                 local_severity = 0.65;
             }
-            4776 => { 
-                event_type = EventType::LoginFailure; 
+            4776 => {
+                event_type = EventType::LoginFailure;
                 local_severity = 0.60;
                 metadata.insert("dc_auth_failure".to_string(), serde_json::json!(true));
             }
@@ -291,15 +342,21 @@ impl LogParser for WindowsEventParser {
 pub struct Db2AuditParser;
 
 impl Db2AuditParser {
-    pub fn new() -> Self { Db2AuditParser }
+    pub fn new() -> Self {
+        Db2AuditParser
+    }
 }
 
 impl LogParser for Db2AuditParser {
-    fn source_type(&self) -> &'static str { "db2" }
+    fn source_type(&self) -> &'static str {
+        "db2"
+    }
 
     fn parse(&self, raw: &str) -> Result<KalpixkEvent, ParseError> {
         let raw = raw.trim();
-        if raw.is_empty() { return Err(ParseError::EmptyLine); }
+        if raw.is_empty() {
+            return Err(ParseError::EmptyLine);
+        }
 
         let mut metadata = HashMap::new();
         let lower = raw.to_lowercase();
@@ -326,12 +383,18 @@ impl LogParser for Db2AuditParser {
 
         // Tablas sensibles del Manhattan WMS
         let sensitive_tables = [
-            "inventory", "shipment", "employee", "salary",
-            "wms_user", "order_header", "billing", "vendor"
+            "inventory",
+            "shipment",
+            "employee",
+            "salary",
+            "wms_user",
+            "order_header",
+            "billing",
+            "vendor",
         ];
         for table in &sensitive_tables {
             if lower.contains(table) {
-                local_severity = (local_severity + 0.20).min(1.0);
+                local_severity = (local_severity + 0.20f64).min(1.0f64);
                 metadata.insert("sensitive_table".to_string(), serde_json::json!(table));
                 break;
             }
@@ -361,20 +424,28 @@ impl LogParser for Db2AuditParser {
 pub struct NetflowParser;
 
 impl NetflowParser {
-    pub fn new() -> Self { NetflowParser }
+    pub fn new() -> Self {
+        NetflowParser
+    }
 }
 
 impl LogParser for NetflowParser {
-    fn source_type(&self) -> &'static str { "netflow" }
+    fn source_type(&self) -> &'static str {
+        "netflow"
+    }
 
     fn parse(&self, raw: &str) -> Result<KalpixkEvent, ParseError> {
         let raw = raw.trim();
-        if raw.is_empty() { return Err(ParseError::EmptyLine); }
+        if raw.is_empty() {
+            return Err(ParseError::EmptyLine);
+        }
 
         // Formato esperado: "src_ip dst_ip src_port dst_port proto bytes packets"
         let parts: Vec<&str> = raw.split_whitespace().collect();
         if parts.len() < 5 {
-            return Err(ParseError::ParseFailed("NetFlow requiere al menos 5 campos".to_string()));
+            return Err(ParseError::ParseFailed(
+                "NetFlow requiere al menos 5 campos".to_string(),
+            ));
         }
 
         let source = parts[0].to_string();
@@ -394,8 +465,9 @@ impl LogParser for NetflowParser {
         }
 
         // Transferencia masiva de datos — potencial exfiltración
-        if bytes > 100_000_000 {  // >100MB
-            local_severity = (local_severity + 0.30).min(1.0);
+        if bytes > 100_000_000 {
+            // >100MB
+            local_severity = (local_severity + 0.30f64).min(1.0f64);
             event_type = EventType::DbAnomalousQuery; // Reutilizamos este tipo
             metadata.insert("large_transfer_bytes".to_string(), serde_json::json!(bytes));
         }
@@ -429,7 +501,8 @@ fn extract_syslog_user(raw: &str) -> Option<String> {
     for pattern in &["user=", "for user ", "for invalid user "] {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
-            let end = rest.find(|c: char| c.is_whitespace() || c == ',' || c == ';')
+            let end = rest
+                .find(|c: char| c.is_whitespace() || c == ',' || c == ';')
                 .unwrap_or(rest.len());
             return Some(rest[..end].to_string());
         }
@@ -441,7 +514,8 @@ fn extract_syslog_ip(raw: &str) -> Option<String> {
     // Buscar "from x.x.x.x"
     if let Some(pos) = raw.find("from ") {
         let rest = &raw[pos + 5..];
-        let end = rest.find(|c: char| c.is_whitespace() || c == ':')
+        let end = rest
+            .find(|c: char| c.is_whitespace() || c == ':')
             .unwrap_or(rest.len());
         let candidate = &rest[..end];
         // Validar que parece una IP
@@ -477,7 +551,9 @@ fn extract_windows_event_id(raw: &str) -> Option<u32> {
     for pattern in &["EventID: ", "EventID=", "<EventID>"] {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
-            let end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+            let end = rest
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(rest.len());
             return rest[..end].parse().ok();
         }
     }
@@ -488,7 +564,9 @@ fn extract_windows_user(raw: &str) -> Option<String> {
     for pattern in &["Account Name: ", "SubjectUserName: "] {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
-            let end = rest.find(|c: char| c == '\n' || c == '\r').unwrap_or(rest.len());
+            let end = rest
+                .find(|c: char| c == '\n' || c == '\r')
+                .unwrap_or(rest.len());
             let u = rest[..end].trim().to_string();
             if !u.is_empty() && u != "-" {
                 return Some(u);
@@ -501,7 +579,9 @@ fn extract_windows_user(raw: &str) -> Option<String> {
 fn extract_windows_computer(raw: &str) -> Option<String> {
     if let Some(pos) = raw.find("Computer: ") {
         let rest = &raw[pos + 10..];
-        let end = rest.find(|c: char| c == '\n' || c == '\r').unwrap_or(rest.len());
+        let end = rest
+            .find(|c: char| c == '\n' || c == '\r')
+            .unwrap_or(rest.len());
         return Some(rest[..end].trim().to_string());
     }
     None
@@ -511,7 +591,9 @@ fn extract_db2_user(raw: &str) -> Option<String> {
     for pattern in &["AUTHID=", "UserID=", "user_id="] {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
-            let end = rest.find(|c: char| c.is_whitespace() || c == ',').unwrap_or(rest.len());
+            let end = rest
+                .find(|c: char| c.is_whitespace() || c == ',')
+                .unwrap_or(rest.len());
             return Some(rest[..end].to_string());
         }
     }
@@ -521,7 +603,9 @@ fn extract_db2_user(raw: &str) -> Option<String> {
 fn extract_db2_apphost(raw: &str) -> Option<String> {
     if let Some(pos) = raw.find("HOSTNAME=") {
         let rest = &raw[pos + 9..];
-        let end = rest.find(|c: char| c.is_whitespace() || c == ',').unwrap_or(rest.len());
+        let end = rest
+            .find(|c: char| c.is_whitespace() || c == ',')
+            .unwrap_or(rest.len());
         return Some(rest[..end].to_string());
     }
     None

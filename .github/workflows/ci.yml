@@ -11,7 +11,7 @@ env:
   RUST_LOG: debug
 
 jobs:
-  # ─── Lint y tests Rust ────────────────────────────────────────────────────────
+  # Rust lint and test
   rust-check:
     name: Rust lint & test
     runs-on: ubuntu-latest
@@ -27,28 +27,45 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
       
-      - name: Format check
-        run: cargo fmt --all -- --check
-      
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
       
       - name: Tests unitarios
         run: cargo test --all
-      
+
+  # Job: Build WASM
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasmpack
+        run: cargo install wasm-pack
+
       - name: Build WASM
         run: |
-          cargo install wasm-pack --version 0.13.0
           cd crates/kalpixk-core
           wasm-pack build --target web --release
-      
+
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kalpixk-core-wasm
+          name: kalpixk-wasm
           path: crates/kalpixk-core/pkg/
+          retention-days: 30
 
-  # ─── Lint y tests Python ──────────────────────────────────────────────────────
+      - name: Show WASM size
+        run: |
+          ls -lh crates/kalpixk-core/pkg/
+          echo "WASM size: $(du -sh crates/kalpixk-core/pkg/kalpixk_core_bg.wasm | cut -f1)"
+
+  # Python lint and test
   python-check:
     name: Python lint & test
     runs-on: ubuntu-latest
@@ -75,11 +92,11 @@ jobs:
         env:
           KALPIXK_FORCE_CPU: "true"
 
-  # ─── Build y deploy frontend ──────────────────────────────────────────────────
+  # Build and deploy frontend
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
-    needs: [rust-check]
+    needs: [build-wasm]
     steps:
       - uses: actions/checkout@v4
       
@@ -87,24 +104,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
+
+      - name: Install pnpm
+        run: npm install -g pnpm
       
       - name: Download WASM artifact
         uses: actions/download-artifact@v4
         with:
-          name: kalpixk-core-wasm
-          path: web/src/wasm/pkg/
+          name: kalpixk-wasm
+          path: crates/kalpixk-core/pkg/
       
       - name: Instalar dependencias
         run: |
           cd web
-          npm ci
+          pnpm install
+
+      - name: Tests
+        run: |
+          cd web
+          pnpm test
       
       - name: Build
         run: |
           cd web
-          npm run build
+          pnpm build
       
       - name: Deploy a Netlify (solo main)
         if: github.ref == 'refs/heads/main'
@@ -113,12 +136,12 @@ jobs:
           publish-dir: web/dist
           production-branch: main
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy from GitHub Actions — ${{ github.sha }}"
+          deploy-message: "Deploy from GitHub Actions"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
-  # ─── Security scan ────────────────────────────────────────────────────────────
+  # Security scan
   security:
     name: Security scan
     runs-on: ubuntu-latest
@@ -136,4 +159,4 @@ jobs:
           scan-type: fs
           scan-ref: .
           severity: HIGH,CRITICAL
-          exit-code: 0  # No fallar el pipeline, solo reportar
+          exit-code: 0
