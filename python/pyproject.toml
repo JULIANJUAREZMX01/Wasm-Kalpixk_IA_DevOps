@@ -20,11 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-rocm = [
-    # cuML para Isolation Forest GPU (AMD)
-    # Instalar manualmente: pip install cuml-cu12 --extra-index-url https://pypi.nvidia.com
-    # Para AMD: usa el Docker oficial de ROCm con cuML preinstalado
-]
+rocm = []
 
 dev = [
     "pytest>=8.0.0",
@@ -33,6 +29,9 @@ dev = [
     "ruff>=0.7.0",
     "mypy>=1.13.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["api", "models", "utils"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
