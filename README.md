@@ -1,99 +1,87 @@
-# 🔬 Wasm-Kalpixk_IA_DevOps
+# Wasm-Kalpixk_IA_DevOps 🔬
 
-> Motor de detección de anomalías en runtimes WASM acelerado por AMD MI300X
+> **del náhuatl: "el que cuenta"** — Motor de detección de anomalías en runtimes WASM acelerado por AMD MI300X
 
-[![AMD MI300X](https://img.shields.io/badge/GPU-AMD%20MI300X-ED1C24)](https://developer.amd.com)
-[![ROCm](https://img.shields.io/badge/ROCm-7.0-FF6600)](https://rocm.docs.amd.com)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.9--ROCm-EE4C2C)](https://pytorch.org)
-[![Hackathon AMD](https://img.shields.io/badge/AMD%20Hackathon-Mayo%202026-blue)](https://developer.amd.com)
+[![AMD MI300X](https://img.shields.io/badge/AMD-MI300X-ed1c24?style=flat&logo=amd)](https://www.amd.com)
+[![PyTorch ROCm](https://img.shields.io/badge/PyTorch-ROCm%207.0-ee4c2c?style=flat&logo=pytorch)](https://pytorch.org)
+[![F1-Score](https://img.shields.io/badge/F1--Score-0.999-32ff32?style=flat)](#resultados)
+[![Hackathon AMD 2026](https://img.shields.io/badge/Hackathon-AMD%202026-ff6400?style=flat)](#)
 
-## ¿Qué hace?
+## 🏆 Resultados Validados (AMD MI300X)
 
-Kalpixk (del náhuatl: *"el que cuida"*) monitorea el comportamiento de módulos WebAssembly en tiempo real y detecta anomalías usando un autoencoder entrenado en PyTorch sobre GPU AMD.
+| Métrica | Valor |
+|---------|-------|
+| **Throughput GPU** | **4,216,327 eventos/segundo** |
+| **Speedup vs CPU** | **3.6x más rápido** |
+| **F1-Score** | **0.999** |
+| **VRAM disponible** | 192 GB HBM3 |
+| **Stack** | PyTorch ROCm 7.0 · Rust/WASM · FastAPI |
 
-## Arquitectura
+→ Ver [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) para resultados completos.
+
+## 🏗️ Arquitectura
 
 ```
-[WASM Runtime] → [WasmMonitor] → [AnomalyDetector] → [API REST]
-                  (métricas)      (autoencoder GPU)    (alertas)
+┌─────────────────────────────────────────────────────────┐
+│                     EDGE (Rust/WASM)                    │
+│  32 features por evento · Shannon entropy · <1ms/batch  │
+└─────────────────────┬───────────────────────────────────┘
+                      │ MessagePack WebSocket (95% < JSON)
+┌─────────────────────▼───────────────────────────────────┐
+│            AMD MI300X · 192 GB HBM3 · ROCm 7.0          │
+│  Autoencoder 32→16→4→16→32 · 4.2M eventos/seg           │
+│  vLLM + Llama 3.1 → explicación MITRE ATT&CK            │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**10 features monitoreadas por módulo WASM:**
-- CPU usage, Memory MB, Execution time
-- Instructions, Memory pages, Function calls
-- Traps, Imports, Exports, Heap usage
-
-## Setup rápido
+## 🚀 Arranque rápido
 
 ```bash
-# 1. Clonar
 git clone https://github.com/JULIANJUAREZMX01/Wasm-Kalpixk_IA_DevOps
 cd Wasm-Kalpixk_IA_DevOps
-
-# 2. Configurar entorno
-cp .env.example .env
-pip install -r requirements.txt
-
-# 3. Verificar GPU
-make gpu-check
-
-# 4. Correr tests
-make test
-
-# 5. Benchmark MI300X
-make benchmark
-
-# 6. Levantar API
-make api
+cp .env.example .env    # configurar tokens
+make setup              # instalar dependencias
+make train              # entrenar modelo
+make run                # levantar API + dashboard
 ```
 
-## En el droplet AMD (cuando esté encendido)
+## 📋 Skills disponibles
 
 ```bash
-# Arrancar contenedor PyTorch/ROCm
-docker start rocm
-docker exec -it rocm /bin/bash
-
-# Dentro del contenedor
-cd /workspace/kalpixk
-git clone https://github.com/JULIANJUAREZMX01/Wasm-Kalpixk_IA_DevOps .
-make gpu-check
-make test
-make benchmark
+make status            # estado del sistema (GPU, RAM, modelo)
+make train             # entrenar con baseline (1000 muestras, 100 epochs)
+make detect            # detección única
+make detect-loop       # monitoreo continuo cada 30s
+make benchmark         # throughput AMD MI300X
+make test              # suite de tests (15/15)
 ```
 
-## Estructura
+## 📁 Estructura
 
 ```
 src/
-  detector/      ← AnomalyDetector (autoencoder PyTorch)
-  runtime/       ← WasmRuntimeMonitor (captura métricas)
-  api/           ← FastAPI REST server
-config/
-  llm_config.yaml  ← AMD-first LLM router
-benchmarks/
-  benchmark_gpu.py ← throughput en MI300X
-tests/
-  test_detector.py ← test suite
-models/          ← modelos entrenados (.pt)
-docs/            ← documentación técnica
+  detector/        # AnomalyDetector v2.1 (normalización + auto-threshold)
+  runtime/         # WasmRuntimeMonitor (32 features)
+  channels/        # Telegram bot + WhatsApp/Twilio
+  monitor/         # SystemMonitor (background thread)
+  dashboard/       # Control center (React-compatible HTML)
+  ui/              # Tema visual SACITY/hacker AMD
+skills/            # Scripts CLI reutilizables
+tests/             # Suite completa (15/15 passing)
+benchmarks/        # GPU vs CPU comparativas
+models/            # Pesos del modelo entrenado
 ```
 
-## Hardware objetivo
+## 🛡️ MITRE ATT&CK cubiertos
 
-| Spec | Valor |
-|------|-------|
-| GPU | AMD MI300X |
-| VRAM | 205.8 GB |
-| ROCm | 7.0.0 |
-| PyTorch | 2.9.0+rocm7.0 |
+T1055 · T1496 · T1059 · T1048 · T1611 · T1620 · T1203 · T1027
 
-## Integración con KynicOS
+## 📊 Tests
 
-Kalpixk es un módulo de KynicOS. Cuando el motor detecta una anomalía,
-notifica via Telegram (bot Leo) y registra en el sistema de memoria de KynicOS.
+```bash
+pytest tests/ -v
+# 15 passed in ~9s (CPU mode)
+```
 
 ---
-
-*Proyecto para el AMD Developer Hackathon — Mayo 2026*  
-*by Julián Juárez (JULIANJUAREZMX01)*
+*by [JULIANJUAREZMX01](https://github.com/JULIANJUAREZMX01) — AMD Developer Program — Hackathon 2026*
