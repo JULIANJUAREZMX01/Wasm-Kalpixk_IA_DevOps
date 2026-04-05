@@ -1,0 +1,33 @@
+# ATLATL-ORDNANCE: Decentralized Defense Node
+# Optimized for ARM64 (Edge) and x86_64 (Droplet)
+
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/ ./src/
+COPY main.py .
+COPY models/ ./models/
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV KALPIXK_MODE=NODE
+ENV ATLATL_AGGRESSION=HIGH
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# Start the Node API
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

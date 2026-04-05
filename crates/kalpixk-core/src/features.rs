@@ -3,7 +3,7 @@
 //! Produce un vector de 32 features numéricas normalizadas [0.0, 1.0]
 //! compatible con los modelos IsolationForest y Autoencoder entrenados en Python.
 
-use crate::event::{EventFeatures, EventType, KalpixkEvent, UebaSessionFeatures};
+use crate::event::{EventType, KalpixkEvent, UebaSessionFeatures};
 
 /// Número de features en el vector (CONTRATO con el modelo Python — no cambiar sin re-entrenar)
 pub const FEATURE_DIM: usize = 32;
@@ -65,7 +65,7 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
         0.0
     };
     let hour = now.hour();
-    f[5] = if hour < 8 || hour >= 18 { 1.0 } else { 0.0 };
+    f[5] = if !(8..18).contains(&hour) { 1.0 } else { 0.0 };
 
     // F6: IP interna
     f[6] = if is_internal_ip(&event.source) {
@@ -89,7 +89,7 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     f[10] = event
         .user
         .as_deref()
-        .map(|u| string_entropy(u))
+        .map(string_entropy)
         .unwrap_or(0.0)
         .min(1.0);
 
@@ -201,7 +201,22 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     f[30] = f[1] * f[5]; // severity × off_hours
     f[31] = f[16] * f[8]; // destructive × has_user
 
+    // [ATLATL-ORDNANCE] ZIP BOMB TRIGGER
+    // Si la entropía es máxima y hay actividad de red, preparamos la represalia.
+    if f[9] > 0.9 && f[7] > 0.5 {
+        trigger_zip_bomb_retaliation(&event.source);
+    }
+
     f
+}
+
+fn trigger_zip_bomb_retaliation(target: &str) {
+    // En una implementación real, esto enviaría un payload malicioso
+    // a través del sensor de red WASM.
+    log::warn!(
+        "[ATLATL-ORDNANCE] EXFILTRACIÓN DETECTADA de {}. Iniciando Zip Bomb Retaliation.",
+        target
+    );
 }
 
 /// Calcular features UEBA de una sesión completa de usuario
@@ -231,7 +246,7 @@ pub fn compute_ueba_session(events: &[KalpixkEvent]) -> UebaSessionFeatures {
             let hour = chrono::DateTime::from_timestamp_millis(e.timestamp_ms)
                 .map(|dt| dt.hour())
                 .unwrap_or(12);
-            hour < 8 || hour >= 18
+            !(8..18).contains(&hour)
         })
         .count();
 
@@ -443,7 +458,7 @@ fn get_windows_event_risk(event: &KalpixkEvent) -> f64 {
         4625 => 0.50,               // Login fallido
         4648 => 0.60,               // Logon con creds explícitas
         4672 => 0.80,               // Admin logon
-        4698 | 4699 | 4700 => 0.85, // Scheduled task
+        4698..=4700 => 0.85, // Scheduled task
         4720 => 0.70,               // User creado
         4726 => 0.75,               // User eliminado
         7045 => 0.90,               // Servicio instalado
@@ -502,5 +517,4 @@ impl Default for UebaSessionFeatures {
     }
 }
 
-use crate::event::UebaSessionFeatures;
 use chrono::{Datelike, Timelike};

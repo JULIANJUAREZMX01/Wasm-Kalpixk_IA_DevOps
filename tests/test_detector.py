@@ -29,11 +29,11 @@ def test_detector_init():
     assert not det.is_trained
 
 def test_autoencoder_shape():
-    model = KalpixkAutoencoder(input_dim=10, latent_dim=4)
+    model = KalpixkAutoencoder(input_dim=32, latent_dim=16)
     import torch
-    x = torch.randn(5, 10)
+    x = torch.randn(5, 32)
     out = model(x)
-    assert out.shape == (5, 10), "Output shape debe ser igual al input"
+    assert out.shape == (5, 32), "Output shape debe ser igual al input"
 
 # ── Monitor ─────────────────────────────────────────────────────
 def test_monitor_metrics():
@@ -41,13 +41,13 @@ def test_monitor_metrics():
     m = mon.capture_metrics()
     assert isinstance(m, WasmMetrics)
     arr = m.to_array()
-    assert arr.shape == (1, 10)
+    assert arr.shape == (1, 32)
     assert all(isinstance(v, float) for v in [m.cpu_usage, m.memory_mb])
 
 def test_baseline_generation():
     mon = WasmRuntimeMonitor()
     data = mon.generate_normal_baseline(200)
-    assert data.shape == (200, 10)
+    assert data.shape == (200, 32)
     assert data.dtype == np.float32
 
 def test_simulate_anomalies():
@@ -91,9 +91,9 @@ def test_predict_normal_no_false_positives(trained_detector):
 def test_predict_anomalies_detected(trained_detector):
     """Anomalías obvias DEBEN ser detectadas (recall > 95%)."""
     det, mon = trained_detector
-    # Anomalías extremas — valores 10x fuera de rango normal
+    # Anomalías extremas — valores 10x fuera de rango normal (32 features)
     anomalies = np.tile([1000.0, 50000.0, 500.0, 50000.0, 500.0,
-                          5000.0, 100.0, 100.0, 50.0, 99.0], (20, 1)).astype(np.float32)
+                          5000.0, 100.0, 100.0, 50.0, 99.0] + [1.0]*22, (20, 1)).astype(np.float32)
     result = det.predict(anomalies)
     recall = sum(result["anomalies"]) / 20
     assert recall >= 0.95, f"Recall insuficiente: {recall:.1%}"
@@ -125,7 +125,7 @@ def test_simulate_anomalies_detected(trained_detector):
 def test_evaluate_metrics(trained_detector):
     det, mon = trained_detector
     normal = mon.generate_normal_baseline(30)
-    anomalies = np.tile([5000.0]*10, (10, 1)).astype(np.float32)
+    anomalies = np.tile([5000.0]*32, (10, 1)).astype(np.float32)
     metrics = det.evaluate(normal, anomalies)
     assert "precision" in metrics
     assert "recall" in metrics
@@ -174,7 +174,7 @@ def test_full_pipeline():
     assert result["scores_normalized"][0] <= 1.0
 
     # 3. Evaluar
-    anomalies = np.tile([9999.0]*10, (5, 1)).astype(np.float32)
+    anomalies = np.tile([9999.0]*32, (5, 1)).astype(np.float32)
     eval_res = det.evaluate(normal[:20], anomalies)
     assert eval_res["f1"] > 0.5
 

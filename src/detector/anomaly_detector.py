@@ -25,19 +25,17 @@ except ImportError:
 class KalpixkAutoencoder(nn.Module):
     """
     Autoencoder para detección de anomalías en métricas WASM.
-    Arquitectura: 10 → 32 → 16 → 4 → 16 → 32 → 10
+    Arquitectura ATLATL: 32 → 64 → 16 → 64 → 32
     """
-    def __init__(self, input_dim: int = 10, latent_dim: int = 4):
+    def __init__(self, input_dim: int = 32, latent_dim: int = 16):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 32), nn.ReLU(), nn.Dropout(0.1),
-            nn.Linear(32, 16), nn.ReLU(),
-            nn.Linear(16, latent_dim)
+            nn.Linear(input_dim, 64), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(64, latent_dim)
         )
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 16), nn.ReLU(),
-            nn.Linear(16, 32), nn.ReLU(), nn.Dropout(0.1),
-            nn.Linear(32, input_dim)
+            nn.Linear(latent_dim, 64), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(64, input_dim)
         )
 
     def forward(self, x):
@@ -52,12 +50,11 @@ class AnomalyDetector:
     """
     Motor principal de detección de anomalías en runtimes WASM.
 
-    Features (10):
-        cpu_usage, memory_mb, exec_time_ms, instructions,
-        memory_pages, function_calls, traps, imports, exports, heap_usage
+    Features (32):
+        Sincronizado con kalpixk-core (Rust/WASM) para análisis forense profundo.
     """
 
-    def __init__(self, input_dim: int = 10, latent_dim: int = 4):
+    def __init__(self, input_dim: int = 32, latent_dim: int = 16):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = KalpixkAutoencoder(input_dim, latent_dim).to(self.device)
         self.threshold: float = 2.0

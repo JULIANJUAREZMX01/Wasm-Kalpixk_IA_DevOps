@@ -49,7 +49,7 @@ telegram.send_message("🚀 *Kalpixk iniciado*\nMotor entrenado y listo.\nAMD MI
 
 # ── Models & Security ─────────────────────────────────────
 class DetectPayload(BaseModel):
-    features: List[float] = Field(..., min_length=10, max_length=10, description="10 features for anomaly detection")
+    features: List[float] = Field(..., min_length=32, max_length=32, description="32 features for anomaly detection")
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(500, ge=10, le=2000)
@@ -146,7 +146,7 @@ def benchmark(api_key: str = Depends(verify_api_key)):
     import torch, time
     device = str(detector.device)
     model = detector.model
-    data = torch.randn(10000, 10).to(detector.device)
+    data = torch.randn(10000, 32).to(detector.device)
     start = time.perf_counter()
     with torch.no_grad():
         _ = model(data)
