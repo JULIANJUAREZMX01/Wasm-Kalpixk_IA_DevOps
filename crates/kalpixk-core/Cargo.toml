@@ -7,7 +7,7 @@ authors.workspace = true
 license.workspace = true
 
 [lib]
-crate-type = ["cdylib", "rlib"]  # cdylib para WASM, rlib para tests
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = { workspace = true }
@@ -17,8 +17,9 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
+lazy_static = "1.4"
 
-# Solo disponible fuera de WASM (para CLI y tests)
+# Solo disponible fuera de WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 
@@ -27,4 +28,4 @@ wasm-bindgen-test = "0.3"
 
 [features]
 default = []
-console_log = []  # Log a consola del browser
+console_log = []
