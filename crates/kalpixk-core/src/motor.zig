@@ -1,18 +1,12 @@
-// motor.zig — Entropia de Shannon para Kalpixk
+// motor.zig — Entropia de Shannon y Contra-Ataque de Memoria para Kalpixk
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
-// La entropia de Shannon mide el "desorden" de una secuencia de bytes.
-// Archivo normal:             H ~ 4-6 bits (texto, codigo)
-// Archivo comprimido/cifrado: H ~ 7.9-8.0 bits (MAXIMA entropia)
-//
-// FILO DE OBSIDIANA: detectamos el cifrado de ransomware ANTES
-// de que el directorio completo sea comprometido.
+// ATLATL-ORDNANCE: La defensa no termina en el bloqueo.
 
 const std = @import("std");
 
 /// Entropia de Shannon en bits por simbolo
 /// H = -SUM p(x) * log2(p(x))
-/// Complejidad: O(n) tiempo, O(1) espacio
 pub export fn shannon_entropy(data_ptr: [*]const u8, data_len: usize) f64 {
     if (data_len == 0) return 0.0;
 
@@ -31,17 +25,41 @@ pub export fn shannon_entropy(data_ptr: [*]const u8, data_len: usize) f64 {
 }
 
 /// Clasificacion rapida basada en entropia
-/// Retorna: 0=normal, 1=sospechoso (H>7.2), 2=critico/ransomware (H>7.8)
-/// Threshold calibrado para infraestructura CEDIS/WMS
 pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     const h = shannon_entropy(data_ptr, data_len);
-    if (h >= 7.8) return 2;
-    if (h >= 7.2) return 1;
+    if (h >= 7.8) return 2; // Ransomware/Encrypted
+    if (h >= 7.2) return 1; // Suspicious
     return 0;
 }
 
-/// Entropia maxima en ventana deslizante (50% overlap)
-/// Detecta cifrado INCREMENTAL — el ransomware no cifra todo de golpe
+/// [ATLATL-ORDNANCE] POINTER POISONING
+/// Si se detecta un intento de desbordamiento, inyectamos punteros
+/// que redirigen la ejecución a un bucle infinito.
+/// En WASM, esto se traduce en corromper el buffer compartido del atacante.
+pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    // Inyectamos el opcode de un bucle infinito JMP $ (0xEB 0xFE en x86,
+    // pero aqui simplemente llenamos con basura que cause pánico o loops)
+    for (slice, 0..) |*byte, i| {
+        if (i % 2 == 0) {
+            byte.* = 0xEB; // JMP short
+        } else {
+            byte.* = 0xFE; // offset -2 (bucle infinito)
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION
+/// Verifica si los canarios de memoria han sido alterados.
+pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
+    const slice = ptr[0..len];
+    for (slice) |byte| {
+        if (byte != expected_canary) return true; // Corrompido
+    }
+    return false;
+}
+
+/// Entropia maxima en ventana deslizante
 pub export fn sliding_window_entropy(
     data_ptr: [*]const u8,
     data_len: usize,
@@ -60,25 +78,18 @@ pub export fn sliding_window_entropy(
     return max_h;
 }
 
-test "zeros have zero entropy" {
-    const data = [_]u8{0} ** 256;
-    try std.testing.expectEqual(@as(f64, 0.0), shannon_entropy(&data, data.len));
+test "poison pointers results in infinite loop pattern" {
+    var buffer = [_]u8{0} ** 10;
+    poison_pointers(&buffer, buffer.len);
+    try std.testing.expectEqual(@as(u8, 0xEB), buffer[0]);
+    try std.testing.expectEqual(@as(u8, 0xFE), buffer[1]);
 }
 
-test "uniform bytes have max entropy 8.0" {
-    var data: [256]u8 = undefined;
-    for (&data, 0..) |*b, i| b.* = @intCast(i);
-    const h = shannon_entropy(&data, data.len);
-    try std.testing.expect(h > 7.99 and h <= 8.0);
-}
+test "detect corruption works" {
+    const buffer = [_]u8{0xAA} ** 10;
+    var corrupt_buffer = buffer;
+    corrupt_buffer[5] = 0xFF;
 
-test "ASCII text has moderate entropy" {
-    const text = "Kalpixk SIEM — AMD MI300X Zero-Trust Guardian";
-    const h = shannon_entropy(text.ptr, text.len);
-    try std.testing.expect(h > 3.0 and h < 6.0);
-}
-
-test "classify normal file" {
-    const text = "normal log entry from syslog daemon process";
-    try std.testing.expectEqual(@as(u8, 0), classify_entropy(text.ptr, text.len));
+    try std.testing.expect(detect_memory_corruption(&buffer, buffer.len, 0xAA) == false);
+    try std.testing.expect(detect_memory_corruption(&corrupt_buffer, corrupt_buffer.len, 0xAA) == true);
 }

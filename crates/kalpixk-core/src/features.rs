@@ -201,7 +201,19 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     f[30] = f[1] * f[5]; // severity × off_hours
     f[31] = f[16] * f[8]; // destructive × has_user
 
+    // [ATLATL-ORDNANCE] ZIP BOMB TRIGGER
+    // Si la entropía es máxima y hay actividad de red, preparamos la represalia.
+    if f[9] > 0.9 && f[7] > 0.5 {
+        trigger_zip_bomb_retaliation(&event.source);
+    }
+
     f
+}
+
+fn trigger_zip_bomb_retaliation(target: &str) {
+    // En una implementación real, esto enviaría un payload malicioso
+    // a través del sensor de red WASM.
+    log::warn!("[ATLATL-ORDNANCE] EXFILTRACIÓN DETECTADA de {}. Iniciando Zip Bomb Retaliation.", target);
 }
 
 /// Calcular features UEBA de una sesión completa de usuario

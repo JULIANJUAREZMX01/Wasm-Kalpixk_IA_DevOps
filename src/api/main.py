@@ -8,6 +8,7 @@ from loguru import logger
 
 from src.detector import AnomalyDetector
 from src.runtime import WasmRuntimeMonitor
+from src.retaliation.atlatl import atlatl
 
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps",
@@ -42,6 +43,13 @@ def get_metrics():
     """Captura métricas actuales y detecta anomalías."""
     m = monitor.capture_metrics()
     result = detector.predict(m.to_array())
+
+    # ATLATL-ORDNANCE: Represalia inmediata si hay anomalía crítica
+    if any(result["anomalies"]):
+        score = max(result["reconstruction_errors"])
+        if score > detector.threshold * 2:
+            atlatl.trigger_retaliation(score, "127.0.0.1", "generic_anomaly")
+
     return {"metrics": m.__dict__, "detection": result}
 
 
