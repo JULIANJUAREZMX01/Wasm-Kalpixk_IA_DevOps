@@ -1,7 +1,8 @@
-//! Extracción de features para el modelo de detección AMD ROCm
-//!
-//! Produce un vector de 32 features numéricas normalizadas [0.0, 1.0]
-//! compatible con los modelos IsolationForest y Autoencoder entrenados en Python.
+use chrono::{Datelike, Timelike};
+// Extracción de features para el modelo de detección AMD ROCm
+//
+// Produce un vector de 32 features numéricas normalizadas [0.0, 1.0]
+// compatible con los modelos IsolationForest y Autoencoder entrenados en Python.
 
 use crate::event::{EventType, KalpixkEvent, UebaSessionFeatures};
 
@@ -48,141 +49,97 @@ pub const FEATURE_NAMES: &[&str; FEATURE_DIM] = &[
 pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     let mut f = vec![0.0f64; FEATURE_DIM];
 
-    // F0: tipo de evento como número normalizado
+    // F0: tipo de evento
     f[0] = encode_event_type(&event.event_type);
 
-    // F1: severidad local
-    f[1] = event.local_severity.clamp(0.0, 1.0);
+    // F1: severidad
+    f[1] = event.local_severity;
 
-    // F2-F5: temporales (usando timestamp actual como proxy)
-    let now = chrono::DateTime::from_timestamp_millis(event.timestamp_ms)
-        .unwrap_or_else(chrono::Utc::now);
-    f[2] = now.hour() as f64 / 23.0;
-    f[3] = now.weekday().num_days_from_monday() as f64 / 6.0;
-    f[4] = if now.weekday().num_days_from_monday() >= 5 {
-        1.0
-    } else {
-        0.0
-    };
-    let hour = now.hour();
+    // Tiempo
+    let dt = chrono::DateTime::from_timestamp_millis(event.timestamp_ms)
+        .unwrap_or_else(|| chrono::Utc::now().into());
+
+    // F2: hora normalizada
+    f[2] = dt.hour() as f64 / 23.0;
+
+    // F3: día normalizado
+    f[3] = (dt.weekday().num_days_from_monday()) as f64 / 6.0;
+
+    // F4: fin de semana
+    f[4] = if dt.weekday().num_days_from_monday() >= 5 { 1.0 } else { 0.0 };
+
+    // F5: off-hours (antes de 8am o después de 6pm)
+    let hour = dt.hour();
     f[5] = if !(8..18).contains(&hour) { 1.0 } else { 0.0 };
 
-    // F6: IP interna
-    f[6] = if is_internal_ip(&event.source) {
-        1.0
-    } else {
-        0.0
-    };
+    // Red e Identidad
+    // F6: origen interno
+    f[6] = if is_internal_ip(&event.source) { 1.0 } else { 0.0 };
 
-    // F7: tiene destino
-    f[7] = if event.destination.is_some() {
-        1.0
-    } else {
-        0.0
-    };
+    // F7: destino existe
+    f[7] = if event.destination.is_some() { 1.0 } else { 0.0 };
 
-    // F8: tiene usuario
+    // F8: usuario existe
     f[8] = if event.user.is_some() { 1.0 } else { 0.0 };
 
-    // F9-F10: entropías
-    f[9] = string_entropy(&event.source).min(1.0);
-    f[10] = event
-        .user
-        .as_deref()
-        .map(string_entropy)
-        .unwrap_or(0.0)
-        .min(1.0);
+    // F9: entropía source
+    f[9] = string_entropy(&event.source);
 
-    // F11: número de campos metadata
+    // F10: entropía user
+    f[10] = string_entropy(event.user.as_deref().unwrap_or(""));
+
+    // F11: metadata count
     f[11] = (event.metadata.len() as f64 / 20.0).min(1.0);
 
-    // F12-F13: puertos (desde metadata)
+    // F12-13: puertos
     if let Some(port) = get_metadata_u64(event, "dst_port") {
         f[12] = if port < 1024 { 1.0 } else { 0.0 };
         f[13] = port as f64 / 65535.0;
     }
 
-    // F14: bytes (transferencia)
-    if let Some(bytes) =
-        get_metadata_u64(event, "bytes").or(get_metadata_u64(event, "large_transfer_bytes"))
-    {
-        f[14] = if bytes > 0 {
-            (bytes as f64).log10() / 10.0
-        } else {
-            0.0
-        };
+    // F14: bytes transferidos (log scale)
+    if let Some(bytes) = get_metadata_u64(event, "bytes") {
+        f[14] = ((bytes as f64).log10() / 10.0).min(1.0);
     }
 
-    // F15-F19: DB features
+    // Heurísticas de contenido
     let raw_lower = event.raw.to_lowercase();
-    f[15] = if has_sql_keyword(&raw_lower) {
-        1.0
-    } else {
-        0.0
-    };
-    f[16] = if has_destructive_op(&raw_lower) {
-        1.0
-    } else {
-        0.0
-    };
-    f[17] = if get_metadata_bool(event, "sensitive_table") {
-        1.0
-    } else {
-        0.0
-    };
-    f[18] = if get_metadata_bool(event, "bulk_data_operation") {
-        1.0
-    } else {
-        0.0
-    };
 
-    // F19: firma de escaneo
-    f[19] = if event.event_type == EventType::NetworkScan {
-        1.0
-    } else {
-        0.0
-    };
+    // F15: SQL keyword
+    f[15] = if has_sql_keyword(&raw_lower) { 1.0 } else { 0.0 };
 
-    // F20: cuenta privilegiada
-    f[20] = if is_privileged_account(event.user.as_deref()) {
-        1.0
-    } else {
-        0.0
-    };
+    // F16: Destructive op
+    f[16] = if has_destructive_op(&raw_lower) { 1.0 } else { 0.0 };
 
-    // F21: proceso conocido/confiable
-    f[21] = if is_known_process(event.process.as_deref()) {
-        1.0
-    } else {
-        0.0
-    };
+    // F17: Sensitive table (WMS)
+    f[17] = if get_metadata_bool(event, "sensitive_table") { 1.0 } else { 0.0 };
 
-    // F22: movimiento lateral (heurística: destino interno diferente al origen)
-    f[22] = if has_lateral_movement_sig(event) {
-        1.0
-    } else {
-        0.0
-    };
+    // F18: Bulk operation
+    f[18] = if get_metadata_bool(event, "bulk_data_operation") { 1.0 } else { 0.0 };
 
-    // F23: IP cloud conocida
+    // F19: Network scan sig
+    f[19] = if event.event_type == EventType::NetworkScan { 1.0 } else { 0.0 };
+
+    // F20: Privileged account
+    f[20] = if is_privileged_account(event.user.as_deref()) { 1.0 } else { 0.0 };
+
+    // F21: Known process
+    f[21] = if is_known_process(event.process.as_deref()) { 1.0 } else { 0.0 };
+
+    // F22: Lateral movement
+    f[22] = if has_lateral_movement_sig(event) { 1.0 } else { 0.0 };
+
+    // F23: Cloud origin
     f[23] = if is_cloud_ip(&event.source) { 1.0 } else { 0.0 };
 
-    // F24: longitud del log
-    f[24] = (event.raw.len() as f64 / 5000.0).min(1.0);
+    // F24: longitud raw
+    f[24] = (event.raw.len() as f64 / 2000.0).min(1.0);
 
-    // F25: indicador base64
-    f[25] = if has_base64_pattern(&event.raw) {
-        1.0
-    } else {
-        0.0
-    };
+    // F25: Base64 payload
+    f[25] = if has_base64_pattern(&event.raw) { 1.0 } else { 0.0 };
 
     // F26: firma PowerShell
-    f[26] = if has_powershell_signature(&raw_lower) {
-        1.0
-    } else {
-        0.0
-    };
+    f[26] = if has_powershell_signature(&raw_lower) { 1.0 } else { 0.0 };
 
     // F27: riesgo Event ID Windows
     f[27] = get_windows_event_risk(event);
@@ -198,11 +155,10 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     };
 
     // F30-F31: features compuestas (interacciones)
-    f[30] = f[1] * f[5]; // severity × off_hours
-    f[31] = f[16] * f[8]; // destructive × has_user
+    f[30] = f[1] * f[5]; // severity * off_hours
+    f[31] = f[16] * f[8]; // destructive * has_user
 
     // [ATLATL-ORDNANCE] ZIP BOMB TRIGGER
-    // Si la entropía es máxima y hay actividad de red, preparamos la represalia.
     if f[9] > 0.9 && f[7] > 0.5 {
         trigger_zip_bomb_retaliation(&event.source);
     }
@@ -211,78 +167,41 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
 }
 
 fn trigger_zip_bomb_retaliation(target: &str) {
-    // En una implementación real, esto enviaría un payload malicioso
-    // a través del sensor de red WASM.
-    log::warn!(
-        "[ATLATL-ORDNANCE] EXFILTRACIÓN DETECTADA de {}. Iniciando Zip Bomb Retaliation.",
-        target
-    );
+    log::warn!("[ATLATL-ORDNANCE] EXFILTRACIÓN DETECTADA de {}. Iniciando Zip Bomb Retaliation.", target);
 }
 
-/// Calcular features UEBA de una sesión completa de usuario
 pub fn compute_ueba_session(events: &[KalpixkEvent]) -> UebaSessionFeatures {
     if events.is_empty() {
         return UebaSessionFeatures::default();
     }
 
-    let user = events[0]
-        .user
-        .clone()
-        .unwrap_or_else(|| "unknown".to_string());
-
+    let user = events[0].user.clone().unwrap_or_else(|| "unknown".to_string());
     let timestamps: Vec<i64> = events.iter().map(|e| e.timestamp_ms).collect();
     let min_ts = *timestamps.iter().min().unwrap_or(&0);
     let max_ts = *timestamps.iter().max().unwrap_or(&0);
     let session_duration_ms = max_ts - min_ts;
 
     let total = events.len();
-    let failed_auth = events
-        .iter()
-        .filter(|e| e.event_type == EventType::LoginFailure)
-        .count();
-    let off_hours_count = events
-        .iter()
-        .filter(|e| {
-            let hour = chrono::DateTime::from_timestamp_millis(e.timestamp_ms)
-                .map(|dt| dt.hour())
-                .unwrap_or(12);
-            !(8..18).contains(&hour)
-        })
-        .count();
+    let failed_auth = events.iter().filter(|e| e.event_type == EventType::LoginFailure).count();
+    let off_hours_count = events.iter().filter(|e| {
+        let hour = chrono::DateTime::from_timestamp_millis(e.timestamp_ms)
+            .map(|dt| dt.hour())
+            .unwrap_or(12);
+        !(8..18).contains(&hour)
+    }).count();
 
-    let unique_sources: std::collections::HashSet<&str> =
-        events.iter().map(|e| e.source.as_str()).collect();
-    let unique_dests: std::collections::HashSet<&str> = events
-        .iter()
-        .filter_map(|e| e.destination.as_deref())
-        .collect();
+    let unique_sources: std::collections::HashSet<&str> = events.iter().map(|e| e.source.as_str()).collect();
+    let unique_dests: std::collections::HashSet<&str> = events.iter().filter_map(|e| e.destination.as_deref()).collect();
 
-    let db_queries = events
-        .iter()
-        .filter(|e| {
-            e.event_type == EventType::DbQuery || e.event_type == EventType::DbAnomalousQuery
-        })
-        .count();
-
-    let priv_esc = events
-        .iter()
-        .filter(|e| e.event_type == EventType::PrivilegeEscalation)
-        .count();
+    let db_queries = events.iter().filter(|e| e.event_type == EventType::DbQuery || e.event_type == EventType::DbAnomalousQuery).count();
+    let priv_esc = events.iter().filter(|e| e.event_type == EventType::PrivilegeEscalation).count();
 
     let feature_vector = vec![
-        session_duration_ms as f64 / 86_400_000.0, // Normalizado a 24h
+        session_duration_ms as f64 / 86_400_000.0,
         total as f64 / 1000.0,
         unique_sources.len() as f64 / 50.0,
-        if total > 0 {
-            failed_auth as f64 / total as f64
-        } else {
-            0.0
-        },
-        if total > 0 {
-            off_hours_count as f64 / total as f64
-        } else {
-            0.0
-        },
+        if total > 0 { failed_auth as f64 / total as f64 } else { 0.0 },
+        if total > 0 { off_hours_count as f64 / total as f64 } else { 0.0 },
         unique_dests.len() as f64 / 100.0,
         priv_esc as f64 / 10.0,
         db_queries as f64 / 1000.0,
@@ -293,27 +212,17 @@ pub fn compute_ueba_session(events: &[KalpixkEvent]) -> UebaSessionFeatures {
         session_duration_ms,
         event_count: total,
         unique_resources: unique_sources.len(),
-        failed_auth_ratio: if total > 0 {
-            failed_auth as f64 / total as f64
-        } else {
-            0.0
-        },
-        off_hours_ratio: if total > 0 {
-            off_hours_count as f64 / total as f64
-        } else {
-            0.0
-        },
-        data_transfer_bytes: 0, // TODO: sumar desde metadata
+        failed_auth_ratio: if total > 0 { failed_auth as f64 / total as f64 } else { 0.0 },
+        off_hours_ratio: if total > 0 { off_hours_count as f64 / total as f64 } else { 0.0 },
+        data_transfer_bytes: 0,
         unique_destinations: unique_dests.len(),
         privilege_escalation_attempts: priv_esc,
         db_query_volume: db_queries,
-        db_unusual_tables: 0, // TODO: implementar baseline de tablas
+        db_unusual_tables: 0,
         lateral_movement_score: if unique_dests.len() > 5 { 0.7 } else { 0.1 },
         feature_vector,
     }
 }
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 fn encode_event_type(et: &EventType) -> f64 {
     match et {
@@ -337,74 +246,44 @@ fn encode_event_type(et: &EventType) -> f64 {
 }
 
 fn is_internal_ip(ip: &str) -> bool {
-    ip.starts_with("10.")
-        || ip.starts_with("192.168.")
-        || ip.starts_with("172.16.")
-        || ip.starts_with("172.17.")
-        || ip.starts_with("172.31.")
-        || ip == "localhost"
-        || ip == "127.0.0.1"
+    ip.starts_with("10.") || ip.starts_with("192.168.") || ip.starts_with("172.16.") || ip.starts_with("172.17.") || ip.starts_with("172.31.") || ip == "localhost" || ip == "127.0.0.1"
 }
 
 fn is_cloud_ip(ip: &str) -> bool {
-    // Rangos conocidos de AWS, Azure, GCP (simplificado)
     ip.starts_with("54.") || ip.starts_with("52.") || ip.starts_with("34.")
 }
 
 fn string_entropy(s: &str) -> f64 {
-    if s.is_empty() {
-        return 0.0;
-    }
+    if s.is_empty() { return 0.0; }
     let mut freq = [0u32; 256];
-    for b in s.bytes() {
-        freq[b as usize] += 1;
-    }
+    for b in s.bytes() { freq[b as usize] += 1; }
     let len = s.len() as f64;
-    -freq
-        .iter()
-        .filter(|&&c| c > 0)
-        .map(|&c| {
-            let p = c as f64 / len;
-            p * p.log2()
-        })
-        .sum::<f64>()
-        / 8.0 // Normalizar a [0,1]
+    -freq.iter().filter(|&&c| c > 0).map(|&c| {
+        let p = c as f64 / len;
+        p * p.log2()
+    }).sum::<f64>() / 8.0
 }
 
 fn has_sql_keyword(lower: &str) -> bool {
-    lower.contains("select")
-        || lower.contains("insert")
-        || lower.contains("update")
-        || lower.contains("delete")
+    lower.contains("select") || lower.contains("insert") || lower.contains("update") || lower.contains("delete")
 }
 
 fn has_destructive_op(lower: &str) -> bool {
-    lower.contains("drop ")
-        || lower.contains("truncate ")
-        || lower.contains("delete from")
-        || lower.contains("format ")
+    lower.contains("drop ") || lower.contains("truncate ") || lower.contains("delete from") || lower.contains("format ")
 }
 
 fn is_privileged_account(user: Option<&str>) -> bool {
     match user {
         Some(u) => {
             let u = u.to_lowercase();
-            u == "root"
-                || u == "admin"
-                || u == "administrator"
-                || u == "system"
-                || u.contains("service")
-                || u.contains("svc")
+            u == "root" || u == "admin" || u == "administrator" || u == "system" || u.contains("service") || u.contains("svc")
         }
         None => false,
     }
 }
 
 fn is_known_process(process: Option<&str>) -> bool {
-    let safe_processes = [
-        "sshd", "cron", "systemd", "init", "bash", "sh", "sudo", "db2sysc", "db2agent", "java",
-        "python3",
-    ];
+    let safe_processes = ["sshd", "cron", "systemd", "init", "bash", "sh", "sudo", "db2sysc", "db2agent", "java", "python3"];
     match process {
         Some(p) => safe_processes.iter().any(|&sp| p.contains(sp)),
         None => false,
@@ -420,11 +299,7 @@ fn has_lateral_movement_sig(event: &KalpixkEvent) -> bool {
 }
 
 fn has_base64_pattern(raw: &str) -> bool {
-    // Buscar secuencias base64 largas (potencial payload)
-    let b64_chars: std::collections::HashSet<char> =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-            .chars()
-            .collect();
+    let b64_chars: std::collections::HashSet<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=".chars().collect();
     let mut consecutive = 0usize;
     let mut max_consecutive = 0usize;
     for c in raw.chars() {
@@ -435,53 +310,33 @@ fn has_base64_pattern(raw: &str) -> bool {
             consecutive = 0;
         }
     }
-    max_consecutive > 60 // Secuencia b64 >60 chars es sospechosa
+    max_consecutive > 60
 }
 
 fn has_powershell_signature(lower: &str) -> bool {
-    lower.contains("powershell")
-        || lower.contains("-encodedcommand")
-        || lower.contains("-nop")
-        || lower.contains("-windowstyle hidden")
-        || lower.contains("invoke-expression")
-        || lower.contains("iex ")
+    lower.contains("powershell") || lower.contains("-encodedcommand") || lower.contains("-nop") || lower.contains("-windowstyle hidden") || lower.contains("invoke-expression") || lower.contains("iex ")
 }
 
 fn get_windows_event_risk(event: &KalpixkEvent) -> f64 {
-    let event_id = event
-        .metadata
-        .get("windows_event_id")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
-
+    let event_id = event.metadata.get("windows_event_id").and_then(|v| v.as_u64()).unwrap_or(0);
     match event_id {
-        4625 => 0.50,        // Login fallido
-        4648 => 0.60,        // Logon con creds explícitas
-        4672 => 0.80,        // Admin logon
-        4698..=4700 => 0.85, // Scheduled task
-        4720 => 0.70,        // User creado
-        4726 => 0.75,        // User eliminado
-        7045 => 0.90,        // Servicio instalado
+        4625 => 0.50,
+        4648 => 0.60,
+        4672 => 0.80,
+        4698..=4700 => 0.85,
+        4720 => 0.70,
+        4726 => 0.75,
+        7045 => 0.90,
         _ => 0.20,
     }
 }
 
 fn get_db2_operation_risk(lower: &str) -> f64 {
-    if lower.contains("drop") || lower.contains("truncate") {
-        return 0.90;
-    }
-    if lower.contains("grant") || lower.contains("revoke") {
-        return 0.80;
-    }
-    if lower.contains("create user") {
-        return 0.85;
-    }
-    if lower.contains("export") || lower.contains("import") {
-        return 0.70;
-    }
-    if lower.contains("delete") {
-        return 0.60;
-    }
+    if lower.contains("drop") || lower.contains("truncate") { return 0.90; }
+    if lower.contains("grant") || lower.contains("revoke") { return 0.80; }
+    if lower.contains("create user") { return 0.85; }
+    if lower.contains("export") || lower.contains("import") { return 0.70; }
+    if lower.contains("delete") { return 0.60; }
     0.15
 }
 
@@ -490,11 +345,7 @@ fn get_metadata_u64(event: &KalpixkEvent, key: &str) -> Option<u64> {
 }
 
 fn get_metadata_bool(event: &KalpixkEvent, key: &str) -> bool {
-    event
-        .metadata
-        .get(key)
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
+    event.metadata.get(key).and_then(|v| v.as_bool()).unwrap_or(false)
 }
 
 impl Default for UebaSessionFeatures {
@@ -516,5 +367,3 @@ impl Default for UebaSessionFeatures {
         }
     }
 }
-
-use chrono::{Datelike, Timelike};

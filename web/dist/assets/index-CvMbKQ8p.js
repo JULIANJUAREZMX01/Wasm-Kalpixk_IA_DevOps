@@ -20,7 +20,7 @@
             fetch(r.href, c);
         }
     })();
-    const L = "modulepreload", M = function(e) {
+    const L = "modulepreload", k = function(e) {
         return "/" + e;
     }, m = {}, h = function(t, n, i) {
         let r = Promise.resolve();
@@ -28,7 +28,7 @@
             document.getElementsByTagName("link");
             const o = document.querySelector("meta[property=csp-nonce]"), s = o?.nonce || o?.getAttribute("nonce");
             r = Promise.allSettled(n.map((f)=>{
-                if (f = M(f), f in m) return;
+                if (f = k(f), f in m) return;
                 m[f] = !0;
                 const _ = f.endsWith(".css"), x = _ ? '[rel="stylesheet"]' : "";
                 if (document.querySelector(`link[href="${f}"]${x}`)) return;
@@ -49,7 +49,7 @@
             return t().catch(c);
         });
     };
-    function R(e, t) {
+    function M(e, t) {
         const n = v(e, a.__wbindgen_malloc, a.__wbindgen_realloc), i = g, r = v(t, a.__wbindgen_malloc, a.__wbindgen_realloc), c = g, o = a.parse_log_line(n, i, r, c);
         let s;
         return o[0] !== 0 && (s = y(o[0], o[1]).slice(), a.__wbindgen_free(o[0], o[1] * 1, 1)), s;
@@ -63,7 +63,7 @@
             a.__wbindgen_free(e, t, 1);
         }
     }
-    function W() {
+    function R() {
         return {
             __proto__: null,
             "./kalpixk_core_bg.js": {
@@ -119,10 +119,10 @@
         fatal: !0
     });
     b.decode();
-    const k = 2146435072;
+    const W = 2146435072;
     let w = 0;
     function P(e, t) {
-        return w += t, w >= k && (b = new TextDecoder("utf-8", {
+        return w += t, w >= W && (b = new TextDecoder("utf-8", {
             ignoreBOM: !0,
             fatal: !0
         }), b.decode(), w = t), b.decode(p().subarray(e, e + t));
@@ -139,7 +139,7 @@
     function I(e, t) {
         return a = e.exports, u = null, a.__wbindgen_start(), a;
     }
-    async function D(e, t) {
+    async function B(e, t) {
         if (typeof Response == "function" && e instanceof Response) {
             if (typeof WebAssembly.instantiateStreaming == "function") try {
                 return await WebAssembly.instantiateStreaming(e, t);
@@ -168,14 +168,14 @@
     }
     async function E(e) {
         if (a !== void 0) return a;
-        e !== void 0 && (Object.getPrototypeOf(e) === Object.prototype ? { module_or_path: e } = e : console.warn("using deprecated parameters for the initialization function; pass a single object instead")), e === void 0 && (e = new URL("/assets/kalpixk_core_bg-CGhuqs0X.wasm", import.meta.url));
-        const t = W();
+        e !== void 0 && (Object.getPrototypeOf(e) === Object.prototype ? { module_or_path: e } = e : console.warn("using deprecated parameters for the initialization function; pass a single object instead")), e === void 0 && (e = new URL("/assets/kalpixk_core_bg-B8mrazkj.wasm", import.meta.url));
+        const t = R();
         (typeof e == "string" || typeof Request == "function" && e instanceof Request || typeof URL == "function" && e instanceof URL) && (e = fetch(e));
-        const { instance: n, module: i } = await D(await e, t);
+        const { instance: n, module: i } = await B(await e, t);
         return I(n);
     }
     let A = !1;
-    async function F() {
+    async function D() {
         if (!A) {
             if (typeof window > "u" || typeof process < "u" && !1) {
                 const e = await h(()=>import("./__vite-browser-external-BIHI7g3E.js"), []), n = (await h(()=>import("./__vite-browser-external-BIHI7g3E.js"), [])).resolve(__dirname, "../../../crates/kalpixk-core/pkg/kalpixk_core_bg.wasm"), i = e.readFileSync(n), r = i.buffer.slice(i.byteOffset, i.byteOffset + i.byteLength);
@@ -184,9 +184,9 @@
             A = !0, console.log(`[Kalpixk] WASM motor v${S()} listo`);
         }
     }
-    async function U() {
-        await F();
-        const e = R("Apr 5 02:14:22 server sshd[123]: Failed password for root from 45.33.32.156 port 22", "syslog");
+    async function F() {
+        await D();
+        const e = M("Apr 5 02:14:22 server sshd[123]: Failed password for root from 45.33.32.156 port 22", "syslog");
         if (e) {
             const t = JSON.parse(e);
             console.log("[Kalpixk] Test WASM OK:", t.event_type, "score:", t.local_severity), document.getElementById("app").innerHTML = `
@@ -200,5 +200,5 @@
     `;
         }
     }
-    U().catch(console.error);
+    F().catch(console.error);
 })();

@@ -3,9 +3,9 @@ pub mod event;
 pub mod features;
 pub mod parsers;
 
-use crate::parsers::LogParser;
 use std::sync::atomic::{AtomicU64, Ordering};
 use wasm_bindgen::prelude::*;
+use crate::parsers::LogParser;
 
 pub const FEATURE_CONTRACT_VERSION: &str = "1.0.0";
 
@@ -54,8 +54,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
                 "error": "Unknown source type",
                 "parsed_count": 0,
                 "feature_matrix": []
-            })
-            .to_string();
+            }).to_string();
         }
     };
 
@@ -71,8 +70,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         "parsed_count": parsed_events.len(),
         "feature_matrix": feature_matrix,
         "contract_version": FEATURE_CONTRACT_VERSION
-    })
-    .to_string()
+    }).to_string()
 }
 
 /// Calcula features UEBA para una sesión (JSON array de KalpixkEvent).
