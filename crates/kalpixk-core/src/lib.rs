@@ -89,8 +89,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
 /// Output: { features: [f64;32], risk_score: f64 }
 #[wasm_bindgen]
 pub fn compute_ueba_features(events_json: &str) -> String {
-    let events: Vec<event::KalpixkEvent> =
-        serde_json::from_str(events_json).unwrap_or_default();
+    let events: Vec<event::KalpixkEvent> = serde_json::from_str(events_json).unwrap_or_default();
 
     if events.is_empty() {
         return serde_json::json!({
