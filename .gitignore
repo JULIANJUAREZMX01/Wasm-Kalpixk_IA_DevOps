@@ -16,3 +16,4 @@ models/*.bin
 models/*.pt
 models/*.safetensors
 .DS_Store
+node_modules/
