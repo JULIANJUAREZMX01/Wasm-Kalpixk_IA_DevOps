@@ -3,7 +3,7 @@
 //! Produce un vector de 32 features numéricas normalizadas [0.0, 1.0]
 //! compatible con los modelos IsolationForest y Autoencoder entrenados en Python.
 
-use crate::event::{EventFeatures, EventType, KalpixkEvent, UebaSessionFeatures};
+use crate::event::{EventType, KalpixkEvent, UebaSessionFeatures};
 
 /// Número de features en el vector (CONTRATO con el modelo Python — no cambiar sin re-entrenar)
 pub const FEATURE_DIM: usize = 32;
@@ -517,5 +517,4 @@ impl Default for UebaSessionFeatures {
     }
 }
 
-use crate::event::UebaSessionFeatures;
 use chrono::{Datelike, Timelike};

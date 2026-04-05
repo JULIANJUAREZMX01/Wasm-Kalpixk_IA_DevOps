@@ -8,7 +8,7 @@ import pickle
 import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from python.utils.device import get_device, log_device_info
+from python.utils.device import get_rocm_device, log_gpu_info
 from python.models.ensemble import DetectionEnsemble
 
 FEATURE_DIM = 32
@@ -31,8 +31,8 @@ def main():
     print("=" * 50)
     print("  KALPIXK — Entrenamiento Baseline Normal")
     print("=" * 50)
-    device = get_device()
-    log_device_info()
+    device = get_rocm_device()
+    log_gpu_info(device)
 
     t0 = time.time()
     print(f"[1/3] Generando {N_SAMPLES} muestras normales...")

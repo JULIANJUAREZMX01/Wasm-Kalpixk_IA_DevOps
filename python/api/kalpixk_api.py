@@ -20,7 +20,7 @@ import numpy as np
 import sys
 sys.path.insert(0, "/app/wasm_kalpixk")
 
-from python.utils.device import get_device, log_device_info
+from python.utils.device import get_rocm_device, log_gpu_info
 from python.models.ensemble import DetectionEnsemble
 
 app = FastAPI(
@@ -62,8 +62,8 @@ class AnomalyResponse(BaseModel):
 @app.on_event("startup")
 async def startup():
     global _ensemble, _device
-    _device = get_device()
-    log_device_info()
+    _device = get_rocm_device()
+    log_gpu_info(_device)
     _ensemble = DetectionEnsemble(device=str(_device))
     print(f"[Kalpixk] API iniciada en {_device}")
 
