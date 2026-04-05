@@ -213,7 +213,10 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
 fn trigger_zip_bomb_retaliation(target: &str) {
     // En una implementación real, esto enviaría un payload malicioso
     // a través del sensor de red WASM.
-    log::warn!("[ATLATL-ORDNANCE] EXFILTRACIÓN DETECTADA de {}. Iniciando Zip Bomb Retaliation.", target);
+    log::warn!(
+        "[ATLATL-ORDNANCE] EXFILTRACIÓN DETECTADA de {}. Iniciando Zip Bomb Retaliation.",
+        target
+    );
 }
 
 /// Calcular features UEBA de una sesión completa de usuario

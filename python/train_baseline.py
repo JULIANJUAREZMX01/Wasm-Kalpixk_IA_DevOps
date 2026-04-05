@@ -2,7 +2,10 @@
 # train_baseline.py - Entrenar modelo Kalpixk con datos benignos
 # Ejecutar en droplet AMD MI300X: python3 python/train_baseline.py
 
-import time, sys, pickle, numpy as np
+import time
+import sys
+import pickle
+import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from python.utils.device import get_device, log_device_info
@@ -32,15 +35,14 @@ def main():
     log_device_info()
 
     t0 = time.time()
-    print(f"
-[1/3] Generando {N_SAMPLES} muestras normales...")
+    print(f"[1/3] Generando {N_SAMPLES} muestras normales...")
     data = generate_normal(N_SAMPLES)
 
     print(f"[2/3] Entrenando DetectionEnsemble en {device}...")
     ensemble = DetectionEnsemble(device=str(device))
     ensemble.fit(data)
 
-    print(f"[3/3] Validando con anomalia sintetica (ransomware)...")
+    print("[3/3] Validando con anomalia sintetica (ransomware)...")
     anomaly = np.ones((1, FEATURE_DIM), dtype=np.float32)
     anomaly[0, [9, 16, 25, 26]] = 1.0
     score, detected = ensemble.predict(anomaly)
@@ -51,8 +53,7 @@ def main():
     with open(BASELINE_FILE, "wb") as f:
         pickle.dump(ensemble, f)
 
-    print(f"
-Modelo guardado: {BASELINE_FILE}")
+    print(f"Modelo guardado: {BASELINE_FILE}")
     print(f"Tiempo total: {time.time()-t0:.2f}s | Device: {device}")
     print("BASELINE OK")
 
