@@ -47,6 +47,11 @@ select = ["E", "F", "I", "UP"]
 [tool.hatch.build.targets.wheel]
 packages = ["api", "models", "utils"]
 
+[tool.hatch.build.targets.wheel.sources]
+"api" = "api"
+"models" = "models"
+"utils" = "utils"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
