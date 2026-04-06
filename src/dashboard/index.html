@@ -93,10 +93,14 @@
     </div>
 
     <!-- Anomaly / Retaliation Status -->
-    <div class="terminal-card relative overflow-hidden">
+    <div id="anomaly-container" class="terminal-card relative overflow-hidden transition-all duration-500">
+      <div id="phase-black-overlay" class="hidden absolute inset-0 bg-red-900 opacity-20 blink pointer-events-none"></div>
       <div class="flex justify-between items-center mb-2">
         <span class="text-xs font-bold status-error">[ RECONSTRUCTION_ERROR_VECTOR ]</span>
-        <span id="score-val" class="font-mono text-sm status-info">0.0000</span>
+        <div class="flex items-center gap-4">
+            <span id="phase-black-tag" class="hidden px-2 py-0.5 bg-red-600 text-[10px] font-bold animate-pulse">PHASE BLACK ACTIVATED</span>
+            <span id="score-val" class="font-mono text-sm status-info">0.0000</span>
+        </div>
       </div>
       <div class="w-full bg-gray-900 h-1.5 rounded-full overflow-hidden">
         <div id="score-bar" class="score-bar" style="width: 2%"></div>

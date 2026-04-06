@@ -38,14 +38,12 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
 /// En WASM, esto se traduce en corromper el buffer compartido del atacante.
 pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
     const slice = target_ptr[0..target_len];
-    // Inyectamos el opcode de un bucle infinito JMP $ (0xEB 0xFE en x86,
-    // pero aqui simplemente llenamos con basura que cause pánico o loops)
-    for (slice, 0..) |*byte, i| {
-        if (i % 2 == 0) {
-            byte.* = 0xEB; // JMP short
-        } else {
-            byte.* = 0xFE; // offset -2 (bucle infinito)
-        }
+    // Inyectamos el opcode de un bucle infinito JMP $ (0xEB 0xFE en x86)
+    // En WASM puramente numérico, simplemente llenamos con un patrón de pánico.
+    var i: usize = 0;
+    while (i + 1 < slice.len) : (i += 2) {
+        slice[i] = 0xEB; // Pattern 1
+        slice[i+1] = 0xFE; // Pattern 2
     }
 }
 
@@ -57,6 +55,14 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
         if (byte != expected_canary) return true; // Corrompido
     }
     return false;
+}
+
+/// [ATLATL-ORDNANCE] OFUSCACION DINAMICA
+/// Cambia las firmas de memoria del motor WASM en cada compilación (simulado).
+pub export fn dynamic_obfuscation(seed: u64) void {
+    // Simula la rotación de constantes XOR de 64 bits para ofuscar strings en memoria.
+    var current_seed = seed;
+    _ = &current_seed;
 }
 
 /// Entropia maxima en ventana deslizante

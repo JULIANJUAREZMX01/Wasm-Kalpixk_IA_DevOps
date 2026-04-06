@@ -3,7 +3,7 @@ Wasm-Kalpixk — Motor de Detección de Anomalías v2.1
 Fixes:
   - StandardScaler serializado con joblib (compatible PyTorch 2.6)
   - Auto-threshold calibrado: mean + 2*std
-  - Arquitectura mejorada: 10→32→16→4→16→32→10
+  - Arquitectura ATLATL: 32→64→16→64→32 (Sincronizada con Alpha Stack)
   - evaluate() para métricas de precision/recall/F1
 """
 import os
@@ -30,11 +30,15 @@ class KalpixkAutoencoder(nn.Module):
     def __init__(self, input_dim: int = 32, latent_dim: int = 16):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 64), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(64, latent_dim)
         )
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 64), nn.ReLU(), nn.Dropout(0.1),
+            nn.Linear(latent_dim, 64),
+            nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(64, input_dim)
         )
 

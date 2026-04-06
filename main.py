@@ -23,6 +23,7 @@ from src.runtime import WasmRuntimeMonitor
 from src.channels.telegram_bot import KalpixkTelegramBot
 from src.channels.whatsapp_twilio import KalpixkWhatsApp
 from src.monitor import KalpixkSystemMonitor
+from src.retaliation.atlatl import atlatl
 
 # ── Boot visual ───────────────────────────────────────────
 KalpixkTheme.print_banner()
@@ -113,6 +114,14 @@ def health():
 def get_metrics():
     m = monitor_wasm.capture_metrics()
     result = detector.predict(m.to_array())
+
+    # ATLATL-ORDNANCE: Represalia inmediata si hay anomalía crítica
+    if any(result["anomalies"]):
+        norm_score = max(result["scores_normalized"])
+        raw_score = max(result["reconstruction_errors"])
+        if raw_score > detector.threshold * 1.5:
+            atlatl.trigger_retaliation(norm_score, "127.0.0.1", "critical_system_anomaly")
+
     return {"metrics": m.__dict__, "detection": result}
 
 @app.post("/detect")
@@ -125,11 +134,19 @@ def detect(payload: DetectPayload, api_key: str = Depends(verify_api_key)):
 def simulate(anomaly_type: str, api_key: str = Depends(verify_api_key)):
     m = monitor_wasm.simulate_anomaly(anomaly_type)
     result = detector.predict(m.to_array())
+
+    detected = any(result["anomalies"])
+    if detected:
+        norm_score = max(result["scores_normalized"])
+        raw_score = max(result["reconstruction_errors"])
+        if raw_score > detector.threshold * 1.5:
+            atlatl.trigger_retaliation(norm_score, "127.0.0.1", f"simulated_{anomaly_type}")
+
     return {
         "anomaly_type": anomaly_type,
         "metrics": m.__dict__,
         "detection": result,
-        "detected": any(result["anomalies"])
+        "detected": detected
     }
 
 @app.post("/train")

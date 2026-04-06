@@ -93,9 +93,22 @@ async function refreshMetrics() {
         document.getElementById('anomaly-status').textContent = 'THREAT!';
         document.getElementById('anomaly-status').className = 'text-xl font-bold status-error blink';
         log(`🚨 THREAT_VECTOR DETECTED! SCORE: ${score.toFixed(6)}`, 'error');
+
+        // PHASE BLACK Visuals
+        if (score > threshold * 1.5) {
+            document.getElementById('phase-black-overlay').classList.remove('hidden');
+            document.getElementById('phase-black-tag').classList.remove('hidden');
+            document.getElementById('anomaly-container').style.borderColor = '#FF0000';
+            document.getElementById('anomaly-container').style.boxShadow = '0 0 30px #FF0000';
+            log(`💀 ATLATL-ORDNANCE: PHASE BLACK ENGAGED. RECURSIVE ZIP BOMB DELIVERED.`, 'error');
+        }
     } else {
         document.getElementById('anomaly-status').textContent = 'CLEAN';
         document.getElementById('anomaly-status').className = 'text-xl font-bold status-ok';
+        document.getElementById('phase-black-overlay').classList.add('hidden');
+        document.getElementById('phase-black-tag').classList.add('hidden');
+        document.getElementById('anomaly-container').style.borderColor = '';
+        document.getElementById('anomaly-container').style.boxShadow = '';
     }
 
     if (wasmReady) {

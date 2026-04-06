@@ -13,7 +13,7 @@ from typing import Optional
 @dataclass
 class WasmMetrics:
     """32 features sincronizadas con kalpixk-core (Rust)."""
-    # Original 10
+    # 0-9: Core Runtime Metrics
     cpu_usage: float
     memory_mb: float
     exec_time_ms: float
@@ -25,7 +25,7 @@ class WasmMetrics:
     exports: float
     heap_usage: float
 
-    # Extended features (22)
+    # 10-31: Security Context Features (Extended)
     hour_normalized: float = 0.5
     day_normalized: float = 0.5
     is_weekend: float = 0.0
@@ -80,23 +80,32 @@ class WasmRuntimeMonitor:
         cpu = psutil.cpu_percent(interval=0.1)
         mem = psutil.virtual_memory()
         
+        # Simulación de métricas extendidas basadas en el tiempo actual
+        import datetime
+        now = datetime.datetime.now()
+
         metrics = WasmMetrics(
             cpu_usage=cpu,
             memory_mb=mem.used / 1e6,
-            exec_time_ms=0.0,     # rellenar con wasmtime profiler
-            instructions=0.0,      # rellenar con instrumentación WASM
+            exec_time_ms=0.0,
+            instructions=0.0,
             memory_pages=mem.used / (64 * 1024),
-            function_calls=0.0,    # rellenar con hooks de runtime
+            function_calls=0.0,
             traps=0.0,
             imports=0.0,
             exports=0.0,
-            heap_usage=mem.percent
+            heap_usage=mem.percent,
+            hour_normalized=now.hour / 23.0,
+            day_normalized=now.weekday() / 6.0,
+            is_weekend=1.0 if now.weekday() >= 5 else 0.0,
+            is_off_hours=1.0 if not (8 <= now.hour <= 18) else 0.0
         )
         return metrics
 
     def generate_normal_baseline(self, n_samples: int = 500) -> np.ndarray:
         """Genera datos de entrenamiento simulando operación normal (32 features)."""
         np.random.seed(42)
+        # 32 features
         loc = [30, 512, 5, 1000, 8, 50, 0, 10, 5, 40] + [0.5]*22
         scale = [5, 50, 1, 100, 1, 10, 0.1, 1, 0.5, 5] + [0.1]*22
         return np.random.normal(
@@ -111,6 +120,7 @@ class WasmRuntimeMonitor:
         if anomaly_type == "memory_spike":
             base.memory_mb *= 10
             base.memory_pages *= 10
+            base.heap_usage = 95.0
         elif anomaly_type == "cpu_spike":
             base.cpu_usage = 95.0
             base.exec_time_ms = 500.0
