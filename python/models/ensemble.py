@@ -71,16 +71,10 @@ class DetectionEnsemble:
         ensemble_scores = 0.45 * if_scores + 0.55 * ae_scores
         
         # Determinar método ganador y confianza
-        methods = []
-        confidences = []
-        for i in range(n):
-            diff = abs(float(if_scores[i]) - float(ae_scores[i]))
-            if float(if_scores[i]) > float(ae_scores[i]):
-                methods.append("isolation_forest")
-            else:
-                methods.append("autoencoder")
-            # Mayor diferencia entre modelos = menor confianza
-            confidences.append(max(0.5, 1.0 - diff))
+        diffs = np.abs(if_scores - ae_scores)
+        confidences = np.maximum(0.5, 1.0 - diffs).tolist()
+        if_greater = if_scores > ae_scores
+        methods = np.where(if_greater, "isolation_forest", "autoencoder").tolist()
         
         return (
             ensemble_scores.tolist(),
