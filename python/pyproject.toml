@@ -44,6 +44,9 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 
+[tool.hatch.build.targets.wheel]
+packages = ["api", "detection", "utils", "training"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
