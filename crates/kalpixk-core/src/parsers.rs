@@ -38,11 +38,12 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
 
 // ─── Parser Syslog RFC 5424 / RFC 3164 ────────────────────────────────────────
 
+#[derive(Default)]
 pub struct SyslogParser;
 
 impl SyslogParser {
     pub fn new() -> Self {
-        SyslogParser
+        Self
     }
 
     fn fingerprint(raw: &str) -> String {
@@ -140,11 +141,12 @@ impl LogParser for SyslogParser {
 
 // ─── Parser JSON estructurado (Filebeat, Logstash, etc.) ──────────────────────
 
+#[derive(Default)]
 pub struct JsonStructuredParser;
 
 impl JsonStructuredParser {
     pub fn new() -> Self {
-        JsonStructuredParser
+        Self
     }
 }
 
@@ -230,11 +232,12 @@ impl LogParser for JsonStructuredParser {
 
 // ─── Parser Windows Event Log ─────────────────────────────────────────────────
 
+#[derive(Default)]
 pub struct WindowsEventParser;
 
 impl WindowsEventParser {
     pub fn new() -> Self {
-        WindowsEventParser
+        Self
     }
 }
 
@@ -339,11 +342,12 @@ impl LogParser for WindowsEventParser {
 
 // ─── Parser DB2 Audit (IBM DB2 — Manhattan WMS) ───────────────────────────────
 
+#[derive(Default)]
 pub struct Db2AuditParser;
 
 impl Db2AuditParser {
     pub fn new() -> Self {
-        Db2AuditParser
+        Self
     }
 }
 
@@ -421,11 +425,12 @@ impl LogParser for Db2AuditParser {
 
 // ─── Parser NetFlow v9 / IPFIX (simplificado) ─────────────────────────────────
 
+#[derive(Default)]
 pub struct NetflowParser;
 
 impl NetflowParser {
     pub fn new() -> Self {
-        NetflowParser
+        Self
     }
 }
 
@@ -565,7 +570,7 @@ fn extract_windows_user(raw: &str) -> Option<String> {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
             let end = rest
-                .find(|c: char| c == '\n' || c == '\r')
+                .find(['\n', '\r'])
                 .unwrap_or(rest.len());
             let u = rest[..end].trim().to_string();
             if !u.is_empty() && u != "-" {
@@ -580,7 +585,7 @@ fn extract_windows_computer(raw: &str) -> Option<String> {
     if let Some(pos) = raw.find("Computer: ") {
         let rest = &raw[pos + 10..];
         let end = rest
-            .find(|c: char| c == '\n' || c == '\r')
+            .find(['\n', '\r'])
             .unwrap_or(rest.len());
         return Some(rest[..end].trim().to_string());
     }
