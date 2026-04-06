@@ -45,11 +45,7 @@ def get_metrics():
     result = detector.predict(m.to_array())
 
     # ATLATL-ORDNANCE: Represalia inmediata si hay anomalía crítica
-    if any(result["anomalies"]):
-        norm_score = max(result["scores_normalized"])
-        raw_score = max(result["reconstruction_errors"])
-        if raw_score > detector.threshold * 1.5:
-            atlatl.trigger_retaliation(norm_score, "127.0.0.1", "critical_system_anomaly")
+    atlatl.check_and_trigger(result, detector.threshold, "127.0.0.1", "critical_system_anomaly")
 
     return {"metrics": m.__dict__, "detection": result}
 
@@ -72,11 +68,7 @@ def simulate(anomaly_type: str):
     result = detector.predict(m.to_array())
 
     detected = any(result["anomalies"])
-    if detected:
-        norm_score = max(result["scores_normalized"])
-        raw_score = max(result["reconstruction_errors"])
-        if raw_score > detector.threshold * 1.5:
-            atlatl.trigger_retaliation(norm_score, "127.0.0.1", f"simulated_{anomaly_type}")
+    atlatl.check_and_trigger(result, detector.threshold, "127.0.0.1", f"simulated_{anomaly_type}")
 
     return {
         "anomaly_type": anomaly_type,

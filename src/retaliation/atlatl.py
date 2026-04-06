@@ -76,5 +76,13 @@ class Atlatl:
         logger.debug(f"Modificando encabezados de respuesta para invalidar el protocolo C2 de {target}")
         time.sleep(0.1)
 
+    def check_and_trigger(self, result: dict, threshold: float, source_ip: str, anomaly_type: str = "critical_system_anomaly"):
+        """Analiza el resultado de detección y dispara represalia si es crítico."""
+        if any(result.get("anomalies", [])):
+            norm_score = max(result.get("scores_normalized", [0.0]))
+            raw_score = max(result.get("reconstruction_errors", [0.0]))
+            if raw_score > threshold * 1.5:
+                self.trigger_retaliation(norm_score, source_ip, anomaly_type)
+
 # Singleton
 atlatl = Atlatl()

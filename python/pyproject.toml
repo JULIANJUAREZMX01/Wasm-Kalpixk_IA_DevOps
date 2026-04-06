@@ -45,7 +45,7 @@ target-version = "py311"
 select = ["E", "F", "I", "UP"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["api", "detection", "utils", "training"]
+packages = ["api", "models", "utils"]
 
 [build-system]
 requires = ["hatchling"]

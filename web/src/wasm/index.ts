@@ -9,7 +9,7 @@ import init, {
   compute_ueba_features,
   get_feature_names,
   health_check,
-} from "../../../crates/kalpixk-core/pkg/kalpixk_core.js";
+} from "./kalpixk_core.js";
 
 let initialized = false;
 
