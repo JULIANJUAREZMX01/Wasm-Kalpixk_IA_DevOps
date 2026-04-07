@@ -1,8 +1,11 @@
 """
 Wasm-Kalpixk API — Endpoint de detección de anomalías
 """
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+import os
+from typing import List
+from fastapi import FastAPI, HTTPException, Depends, Security, status
+from fastapi.security import APIKeyHeader
+from pydantic import BaseModel, Field
 import numpy as np
 from loguru import logger
 
@@ -18,6 +21,31 @@ app = FastAPI(
 
 detector = AnomalyDetector()
 monitor = WasmRuntimeMonitor()
+
+# ── Models & Security ─────────────────────────────────────
+class DetectPayload(BaseModel):
+    features: List[float] = Field(..., min_length=32, max_length=32, description="32 features for anomaly detection")
+
+API_KEY_NAME = "X-Kalpixk-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    expected_key = os.getenv("KALPIXK_API_KEY")
+    if not expected_key:
+        if os.getenv("ENV") == "production":
+            logger.error("KALPIXK_API_KEY not set in production!")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="API Key not configured"
+            )
+        return None
+
+    if api_key != expected_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Could not validate credentials"
+        )
+    return api_key
 
 
 @app.on_event("startup")
@@ -39,7 +67,7 @@ def health():
 
 
 @app.get("/metrics")
-def get_metrics():
+def get_metrics(api_key: str = Depends(verify_api_key)):
     """Captura métricas actuales y detecta anomalías."""
     m = monitor.capture_metrics()
     result = detector.predict(m.to_array())
@@ -54,18 +82,19 @@ def get_metrics():
 
 
 @app.post("/detect")
-def detect(payload: dict):
+def detect(payload: DetectPayload, api_key: str = Depends(verify_api_key)):
     """Detecta anomalías en métricas enviadas externamente."""
     try:
-        features = np.array([list(payload["features"])], dtype=np.float32)
-        result = detector.predict(features)
+        X = np.array([payload.features], dtype='float32')
+        result = detector.predict(X)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Detection error: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error processing features")
 
 
 @app.get("/simulate/{anomaly_type}")
-def simulate(anomaly_type: str):
+def simulate(anomaly_type: str, api_key: str = Depends(verify_api_key)):
     """Simula una anomalía y la detecta (testing)."""
     m = monitor.simulate_anomaly(anomaly_type)
     result = detector.predict(m.to_array())
