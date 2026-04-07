@@ -24,17 +24,17 @@ monitor = WasmRuntimeMonitor()
 
 # ── Models & Security ─────────────────────────────────────
 class DetectPayload(BaseModel):
-    features: List[float] = Field(..., min_length=32, max_length=32, description="32 features for anomaly detection")
+    features: List[float] = Field(..., min_length=32, max_length=32, description="32 features")
 
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    expected_key = os.getenv("KALPIXK_API_KEY")
-    if expected_key and api_key != expected_key:
+    expected = os.getenv("KALPIXK_API_KEY")
+    if expected and api_key != expected:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
-    if not expected_key and os.getenv("ENV") == "production":
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="API Key not configured")
+    if not expected and os.getenv("ENV") == "production":
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="API Key missing")
     return api_key
 
 
