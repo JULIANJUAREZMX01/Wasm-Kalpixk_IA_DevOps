@@ -31,20 +31,10 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
     expected_key = os.getenv("KALPIXK_API_KEY")
-    if not expected_key:
-        if os.getenv("ENV") == "production":
-            logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="API Key not configured"
-            )
-        return None
-
-    if api_key != expected_key:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials"
-        )
+    if expected_key and api_key != expected_key:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    if not expected_key and os.getenv("ENV") == "production":
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="API Key not configured")
     return api_key
 
 
@@ -86,10 +76,8 @@ def detect(payload: DetectPayload, api_key: str = Depends(verify_api_key)):
     """Detecta anomalías en métricas enviadas externamente."""
     try:
         X = np.array([payload.features], dtype='float32')
-        result = detector.predict(X)
-        return result
-    except Exception as e:
-        logger.error(f"Detection error: {e}")
+        return detector.predict(X)
+    except Exception:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error processing features")
 
 
