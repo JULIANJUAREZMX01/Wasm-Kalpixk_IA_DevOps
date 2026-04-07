@@ -1,44 +1,20 @@
-[project]
-name = "kalpixk-backend"
+[workspace]
+resolver = "2"
+members = [
+    "crates/kalpixk-core"
+]
+
+[workspace.package]
 version = "0.1.0"
-description = "Kalpixk SIEM Backend — AMD ROCm anomaly detection engine"
-authors = [{ name = "Julián Juárez", email = "julianjuarezmx01@gmail.com" }]
-license = { text = "MIT" }
-requires-python = ">=3.11"
+edition = "2021"
+authors = ["Julián Juárez <julianjuarezmx01@gmail.com>"]
+license = "MIT"
 
-dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "pydantic>=2.9.0",
-    "torch>=2.4.0",
-    "numpy>=1.26.0",
-    "scikit-learn>=1.5.0",
-    "httpx>=0.27.0",
-    "websockets>=13.0",
-    "python-multipart>=0.0.12",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.24.0",
-    "ruff>=0.7.0",
-]
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
-
-# ─── Esto le dice a hatchling exactamente dónde están los paquetes ─────────────
-[tool.hatch.build.targets.wheel]
-packages = ["api", "detection", "utils", "training"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[workspace.dependencies]
+wasm-bindgen = "0.2.89"
+js-sys = "0.3.66"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+log = "0.4"
+chrono = "0.4"
