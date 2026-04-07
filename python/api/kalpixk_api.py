@@ -8,20 +8,20 @@ Endpoints:
   GET  /features    → Nombres de las 32 features (XAI)
 """
 
-import time
-from typing import Optional, List
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import msgpack
-import numpy as np
-
 # Importaciones internas
 import sys
+import time
+
+import msgpack
+import numpy as np
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 sys.path.insert(0, "/app/wasm_kalpixk")
 
-from python.utils.device import get_rocm_device, log_gpu_info
 from python.models.ensemble import DetectionEnsemble
+from python.utils.device import get_rocm_device, log_gpu_info
 
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
@@ -38,23 +38,23 @@ app.add_middleware(
 )
 
 # Estado global
-_ensemble: Optional[DetectionEnsemble] = None
+_ensemble: DetectionEnsemble | None = None
 _device = None
-_ws_clients: List[WebSocket] = []
+_ws_clients: list[WebSocket] = []
 _boot_time = time.time()
 
 
 class LogRequest(BaseModel):
-    features: List[float]          # Vector de 32 features del WASM core
-    raw_log: Optional[str] = None  # Log original para el LLM explicador
-    source: Optional[str] = "unknown"
+    features: list[float]          # Vector de 32 features del WASM core
+    raw_log: str | None = None  # Log original para el LLM explicador
+    source: str | None = "unknown"
 
 
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
     severity: str
-    explanation: Optional[str] = None
+    explanation: str | None = None
     device: str
     latency_ms: float
 
@@ -94,7 +94,12 @@ async def analyze(req: LogRequest):
     score, is_anomaly = _ensemble.predict(features_array)
     latency = (time.time() - t0) * 1000
 
-    severity = "CRITICAL" if score > 0.8 else "HIGH" if score > 0.6 else "MEDIUM" if score > 0.4 else "LOW"
+    severity = (
+        "CRITICAL" if score > 0.8
+        else "HIGH" if score > 0.6
+        else "MEDIUM" if score > 0.4
+        else "LOW"
+    )
 
     # Broadcast a clientes WebSocket conectados
     if _ws_clients and is_anomaly:
