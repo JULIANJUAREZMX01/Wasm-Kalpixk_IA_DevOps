@@ -57,7 +57,7 @@ pub fn run_test_case(
     let duration_ms = start.elapsed().as_millis() as u64;
 
     match result {
-        Ok((event_type, severity)) => {
+        Ok((_event_type, severity)) => {
             let passed = case.expected.should_parse
                 && severity >= case.expected.severity_min
                 && severity <= case.expected.severity_max;

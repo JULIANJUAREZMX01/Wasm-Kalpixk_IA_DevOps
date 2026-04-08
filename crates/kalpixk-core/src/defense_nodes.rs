@@ -6,7 +6,7 @@
 //! - Node-3: Credential Theft
 //! - Node-4: Payload Execution
 
-use crate::event::{EventType, KalpixkEvent};
+use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
 
 /// Severity score from 0.0 to 1.0
@@ -221,12 +221,11 @@ pub fn detect_credential_theft(
     let user = user_lower;
 
     // Password spraying (multiple failed auths)
-    if user.contains("admin") || user.contains("root") {
-        if raw.contains("failed") || raw.contains("invalid") {
+    if (user.contains("admin") || user.contains("root"))
+        && (raw.contains("failed") || raw.contains("invalid")) {
             score += 0.4;
             techniques.push("T1110".to_string()); // Brute Force
         }
-    }
 
     // LSASS access attempt (mimikatz)
     if raw.contains("lsass") || raw.contains("lsass.exe") {

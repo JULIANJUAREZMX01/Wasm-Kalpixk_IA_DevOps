@@ -6,7 +6,6 @@
 //! - Security policies enforcement
 
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
 
 /// Security policy levels
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
