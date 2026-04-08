@@ -137,10 +137,14 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     };
 
     // F22-F26: [ATLATL-ORDNANCE] Offensive Node Scores
-    f[22] = crate::defense_nodes::detect_recon(event);
-    f[23] = crate::defense_nodes::detect_lateral_movement(event);
-    f[24] = crate::defense_nodes::detect_credential_theft(event);
-    f[25] = crate::defense_nodes::detect_payload_execution(event);
+    // Prepara las versiones lowercase una sola vez para los 4 nodos
+    let raw_lower_dn = event.raw.to_lowercase();
+    let user_lower_dn = event.user.as_deref().unwrap_or("").to_lowercase();
+    let src_lower_dn = event.source.as_deref().unwrap_or("").to_lowercase();
+    f[22] = crate::defense_nodes::detect_reconnaissance(event, &raw_lower_dn, &user_lower_dn, &src_lower_dn).score;
+    f[23] = crate::defense_nodes::detect_lateral_movement(event, &raw_lower_dn, &user_lower_dn, &src_lower_dn).score;
+    f[24] = crate::defense_nodes::detect_credential_theft(event, &raw_lower_dn, &user_lower_dn, &src_lower_dn).score;
+    f[25] = crate::defense_nodes::detect_payload_execution(event, &raw_lower_dn, &user_lower_dn, &src_lower_dn).score;
     f[26] = (f[22] + f[23] + f[24] + f[25]) / 4.0;
 
     // F27-F31: Features avanzadas
@@ -276,7 +280,7 @@ fn get_windows_event_risk(event: &KalpixkEvent) -> f64 {
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
 
-    match event_id {
+    match id {
         4625 => 0.50,        // Login fallido
         4648 => 0.60,        // Logon con creds explícitas
         4672 => 0.80,        // Admin logon
