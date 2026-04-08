@@ -40,6 +40,12 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
 
 pub struct SyslogParser;
 
+impl Default for SyslogParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SyslogParser {
     pub fn new() -> Self {
         SyslogParser
@@ -142,6 +148,12 @@ impl LogParser for SyslogParser {
 
 pub struct JsonStructuredParser;
 
+impl Default for JsonStructuredParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JsonStructuredParser {
     pub fn new() -> Self {
         JsonStructuredParser
@@ -231,6 +243,12 @@ impl LogParser for JsonStructuredParser {
 // ─── Parser Windows Event Log ─────────────────────────────────────────────────
 
 pub struct WindowsEventParser;
+
+impl Default for WindowsEventParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl WindowsEventParser {
     pub fn new() -> Self {
@@ -341,6 +359,12 @@ impl LogParser for WindowsEventParser {
 
 pub struct Db2AuditParser;
 
+impl Default for Db2AuditParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Db2AuditParser {
     pub fn new() -> Self {
         Db2AuditParser
@@ -422,6 +446,12 @@ impl LogParser for Db2AuditParser {
 // ─── Parser NetFlow v9 / IPFIX (simplificado) ─────────────────────────────────
 
 pub struct NetflowParser;
+
+impl Default for NetflowParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl NetflowParser {
     pub fn new() -> Self {
@@ -564,9 +594,7 @@ fn extract_windows_user(raw: &str) -> Option<String> {
     for pattern in &["Account Name: ", "SubjectUserName: "] {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
-            let end = rest
-                .find(|c: char| c == '\n' || c == '\r')
-                .unwrap_or(rest.len());
+            let end = rest.find(['\n', '\r']).unwrap_or(rest.len());
             let u = rest[..end].trim().to_string();
             if !u.is_empty() && u != "-" {
                 return Some(u);
@@ -579,9 +607,7 @@ fn extract_windows_user(raw: &str) -> Option<String> {
 fn extract_windows_computer(raw: &str) -> Option<String> {
     if let Some(pos) = raw.find("Computer: ") {
         let rest = &raw[pos + 10..];
-        let end = rest
-            .find(|c: char| c == '\n' || c == '\r')
-            .unwrap_or(rest.len());
+        let end = rest.find(['\n', '\r']).unwrap_or(rest.len());
         return Some(rest[..end].trim().to_string());
     }
     None

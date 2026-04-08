@@ -1,7 +1,7 @@
-from fastapi.testclient import TestClient
-import pytest
 import sys
 from pathlib import Path
+
+from fastapi.testclient import TestClient
 
 # Add python dir to path if needed
 sys.path.insert(0, str(Path(__file__).parent.parent))

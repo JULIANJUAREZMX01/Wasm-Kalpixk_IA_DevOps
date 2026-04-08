@@ -9,6 +9,3 @@ edition = "2021"
 authors = ["Julián Juárez <julianjuarezmx01@gmail.com>"]
 license = "MIT"
 
-[package]
-name = "kalpixk-workspace"
-version = "0.1.0"

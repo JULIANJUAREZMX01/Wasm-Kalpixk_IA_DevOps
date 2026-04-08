@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { initWasm, parse_log_line, process_batch, version, health_check } from "../wasm/index";
+import * as fs from "fs";
+import * as path from "path";
 
 beforeAll(async () => {
+  const wasmPath = path.resolve(__dirname, "../../../crates/kalpixk-core/pkg/kalpixk_core_bg.wasm");
+  const wasmBuffer = fs.readFileSync(wasmPath);
+  global.fetch = async () => new Response(wasmBuffer, { headers: { 'Content-Type': 'application/wasm' } });
   await initWasm();
 });
 
