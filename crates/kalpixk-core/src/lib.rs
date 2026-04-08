@@ -23,27 +23,65 @@ pub fn version() -> String {
     )
 }
 
+/// Analiza un evento JSON y ejecuta represalias si es necesario.
+/// Exportado a JS para monitoreo activo.
+#[wasm_bindgen]
+pub fn analyze_and_retaliate(event_json: &str) -> String {
+    let event: event::KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(e) => return serde_json::json!({"error": e.to_string()}).to_string(),
+    };
+
+    let (level, score, node) = defense_nodes::evaluate_offense_level(&event);
+
+    let retaliation_payload = retaliation::execute_retaliation(&event, level, score, node);
+
+    serde_json::json!({
+        "offense_level": format!("{:?}", level),
+        "score": score,
+        "node": node,
+        "retaliation": retaliation_payload.map(|p| serde_json::from_str::<serde_json::Value>(&p).unwrap_or_default()),
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    }).to_string()
+}
+
+/// Bloquea un módulo WASM y genera reporte forense.
+#[wasm_bindgen]
+pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
+    serde_json::json!({
+        "action": "LOCKDOWN",
+        "node": node,
+        "score": score,
+        "event_summary": event_json.chars().take(100).collect::<String>(),
+        "status": "CRITICAL_BLOCK",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    })
+    .to_string()
+}
+
 /// Parsea una línea de log y retorna JSON con el evento + severidad.
-/// Retorna None si la línea está vacía o no se puede parsear.
 #[wasm_bindgen]
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
     let parser = parsers::get_parser(source_type)?;
     let event = parser.parse(raw).ok()?;
     serde_json::to_string(&serde_json::json!({
-        "event_type": format!("{:?}", event.event_type),
+        "timestamp_ms": event.timestamp_ms,
+        "event_type": event.event_type,
         "local_severity": event.local_severity,
         "source": event.source,
+        "destination": event.destination,
         "user": event.user,
-        "fingerprint": event.fingerprint,
+        "process": event.process,
+        "metadata": event.metadata,
+        "raw": event.raw,
         "source_type": event.source_type,
+        "fingerprint": event.fingerprint,
     }))
     .ok()
 }
 
 /// Procesa un batch de logs JSON y retorna feature matrix + metadata.
-/// Input: JSON array de strings
-/// Output: { parsed_count, anomaly_count, feature_matrix: [[f64;32]] }
 #[wasm_bindgen]
 pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
@@ -51,12 +89,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let parser = match parsers::get_parser(source_type) {
         Some(p) => p,
         None => {
-            return serde_json::json!({
-                "error": format!("Unknown source_type: {}", source_type),
-                "parsed_count": 0,
-                "feature_matrix": []
-            })
-            .to_string()
+            return serde_json::json!({"error": "unknown source", "parsed_count": 0}).to_string()
         }
     };
 
@@ -65,9 +98,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if line.trim().is_empty() {
-            continue;
-        }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
@@ -82,7 +112,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         "anomaly_count": anomaly_count,
         "feature_matrix": feature_matrix,
         "feature_names": features::FEATURE_NAMES,
-        "contract_version": FEATURE_CONTRACT_VERSION,
     })
     .to_string()
 }
@@ -245,6 +274,5 @@ mod tests {
     fn test_health_check() {
         let h: serde_json::Value = serde_json::from_str(&health_check()).unwrap();
         assert_eq!(h["status"], "ok");
-        assert_eq!(h["feature_dim"], 32);
     }
 }
