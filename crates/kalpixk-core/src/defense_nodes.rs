@@ -222,10 +222,11 @@ pub fn detect_credential_theft(
 
     // Password spraying (multiple failed auths)
     if (user.contains("admin") || user.contains("root"))
-        && (raw.contains("failed") || raw.contains("invalid")) {
-            score += 0.4;
-            techniques.push("T1110".to_string()); // Brute Force
-        }
+        && (raw.contains("failed") || raw.contains("invalid"))
+    {
+        score += 0.4;
+        techniques.push("T1110".to_string()); // Brute Force
+    }
 
     // LSASS access attempt (mimikatz)
     if raw.contains("lsass") || raw.contains("lsass.exe") {

@@ -1,6 +1,10 @@
 target/
 **/*.rs.bk
 python/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 python/build/
 python/dist/
 python/*.egg-info/
