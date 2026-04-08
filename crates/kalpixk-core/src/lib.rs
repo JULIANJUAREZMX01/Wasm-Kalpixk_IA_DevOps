@@ -23,7 +23,7 @@ pub fn version() -> String {
     )
 }
 
-/// Analiza un evento JSON y ejecuta represalias si es necesario.
+/// Analiza un evento JSON y retorna nivel de amenaza + nodo dominante.
 /// Exportado a JS para monitoreo activo.
 #[wasm_bindgen]
 pub fn analyze_and_retaliate(event_json: &str) -> String {
@@ -32,15 +32,24 @@ pub fn analyze_and_retaliate(event_json: &str) -> String {
         Err(e) => return serde_json::json!({"error": e.to_string()}).to_string(),
     };
 
-    let (level, score, node) = defense_nodes::evaluate_offense_level(&event);
+    use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
 
-    let retaliation_payload = retaliation::execute_retaliation(&event, level, score, node);
+    let all_nodes = analyze_all_nodes(&event);
+    let max = get_max_severity(&event);
+    let lockdown = should_lockdown(&event);
+
+    // Nodo con score más alto
+    let dominant_node = all_nodes.iter()
+        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|n| n.node.clone())
+        .unwrap_or_else(|| "NONE".to_string());
 
     serde_json::json!({
-        "offense_level": format!("{:?}", level),
-        "score": score,
-        "node": node,
-        "retaliation": retaliation_payload.map(|p| serde_json::from_str::<serde_json::Value>(&p).unwrap_or_default()),
+        "offense_level": format!("{:?}", max.as_level()),
+        "score": max.as_f64(),
+        "node": dominant_node,
+        "lockdown": lockdown,
+        "all_nodes": all_nodes,
         "timestamp": chrono::Utc::now().timestamp_millis(),
     }).to_string()
 }
