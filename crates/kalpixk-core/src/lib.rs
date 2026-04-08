@@ -39,8 +39,13 @@ pub fn analyze_and_retaliate(event_json: &str) -> String {
     let lockdown = should_lockdown(&event);
 
     // Nodo con score más alto
-    let dominant_node = all_nodes.iter()
-        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
+    let dominant_node = all_nodes
+        .iter()
+        .max_by(|a, b| {
+            a.score
+                .partial_cmp(&b.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .map(|n| n.node.clone())
         .unwrap_or_else(|| "NONE".to_string());
 
@@ -51,7 +56,8 @@ pub fn analyze_and_retaliate(event_json: &str) -> String {
         "lockdown": lockdown,
         "all_nodes": all_nodes,
         "timestamp": chrono::Utc::now().timestamp_millis(),
-    }).to_string()
+    })
+    .to_string()
 }
 
 /// Bloquea un módulo WASM y genera reporte forense.
