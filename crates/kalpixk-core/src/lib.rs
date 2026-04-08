@@ -3,8 +3,8 @@ pub mod defense_nodes;
 pub mod event;
 pub mod features;
 pub mod parsers;
-pub mod retaliation;
-pub mod severity;
+pub mod wasp;
+pub mod wast;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use wasm_bindgen::prelude::*;
@@ -116,15 +116,133 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     .to_string()
 }
 
+/// Computa features UEBA desde una sesión de eventos JSON.
+/// Input: JSON array de KalpixkEvent
+/// Output: { features: [f64;32], risk_score: f64 }
+#[wasm_bindgen]
+pub fn compute_ueba_features(events_json: &str) -> String {
+    let events: Vec<event::KalpixkEvent> = serde_json::from_str(events_json).unwrap_or_default();
+
+    if events.is_empty() {
+        return serde_json::json!({
+            "features": vec![0.0f64; features::FEATURE_DIM],
+            "risk_score": 0.0,
+            "event_count": 0
+        })
+        .to_string();
+    }
+
+    // Promediar features de todos los eventos
+    let mut avg = vec![0.0f64; features::FEATURE_DIM];
+    let n = events.len() as f64;
+    for ev in &events {
+        let fvec = features::extract(ev);
+        for (i, v) in fvec.iter().enumerate() {
+            avg[i] += v / n;
+        }
+    }
+
+    let risk_score = avg[1]; // local_severity promedio
+    serde_json::json!({
+        "features": avg,
+        "risk_score": risk_score,
+        "event_count": events.len(),
+        "contract_version": FEATURE_CONTRACT_VERSION,
+    })
+    .to_string()
+}
+
+/// Parsea un log JSON crudo (formato interno) y extrae features.
+#[wasm_bindgen]
+pub fn parse_and_extract(raw_log: &str) -> Result<String, JsValue> {
+    SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
+    let event: event::KalpixkEvent = serde_json::from_str(raw_log)
+        .map_err(|e| JsValue::from_str(&format!("Parse error: {}", e)))?;
+    let feature_vec = features::extract(&event);
+    let result = serde_json::json!({
+        "features": feature_vec,
+        "feature_dim": features::FEATURE_DIM,
+        "event_type": format!("{:?}", event.event_type),
+        "local_severity": event.local_severity,
+        "contract_version": FEATURE_CONTRACT_VERSION,
+    });
+    Ok(result.to_string())
+}
+
+/// Retorna los nombres de las 32 features
+#[wasm_bindgen]
+pub fn get_feature_names() -> String {
+    serde_json::to_string(features::FEATURE_NAMES).unwrap_or_default()
+}
+
+/// Health check del módulo
 #[wasm_bindgen]
 pub fn health_check() -> String {
     serde_json::json!({
         "status": "ok",
         "module": "kalpixk-core",
-        "offensive_mode": true,
-        "nodes": ["recon", "lateral", "credential", "payload"],
+        "feature_dim": features::FEATURE_DIM,
+        "contract_version": FEATURE_CONTRACT_VERSION,
+        "defense_nodes": true,
+        "wasp": true,
+        "wast": true,
     })
     .to_string()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WASP — WebAssembly Security Protocol (Exported Functions)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[wasm_bindgen]
+pub fn validate_input_wasp(raw: &str, max_len: usize) -> String {
+    let result = wasp::validate_input(raw, max_len);
+    serde_json::to_string(&result).unwrap_or_default()
+}
+
+#[wasm_bindgen]
+pub fn check_memory_bounds_wasp(offset: usize, length: usize, max_memory: usize) -> String {
+    let result = wasp::check_memory_bounds(offset, length, max_memory);
+    serde_json::to_string(&result).unwrap_or_default()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// Defense Nodes — MITRE ATT&CK Detection
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+#[wasm_bindgen]
+pub fn analyze_defense_nodes(event_json: &str) -> String {
+    use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
+    use event::KalpixkEvent;
+    
+    let event: KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(_) => return serde_json::json!({"error": "Invalid event JSON"}).to_string(),
+    };
+    
+    let all_nodes = analyze_all_nodes(&event);
+    let max = get_max_severity(&event);
+    let lockdown = should_lockdown(&event);
+    
+    serde_json::json!({
+        "nodes": all_nodes,
+        "max": max,
+        "lockdown_triggered": lockdown,
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn check_lockdown(event_json: &str) -> bool {
+    use defense_nodes::{should_lockdown};
+    use event::KalpixkEvent;
+    
+    let event: KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+    
+    should_lockdown(&event)
 }
 
 #[cfg(test)]

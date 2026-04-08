@@ -275,11 +275,16 @@ fn get_windows_event_risk(event: &KalpixkEvent) -> f64 {
         .get("windows_event_id")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
-    match id {
-        4625 => 0.5,
-        4672 => 0.8,
-        7045 => 0.9,
-        _ => 0.2,
+
+    match event_id {
+        4625 => 0.50,        // Login fallido
+        4648 => 0.60,        // Logon con creds explícitas
+        4672 => 0.80,        // Admin logon
+        4698..=4700 => 0.85, // Scheduled task
+        4720 => 0.70,        // User creado
+        4726 => 0.75,        // User eliminado
+        7045 => 0.90,        // Servicio instalado
+        _ => 0.20,
     }
 }
 

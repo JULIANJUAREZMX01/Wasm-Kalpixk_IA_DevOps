@@ -1,23 +1,22 @@
 [package]
 name = "kalpixk-core"
 description = "WASM-native log parser and feature extractor for Blue Team SIEM"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
+version = "0.1.0"
+edition = "2021"
+authors = ["Julián Juárez <julianjuarezmx01@gmail.com>"]
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-wasm-bindgen = { workspace = true }
-js-sys = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
-log = { workspace = true }
-chrono = { workspace = true }
-lazy_static = "1.4"
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+log = "0.4"
+chrono = { version = "0.4", features = ["wasmbind"] }
 
 # Solo disponible fuera de WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

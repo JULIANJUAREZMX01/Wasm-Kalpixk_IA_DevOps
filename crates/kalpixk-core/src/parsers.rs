@@ -70,14 +70,14 @@ impl LogParser for SyslogParser {
         let mut user: Option<String> = None;
         let mut process: Option<String> = None;
         let mut source = "unknown".to_string();
-        let mut local_severity = 0.30;
+        let mut local_severity: f64 = 0.30_f64;
 
         // Detectar patrones comunes de syslog
         let lower = raw.to_lowercase();
 
         if lower.contains("failed password") || lower.contains("authentication failure") {
             event_type = EventType::LoginFailure;
-            local_severity = 0.45;
+            local_severity = 0.45_f64;
 
             if let Some(u) = extract_syslog_user(raw) {
                 user = Some(u.clone());
@@ -89,20 +89,20 @@ impl LogParser for SyslogParser {
             }
         } else if lower.contains("accepted password") || lower.contains("accepted publickey") {
             event_type = EventType::LoginSuccess;
-            local_severity = 0.15;
+            local_severity = 0.15_f64;
             if let Some(u) = extract_syslog_user(raw) {
                 user = Some(u);
             }
         } else if lower.contains("sudo") && lower.contains("command") {
             event_type = EventType::ProcessExecution;
-            local_severity = 0.50;
+            local_severity = 0.50_f64;
             metadata.insert("sudo_cmd".to_string(), serde_json::json!(raw));
         } else if lower.contains("useradd") || lower.contains("adduser") {
             event_type = EventType::UserCreation;
-            local_severity = 0.70;
+            local_severity = 0.70_f64;
         } else if lower.contains("userdel") || lower.contains("deluser") {
             event_type = EventType::UserDeletion;
-            local_severity = 0.75;
+            local_severity = 0.75_f64;
         } else if lower.contains("iptables") || lower.contains("ufw") {
             event_type = EventType::NetworkConnection;
             metadata.insert("firewall_event".to_string(), serde_json::json!(true));
@@ -251,7 +251,7 @@ impl LogParser for WindowsEventParser {
 
         let mut metadata = HashMap::new();
         let mut event_type = EventType::Unknown;
-        let mut local_severity = 0.30;
+        let mut local_severity: f64 = 0.30_f64;
         let mut user: Option<String> = None;
         let mut source = "windows_host".to_string();
 
@@ -282,7 +282,7 @@ impl LogParser for WindowsEventParser {
             4698 | 4699 | 4700 | 4702 => {
                 // Scheduled task creada/modificada/habilitada
                 event_type = EventType::ServiceChange;
-                local_severity = 0.80;
+                local_severity = 0.80_f64;
             }
             4720 => {
                 event_type = EventType::UserCreation;
@@ -295,17 +295,17 @@ impl LogParser for WindowsEventParser {
             4732 | 4733 => {
                 // Usuario agregado/removido de grupo
                 event_type = EventType::PolicyChange;
-                local_severity = 0.65;
+                local_severity = 0.65_f64;
             }
             4776 => {
                 event_type = EventType::LoginFailure;
-                local_severity = 0.60;
+                local_severity = 0.60_f64;
                 metadata.insert("dc_auth_failure".to_string(), serde_json::json!(true));
             }
             7045 => {
                 // Nuevo servicio instalado
                 event_type = EventType::ServiceChange;
-                local_severity = 0.85;
+                local_severity = 0.85_f64;
             }
             _ => {}
         }
@@ -361,23 +361,23 @@ impl LogParser for Db2AuditParser {
         let mut metadata = HashMap::new();
         let lower = raw.to_lowercase();
         let mut event_type = EventType::DbQuery;
-        let mut local_severity = 0.15;
+        let mut local_severity: f64 = 0.15_f64;
 
         // Detectar operaciones anómalas en DB2
         if lower.contains("drop") || lower.contains("truncate") {
             event_type = EventType::DbAnomalousQuery;
-            local_severity = 0.85;
+            local_severity = 0.85_f64;
             metadata.insert("destructive_query".to_string(), serde_json::json!(true));
         } else if lower.contains("grant") || lower.contains("revoke") {
             event_type = EventType::PolicyChange;
-            local_severity = 0.75;
+            local_severity = 0.75_f64;
         } else if lower.contains("create user") || lower.contains("alter user") {
             event_type = EventType::UserCreation;
-            local_severity = 0.80;
+            local_severity = 0.80_f64;
         } else if lower.contains("export") || lower.contains("load") || lower.contains("import") {
             // Operaciones de volumen de datos — potencial exfiltración
             event_type = EventType::DbAnomalousQuery;
-            local_severity = 0.70;
+            local_severity = 0.70_f64;
             metadata.insert("bulk_data_operation".to_string(), serde_json::json!(true));
         }
 
@@ -394,7 +394,7 @@ impl LogParser for Db2AuditParser {
         ];
         for table in &sensitive_tables {
             if lower.contains(table) {
-                local_severity = (local_severity + 0.20f64).min(1.0);
+                local_severity = (local_severity + 0.20_f64).min(1.0_f64);
                 metadata.insert("sensitive_table".to_string(), serde_json::json!(table));
                 break;
             }
@@ -453,21 +453,21 @@ impl LogParser for NetflowParser {
         let dst_port: u16 = parts.get(3).and_then(|s| s.parse().ok()).unwrap_or(0);
         let bytes: u64 = parts.get(5).and_then(|s| s.parse().ok()).unwrap_or(0);
 
-        let mut local_severity = 0.20;
+        let mut local_severity: f64 = 0.20_f64;
         let mut event_type = EventType::NetworkConnection;
         let mut metadata = HashMap::new();
 
         // Puertos de alto riesgo
         let high_risk_ports = [22, 23, 3389, 445, 135, 139, 3306, 5432, 6379, 27017];
         if high_risk_ports.contains(&dst_port) {
-            local_severity = 0.50;
+            local_severity = 0.50_f64;
             metadata.insert("high_risk_port".to_string(), serde_json::json!(dst_port));
         }
 
         // Transferencia masiva de datos — potencial exfiltración
         if bytes > 100_000_000 {
             // >100MB
-            local_severity = (local_severity + 0.30f64).min(1.0);
+            local_severity = (local_severity + 0.30_f64).min(1.0_f64);
             event_type = EventType::DbAnomalousQuery; // Reutilizamos este tipo
             metadata.insert("large_transfer_bytes".to_string(), serde_json::json!(bytes));
         }

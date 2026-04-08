@@ -1,0 +1,116 @@
+name: Deploy Kalpixk WASM to GitHub Pages
+
+# Se ejecuta en cada push a main O manualmente
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permisos necesarios para GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Solo un deployment a la vez
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ─── Paso 1: Compilar el WASM desde Rust ─────────────────────────────────────
+  build-wasm:
+    name: Compilar Rust → WASM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar Rust + target WASM
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Cargo (acelera builds futuros)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/kalpixk-core
+
+      - name: Instalar wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Compilar kalpixk-core a WASM
+        run: |
+          cd crates/kalpixk-core
+          wasm-pack build --target web --release
+          echo "WASM compilado:"
+          ls -lh pkg/
+          echo "Tamaño: $(du -sh pkg/kalpixk_core_bg.wasm | cut -f1)"
+
+      # Guardar el pkg/ como artifact para el siguiente job
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kalpixk-wasm-pkg
+          path: crates/kalpixk-core/pkg/
+
+  # ─── Paso 2: Construir el sitio estático ──────────────────────────────────────
+  build-site:
+    name: Construir sitio GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-wasm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Descargar WASM compilado
+        uses: actions/download-artifact@v4
+        with:
+          name: kalpixk-wasm-pkg
+          # Lo ponemos directamente en web/src/wasm/ para que Vite lo encuentre
+          path: crates/kalpixk-core/pkg/
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependencias npm
+        run: |
+          cd web
+          npm install
+
+      - name: Build de producción con Vite
+        run: |
+          cd web
+          npm run build
+        env:
+          # En producción, la base URL es /Wasm-Kalpixk_IA_DevOps/ (nombre del repo)
+          VITE_BASE_URL: /Wasm-Kalpixk_IA_DevOps/
+
+      # El dashboard HTML estático también va al sitio
+      - name: Copiar dashboard HTML al sitio
+        run: |
+          cp -r dashboard/ web/dist/dashboard/ 2>/dev/null || true
+          cp BENCHMARK_RESULTS.md web/dist/ 2>/dev/null || true
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact de Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist/
+
+  # ─── Paso 3: Deploy a GitHub Pages ───────────────────────────────────────────
+  deploy:
+    name: Deploy a GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-site
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
