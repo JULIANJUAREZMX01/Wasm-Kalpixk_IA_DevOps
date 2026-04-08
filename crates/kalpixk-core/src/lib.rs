@@ -50,8 +50,8 @@ pub fn analyze_and_retaliate(event_json: &str) -> String {
         .unwrap_or_else(|| "NONE".to_string());
 
     serde_json::json!({
-        "offense_level": format!("{:?}", max.as_level()),
-        "score": max.as_f64(),
+        "offense_level": format!("{:?}", max.level),
+        "score": max.score,
         "node": dominant_node,
         "lockdown": lockdown,
         "all_nodes": all_nodes,
