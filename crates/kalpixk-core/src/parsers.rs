@@ -594,9 +594,7 @@ fn extract_windows_user(raw: &str) -> Option<String> {
     for pattern in &["Account Name: ", "SubjectUserName: "] {
         if let Some(pos) = raw.find(pattern) {
             let rest = &raw[pos + pattern.len()..];
-            let end = rest
-                .find(['\n', '\r'])
-                .unwrap_or(rest.len());
+            let end = rest.find(['\n', '\r']).unwrap_or(rest.len());
             let u = rest[..end].trim().to_string();
             if !u.is_empty() && u != "-" {
                 return Some(u);
@@ -609,9 +607,7 @@ fn extract_windows_user(raw: &str) -> Option<String> {
 fn extract_windows_computer(raw: &str) -> Option<String> {
     if let Some(pos) = raw.find("Computer: ") {
         let rest = &raw[pos + 10..];
-        let end = rest
-            .find(['\n', '\r'])
-            .unwrap_or(rest.len());
+        let end = rest.find(['\n', '\r']).unwrap_or(rest.len());
         return Some(rest[..end].trim().to_string());
     }
     None
