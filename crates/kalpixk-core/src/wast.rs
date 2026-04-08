@@ -1,5 +1,5 @@
 //! WAST — WebAssembly Test Format
-//! 
+//!
 //! Testing framework for Kalpixk WASM modules:
 //! - Test cases definition
 //! - Expected results validation
@@ -52,16 +52,16 @@ pub fn run_test_case(
     parse_fn: fn(&str) -> Result<(String, f64), String>,
 ) -> WastTestResult {
     let start = std::time::Instant::now();
-    
+
     let result = parse_fn(&case.input);
     let duration_ms = start.elapsed().as_millis() as u64;
-    
+
     match result {
         Ok((event_type, severity)) => {
             let passed = case.expected.should_parse
                 && severity >= case.expected.severity_min
                 && severity <= case.expected.severity_max;
-            
+
             WastTestResult {
                 name: case.name.clone(),
                 passed,
@@ -70,22 +70,22 @@ pub fn run_test_case(
                 error: if passed {
                     None
                 } else {
-                    Some(format!("Severity {} not in range [{}, {}]",
-                        severity, case.expected.severity_min, case.expected.severity_max))
+                    Some(format!(
+                        "Severity {} not in range [{}, {}]",
+                        severity, case.expected.severity_min, case.expected.severity_max
+                    ))
                 },
                 duration_ms,
             }
         }
-        Err(e) => {
-            WastTestResult {
-                name: case.name.clone(),
-                passed: !case.expected.should_parse,
-                actual_severity: 0.0,
-                expected_severity: 0.0,
-                error: Some(e),
-                duration_ms,
-            }
-        }
+        Err(e) => WastTestResult {
+            name: case.name.clone(),
+            passed: !case.expected.should_parse,
+            actual_severity: 0.0,
+            expected_severity: 0.0,
+            error: Some(e),
+            duration_ms,
+        },
     }
 }
 
@@ -95,15 +95,13 @@ pub fn run_test_suite(
     parse_fn: fn(&str) -> Result<(String, f64), String>,
 ) -> WastSuiteResult {
     let start = std::time::Instant::now();
-    
-    let results: Vec<WastTestResult> = cases.iter()
-        .map(|c| run_test_case(c, parse_fn))
-        .collect();
-    
+
+    let results: Vec<WastTestResult> = cases.iter().map(|c| run_test_case(c, parse_fn)).collect();
+
     let passed = results.iter().filter(|r| r.passed).count();
     let failed = results.len() - passed;
     let duration_ms = start.elapsed().as_millis() as u64;
-    
+
     WastSuiteResult {
         total: results.len(),
         passed,
@@ -116,7 +114,7 @@ pub fn run_test_suite(
 /// Predefined test cases for Kalpixk parsers
 pub mod test_cases {
     use super::*;
-    
+
     /// Syslog parser test cases
     pub fn syslog_tests() -> Vec<WastTestCase> {
         vec![
@@ -166,7 +164,7 @@ pub mod test_cases {
             },
         ]
     }
-    
+
     /// JSON parser test cases
     pub fn json_tests() -> Vec<WastTestCase> {
         vec![
@@ -194,7 +192,7 @@ pub mod test_cases {
             },
         ]
     }
-    
+
     /// Windows Event parser test cases
     pub fn windows_tests() -> Vec<WastTestCase> {
         vec![
@@ -233,7 +231,7 @@ pub mod test_cases {
             },
         ]
     }
-    
+
     /// DB2 parser test cases
     pub fn db2_tests() -> Vec<WastTestCase> {
         vec![
@@ -266,7 +264,7 @@ pub mod test_cases {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     fn mock_parse(input: &str) -> Result<(String, f64), String> {
         let lower = input.to_lowercase();
         if lower.contains("failed") || lower.contains("failure") {
@@ -277,7 +275,7 @@ mod tests {
             Ok(("login_success".to_string(), 0.15))
         }
     }
-    
+
     #[test]
     fn test_run_single_test() {
         let case = WastTestCase {
@@ -291,19 +289,21 @@ mod tests {
             },
             timeout_ms: None,
         };
-        
+
         let result = run_test_case(&case, mock_parse);
         assert!(result.passed);
     }
-    
+
     #[test]
     fn test_run_suite() {
         let cases = test_cases::syslog_tests();
         let result = run_test_suite(&cases, mock_parse);
-        
-        println!("Total: {}, Passed: {}, Failed: {}", 
-            result.total, result.passed, result.failed);
-        
+
+        println!(
+            "Total: {}, Passed: {}, Failed: {}",
+            result.total, result.passed, result.failed
+        );
+
         // Most should pass
         assert!(result.passed >= result.total / 2);
     }

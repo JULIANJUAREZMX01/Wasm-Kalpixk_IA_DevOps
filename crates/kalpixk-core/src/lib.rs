@@ -185,16 +185,16 @@ pub fn check_memory_bounds_wasp(offset: usize, length: usize, max_memory: usize)
 pub fn analyze_defense_nodes(event_json: &str) -> String {
     use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
     use event::KalpixkEvent;
-    
+
     let event: KalpixkEvent = match serde_json::from_str(event_json) {
         Ok(e) => e,
         Err(_) => return serde_json::json!({"error": "Invalid event JSON"}).to_string(),
     };
-    
+
     let all_nodes = analyze_all_nodes(&event);
     let max = get_max_severity(&event);
     let lockdown = should_lockdown(&event);
-    
+
     serde_json::json!({
         "nodes": all_nodes,
         "max": max,
@@ -205,14 +205,14 @@ pub fn analyze_defense_nodes(event_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn check_lockdown(event_json: &str) -> bool {
-    use defense_nodes::{should_lockdown};
+    use defense_nodes::should_lockdown;
     use event::KalpixkEvent;
-    
+
     let event: KalpixkEvent = match serde_json::from_str(event_json) {
         Ok(e) => e,
         Err(_) => return false,
     };
-    
+
     should_lockdown(&event)
 }
 
