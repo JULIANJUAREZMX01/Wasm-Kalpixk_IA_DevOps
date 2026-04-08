@@ -3,6 +3,7 @@ Utilidades de dispositivo — detección automática de AMD ROCm
 """
 
 import logging
+
 import torch
 
 logger = logging.getLogger("kalpixk.utils.device")

@@ -1,48 +1,157 @@
+# =============================================================================
+# python/pyproject.toml — Configuración del paquete Python de Kalpixk
+# =============================================================================
+#
+# PROPÓSITO DE ESTE ARCHIVO:
+#   Define el proyecto Python para que herramientas como pip, uv, y hatchling
+#   sepan cómo instalar y empaquetar el código de Kalpixk.
+#
+# POR QUÉ EL CI FALLABA ANTES:
+#   El CI ejecuta `uv sync` que usa hatchling para resolver dependencias.
+#   Hatchling buscaba automáticamente un directorio llamado "kalpixk_backend"
+#   (el nombre del proyecto con guiones convertidos a guiones bajos).
+#   Ese directorio no existe — el código está en api/, detection/, utils/.
+#
+#   Error exacto del CI:
+#     ValueError: Unable to determine which files to ship inside the wheel
+#     The most likely cause: no directory matching name 'kalpixk_backend'
+#
+# FIX APLICADO:
+#   Agregar [tool.hatch.build.targets.wheel] con packages explícitos
+#   para decirle a hatchling exactamente dónde está el código.
+#
+# =============================================================================
+
 [project]
-name = "kalpixk-ai"
+# Nombre del paquete Python — lo que aparece en pip list
+name = "kalpixk-backend"
 version = "0.1.0"
-description = "Kalpixk SIEM — AMD ROCm anomaly detection engine + KYNIKOS orchestrator"
-authors = [{name = "Julián Juárez", email = "julianjuarezmx01@gmail.com"}]
-license = {text = "MIT"}
+description = "Kalpixk SIEM Backend — AMD ROCm anomaly detection engine"
+authors = [{ name = "Julián Juárez", email = "julianjuarezmx01@gmail.com" }]
+license = { text = "MIT" }
+
+# Python 3.11+ requerido por:
+# - match statements usados en los modelos
+# - tomllib incluido en stdlib (configuración)
+# - mejoras de performance en asyncio
 requires-python = ">=3.11"
 
+# =============================================================================
+# DEPENDENCIAS DE PRODUCCIÓN
+# =============================================================================
+# Estas son las dependencias que se instalan en el droplet AMD MI300X.
+# PyTorch se instala con soporte ROCm en producción (ver sesion_amd.sh).
+# En desarrollo local (sin GPU) se instala la versión CPU normal.
+# =============================================================================
 dependencies = [
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.27.0",
-    "torch>=2.0.0",
+    # API REST y WebSocket — FastAPI es el framework que expone /api/detect,
+    # /api/explain, y el WebSocket /ws/events para el dashboard en tiempo real
+    "fastapi>=0.115.0",
+
+    # Servidor ASGI con soporte WebSocket y HTTP/2
+    # [standard] incluye watchfiles (hot-reload), websockets, httptools
+    "uvicorn[standard]>=0.32.0",
+
+    # Validación de modelos de datos con tipos en Python
+    # Versión 2.x es ~10x más rápida que v1 y es la actual
+    "pydantic>=2.9.0",
+
+    # Deep learning framework — en producción se instala con ROCm:
+    # pip install torch --index-url https://download.pytorch.org/whl/rocm6.1
+    # En desarrollo local se instala la versión CPU normal
+    "torch>=2.4.0",
+
+    # Computación numérica — base de todas las operaciones con features
     "numpy>=1.26.0",
-    "scikit-learn>=1.4.0",
-    "pandas>=2.1.0",
-    "pydantic>=2.0.0",
+
+    # Isolation Forest para detección de anomalías en CPU
+    # En GPU se usa cuML (instalado separadamente en el droplet ROCm)
+    "scikit-learn>=1.5.0",
+
+    # Cliente HTTP async — usado para llamar al LLM explainer (KYNYKOS router)
     "httpx>=0.27.0",
-    "loguru>=0.7.0",
-    "python-telegram-bot>=21.0.0",
-    "groq>=0.4.0",
-    "msgpack>=1.0.7",
-    "websockets>=12.0",
-    "rich>=13.0.0",
-    "python-dotenv>=1.0.0",
+
+    # WebSockets — protocolo de comunicación con el dashboard en tiempo real
+    "websockets>=13.0",
+
+    # Para recibir archivos/formularios en la API (subida de logs)
+    "python-multipart>=0.0.12",
 ]
 
+# =============================================================================
+# DEPENDENCIAS DE DESARROLLO
+# =============================================================================
+# Solo se instalan en el entorno de desarrollo (no en producción)
+# `uv sync --all-extras` las instala todas
+# =============================================================================
 [project.optional-dependencies]
-rocm = ["torch>=2.9.0"]
 dev = [
+    # Framework de testing async — necesario para testear FastAPI
     "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "ruff>=0.3.0",
+    "pytest-asyncio>=0.24.0",
+
+    # Cliente HTTP para tests de la API
     "httpx>=0.27.0",
+
+    # Linter y formatter Python — más rápido que flake8 + isort
+    "ruff>=0.7.0",
 ]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+# =============================================================================
+# CONFIGURACIÓN DE PYTEST
+# =============================================================================
+[tool.pytest.ini_options]
+# asyncio_mode = "auto" permite usar async def en tests sin decoradores extra
+asyncio_mode = "auto"
+# Donde buscar tests
+testpaths = ["tests"]
+# Formato del output
+log_cli = true
+log_cli_level = "INFO"
 
+# =============================================================================
+# CONFIGURACIÓN DE RUFF (linter)
+# =============================================================================
 [tool.ruff]
+# Líneas de máximo 100 caracteres (más permisivo que el default de 88)
 line-length = 100
+# Target Python 3.11
 target-version = "py311"
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
+[tool.ruff.lint]
+# E = errores estilo PEP8, F = errores lógicos pyflakes
+# I = import sorting, UP = upgrades de sintaxis Python moderna
+select = ["E", "F", "I", "UP"]
+# Ignorar E501 (líneas largas) cuando hay URLs o strings largos
+ignore = ["E501"]
 
+# =============================================================================
+# CONFIGURACIÓN DE HATCHLING (build backend)
+# =============================================================================
+#
+# ESTE ES EL FIX CRÍTICO:
+#   hatchling necesita saber qué directorios contienen el código Python
+#   que debe incluir en el wheel (paquete instalable).
+#
+#   Sin esto, hatchling busca automáticamente un directorio con el nombre
+#   del proyecto ("kalpixk_backend") y no lo encuentra → error en CI.
+#
+#   Con esto, le decimos explícitamente: "el código está en estos 4 directorios"
+#
+# Estructura del código Python:
+#   python/
+#   ├── api/        ← FastAPI routes, WebSocket handlers
+#   ├── detection/  ← Autoencoder, IsolationForest, ensemble
+#   ├── utils/      ← device detection, metrics, helpers
+#   └── training/   ← scripts de entrenamiento de modelos
+#
 [tool.hatch.build.targets.wheel]
-packages = ["api", "models", "utils"]
+packages = ["api", "detection", "utils", "training"]
+
+# =============================================================================
+# BUILD SYSTEM
+# =============================================================================
+[build-system]
+# hatchling es el build backend moderno de Python (más rápido que setuptools)
+requires = ["hatchling"]
+build-backend = "hatchling.build"
