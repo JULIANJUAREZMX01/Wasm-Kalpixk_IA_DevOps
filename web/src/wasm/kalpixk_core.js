@@ -1,6 +1,55 @@
 /* @ts-self-types="./kalpixk_core.d.ts" */
 
 /**
+ * @param {string} event_json
+ * @returns {string}
+ */
+export function analyze_defense_nodes(event_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.analyze_defense_nodes(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {string} event_json
+ * @returns {boolean}
+ */
+export function check_lockdown(event_json) {
+    const ptr0 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.check_lockdown(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
+ * @param {number} offset
+ * @param {number} length
+ * @param {number} max_memory
+ * @returns {string}
+ */
+export function check_memory_bounds_wasp(offset, length, max_memory) {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.check_memory_bounds_wasp(offset, length, max_memory);
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * Computa features UEBA desde una sesión de eventos JSON.
  * Input: JSON array de KalpixkEvent
  * Output: { features: [f64;32], risk_score: f64 }
@@ -125,6 +174,26 @@ export function process_batch(logs_json, source_type) {
         return getStringFromWasm0(ret[0], ret[1]);
     } finally {
         wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * @param {string} raw
+ * @param {number} max_len
+ * @returns {string}
+ */
+export function validate_input_wasp(raw, max_len) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(raw, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.validate_input_wasp(ptr0, len0, max_len);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
 }
 

@@ -1,7 +1,10 @@
 //! kalpixk-core — WASM-native log parser & feature extractor
+pub mod defense_nodes;
 pub mod event;
 pub mod features;
 pub mod parsers;
+pub mod wasp;
+pub mod wast;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use wasm_bindgen::prelude::*;
@@ -151,8 +154,66 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": features::FEATURE_DIM,
         "contract_version": FEATURE_CONTRACT_VERSION,
+        "defense_nodes": true,
+        "wasp": true,
+        "wast": true,
     })
     .to_string()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WASP — WebAssembly Security Protocol (Exported Functions)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[wasm_bindgen]
+pub fn validate_input_wasp(raw: &str, max_len: usize) -> String {
+    let result = wasp::validate_input(raw, max_len);
+    serde_json::to_string(&result).unwrap_or_default()
+}
+
+#[wasm_bindgen]
+pub fn check_memory_bounds_wasp(offset: usize, length: usize, max_memory: usize) -> String {
+    let result = wasp::check_memory_bounds(offset, length, max_memory);
+    serde_json::to_string(&result).unwrap_or_default()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// Defense Nodes — MITRE ATT&CK Detection
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+#[wasm_bindgen]
+pub fn analyze_defense_nodes(event_json: &str) -> String {
+    use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
+    use event::KalpixkEvent;
+    
+    let event: KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(_) => return serde_json::json!({"error": "Invalid event JSON"}).to_string(),
+    };
+    
+    let all_nodes = analyze_all_nodes(&event);
+    let max = get_max_severity(&event);
+    let lockdown = should_lockdown(&event);
+    
+    serde_json::json!({
+        "nodes": all_nodes,
+        "max": max,
+        "lockdown_triggered": lockdown,
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn check_lockdown(event_json: &str) -> bool {
+    use defense_nodes::{should_lockdown};
+    use event::KalpixkEvent;
+    
+    let event: KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+    
+    should_lockdown(&event)
 }
 
 #[cfg(test)]

@@ -1,6 +1,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function analyze_defense_nodes(event_json: string): string;
+
+export function check_lockdown(event_json: string): boolean;
+
+export function check_memory_bounds_wasp(offset: number, length: number, max_memory: number): string;
+
 /**
  * Computa features UEBA desde una sesión de eventos JSON.
  * Input: JSON array de KalpixkEvent
@@ -36,6 +42,8 @@ export function parse_log_line(raw: string, source_type: string): string | undef
  */
 export function process_batch(logs_json: string, source_type: string): string;
 
+export function validate_input_wasp(raw: string, max_len: number): string;
+
 /**
  * Retorna la versión del motor
  */
@@ -45,12 +53,16 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly analyze_defense_nodes: (a: number, b: number) => [number, number];
+    readonly check_lockdown: (a: number, b: number) => number;
+    readonly check_memory_bounds_wasp: (a: number, b: number, c: number) => [number, number];
     readonly compute_ueba_features: (a: number, b: number) => [number, number];
     readonly get_feature_names: () => [number, number];
     readonly health_check: () => [number, number];
     readonly parse_and_extract: (a: number, b: number) => [number, number, number, number];
     readonly parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
     readonly process_batch: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly validate_input_wasp: (a: number, b: number, c: number) => [number, number];
     readonly version: () => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
