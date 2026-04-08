@@ -11,7 +11,10 @@ python/*.egg-info/
 .env
 .ipynb_checkpoints/
 *.log
-crates/kalpixk-core/pkg/
+*.wasm
+wasm_modules/
+models/*.bin
+models/*.pt
+models/*.safetensors
+.DS_Store
 node_modules/
-.jules/
-pkg/
