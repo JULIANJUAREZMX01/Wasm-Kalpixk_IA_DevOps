@@ -5,12 +5,16 @@ import { initKalpixkWasm } from "./wasm/kalpixk-wasm"
 
 async function bootstrap() {
   try {
+    // [ATLATL-ORDNANCE] Bootstrap Sequence
     await initKalpixkWasm()
-    console.info("[Kalpixk] WASM engine loaded")
   } catch (e) {
-    console.warn("[Kalpixk] WASM unavailable — running in demo mode:", e)
+    console.warn("[Kalpixk] Running in degraded mode (WASM engine failed to load).", e)
   }
-  ReactDOM.createRoot(document.getElementById("app")!).render(
+
+  const rootElement = document.getElementById("app");
+  if (!rootElement) throw new Error("Failed to find the root element");
+
+  ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <Dashboard />
     </React.StrictMode>
