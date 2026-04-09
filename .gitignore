@@ -19,3 +19,6 @@ models/*.pt
 models/*.safetensors
 .DS_Store
 node_modules/
+
+# Vite build output — generado por CI, no commitear
+web/dist/
