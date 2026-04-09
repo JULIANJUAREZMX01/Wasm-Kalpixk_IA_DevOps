@@ -110,23 +110,6 @@ export function get_feature_names() {
 }
 
 /**
- * [ATLATL-ORDNANCE] Security Telemetry
- * @returns {string}
- */
-export function get_security_telemetry() {
-    let deferred1_0;
-    let deferred1_1;
-    try {
-        const ret = wasm.get_security_telemetry();
-        deferred1_0 = ret[0];
-        deferred1_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
-    }
-}
-
-/**
  * Health check del módulo
  * @returns {string}
  */
