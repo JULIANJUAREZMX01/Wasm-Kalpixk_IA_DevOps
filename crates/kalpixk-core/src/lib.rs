@@ -20,17 +20,16 @@ use crate::runtime_features::extract_32_features;
 use crate::metrics::WasmEventMetrics;
 
 // Generate bindings from the WIT file
-// Note: In a real environment, this macro looks for kalpixk.wit in the root or parent
 wit_bindgen::generate!({
-    path: "../../../kalpixk.wit",
+    path: "../../kalpixk.wit",
     world: "kalpixk-core",
 });
 
 struct KalpixkCore;
 
-impl exports::kalpixk_monitor::Guest for KalpixkCore {
-    fn extract_features(event: exports::kalpixk_monitor::WasmEvent) -> Vec<f32> {
-        // Map WIT record to internal record
+// Implement the exported interface
+impl exports::kalpixk::core::kalpixk_monitor::Guest for KalpixkCore {
+    fn extract_features(event: exports::kalpixk::core::kalpixk_monitor::WasmEvent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
             instruction_count: event.instruction_count,
             memory_pages: event.memory_pages,
@@ -46,9 +45,11 @@ impl exports::kalpixk_monitor::Guest for KalpixkCore {
     }
 }
 
+// Export the struct as the implementation of the world
+// In newer wit-bindgen versions, this might be required
+#[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
-// Keep wasm-bindgen exports for backward compatibility with the current frontend
 #[wasm_bindgen]
 pub fn extract_features_legacy(json_event: &str) -> Vec<f32> {
     let event: WasmEventMetrics = match serde_json::from_str(json_event) {
