@@ -1,13 +1,7 @@
 [workspace]
 members = ["crates/kalpixk-core"]
-resolver = "2"
 
 [workspace.package]
-resolver = "2"
-members = ["crates/kalpixk-core"]
-
-[workspace.package]
-name = "kalpixk-core"
 version = "0.1.0"
 edition = "2021"
 authors = ["Julián Juárez <julianjuarezmx01@gmail.com>"]
