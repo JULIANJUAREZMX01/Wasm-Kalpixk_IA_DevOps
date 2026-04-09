@@ -5,6 +5,7 @@ Estética: SACITY/dhell (rojo/negro/cyber)
 """
 import asyncio
 import os
+import secrets
 import time
 import threading
 from pathlib import Path
@@ -70,7 +71,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
             )
         return None
 
-    if api_key != expected_key:
+    if not api_key or not secrets.compare_digest(api_key, expected_key):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials"
@@ -110,7 +111,7 @@ def health():
     }
 
 @app.get("/metrics")
-def get_metrics():
+def get_metrics(api_key: str = Depends(verify_api_key)):
     m = monitor_wasm.capture_metrics()
     result = detector.predict(m.to_array())
     return {"metrics": m.__dict__, "detection": result}
