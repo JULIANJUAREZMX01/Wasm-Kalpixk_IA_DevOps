@@ -26,11 +26,6 @@ export function compute_ueba_features(events_json: string): string;
 export function get_feature_names(): string;
 
 /**
- * [ATLATL-ORDNANCE] Security Telemetry
- */
-export function get_security_telemetry(): string;
-
-/**
  * Health check del módulo
  */
 export function health_check(): string;
@@ -72,7 +67,6 @@ export interface InitOutput {
     readonly check_memory_bounds_wasp: (a: number, b: number, c: number) => [number, number];
     readonly compute_ueba_features: (a: number, b: number) => [number, number];
     readonly get_feature_names: () => [number, number];
-    readonly get_security_telemetry: () => [number, number];
     readonly health_check: () => [number, number];
     readonly parse_and_extract: (a: number, b: number) => [number, number, number, number];
     readonly parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
