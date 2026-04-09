@@ -4,6 +4,7 @@ pub mod event;
 pub mod features;
 pub mod parsers;
 pub mod payloads;
+pub mod security;
 pub mod wasp;
 pub mod wast;
 
@@ -90,6 +91,12 @@ pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
 #[wasm_bindgen]
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
+
+    // [ATLATL-ORDNANCE] Security Guard
+    if !security::SecurityGuard::validate_raw_log(raw) {
+        return None;
+    }
+
     let parser = parsers::get_parser(source_type)?;
     let event = parser.parse(raw).ok()?;
     serde_json::to_string(&serde_json::json!({
@@ -125,6 +132,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
+        if !security::SecurityGuard::validate_raw_log(line) { continue; }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {

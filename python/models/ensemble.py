@@ -1,32 +1,35 @@
 import logging
-import numpy as np
 import torch
-from python.detection.isolation_forest import IsolationForestDetector
-from python.detection.autoencoder import AutoencoderDetector
+import numpy as np
+from python.detection.isolation_forest import KalpixkIsolationForest
+from python.detection.autoencoder import KalpixkAutoencoder
 
 logger = logging.getLogger("kalpixk.models.ensemble")
 
 class DetectionEnsemble:
     def __init__(self, device: torch.device):
         self.device = device
-        self.iso_forest = IsolationForestDetector()
-        self.autoencoder = AutoencoderDetector(device)
+        self.iso_forest = KalpixkIsolationForest(device)
+        self.autoencoder = KalpixkAutoencoder(device)
         logger.info(f"Ensemble inicializado en {device}")
 
     def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float]]:
         features_np = features.cpu().numpy()
         
         # Inferencia
-        if_scores = self.iso_forest.predict(features_np)
-        ae_scores = self.autoencoder.predict(features)
+        if_scores, if_conf = self.iso_forest.predict(features_np)
+        ae_scores, ae_conf = self.autoencoder.predict(features_np)
         
         # Combinar: 45% IF + 55% AE
-        ensemble_scores = 0.45 * if_scores + 0.55 * ae_scores
+        if_scores_np = np.array(if_scores)
+        ae_scores_np = np.array(ae_scores)
+        ensemble_scores = 0.45 * if_scores_np + 0.55 * ae_scores_np
         
         # Determinar método dominante y confianza
-        diffs = np.abs(if_scores - ae_scores)
-        methods = np.where(if_scores > ae_scores, "isolation_forest", "autoencoder").tolist()
-        confidences = np.maximum(0.5, 1.0 - diffs).tolist()
+        methods = np.where(if_scores_np > ae_scores_np, "isolation_forest", "autoencoder").tolist()
+
+        # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
+        confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
         
         return (
             ensemble_scores.tolist(),
