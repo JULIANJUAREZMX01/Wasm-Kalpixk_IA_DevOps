@@ -38,6 +38,7 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
 
 // ─── Parser Syslog RFC 5424 / RFC 3164 ────────────────────────────────────────
 
+#[derive(Default)]
 pub struct SyslogParser;
 
 impl Default for SyslogParser {
@@ -48,7 +49,7 @@ impl Default for SyslogParser {
 
 impl SyslogParser {
     pub fn new() -> Self {
-        SyslogParser
+        Self
     }
 
     fn fingerprint(raw: &str) -> String {
@@ -146,6 +147,7 @@ impl LogParser for SyslogParser {
 
 // ─── Parser JSON estructurado (Filebeat, Logstash, etc.) ──────────────────────
 
+#[derive(Default)]
 pub struct JsonStructuredParser;
 
 impl Default for JsonStructuredParser {
@@ -156,7 +158,7 @@ impl Default for JsonStructuredParser {
 
 impl JsonStructuredParser {
     pub fn new() -> Self {
-        JsonStructuredParser
+        Self
     }
 }
 
@@ -242,6 +244,7 @@ impl LogParser for JsonStructuredParser {
 
 // ─── Parser Windows Event Log ─────────────────────────────────────────────────
 
+#[derive(Default)]
 pub struct WindowsEventParser;
 
 impl Default for WindowsEventParser {
@@ -252,7 +255,7 @@ impl Default for WindowsEventParser {
 
 impl WindowsEventParser {
     pub fn new() -> Self {
-        WindowsEventParser
+        Self
     }
 }
 
@@ -357,6 +360,7 @@ impl LogParser for WindowsEventParser {
 
 // ─── Parser DB2 Audit (IBM DB2 — Manhattan WMS) ───────────────────────────────
 
+#[derive(Default)]
 pub struct Db2AuditParser;
 
 impl Default for Db2AuditParser {
@@ -367,7 +371,7 @@ impl Default for Db2AuditParser {
 
 impl Db2AuditParser {
     pub fn new() -> Self {
-        Db2AuditParser
+        Self
     }
 }
 
@@ -445,6 +449,7 @@ impl LogParser for Db2AuditParser {
 
 // ─── Parser NetFlow v9 / IPFIX (simplificado) ─────────────────────────────────
 
+#[derive(Default)]
 pub struct NetflowParser;
 
 impl Default for NetflowParser {
@@ -455,7 +460,7 @@ impl Default for NetflowParser {
 
 impl NetflowParser {
     pub fn new() -> Self {
-        NetflowParser
+        Self
     }
 }
 

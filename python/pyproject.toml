@@ -148,6 +148,9 @@ ignore = ["E501"]
 [tool.hatch.build.targets.wheel]
 packages = ["api", "detection", "utils", "training"]
 
+[tool.hatch.build.targets.wheel]
+packages = ["api", "models", "utils"]
+
 # =============================================================================
 # BUILD SYSTEM
 # =============================================================================
