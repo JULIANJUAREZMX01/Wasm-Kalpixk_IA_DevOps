@@ -95,7 +95,10 @@ async def analyze(req: LogRequest):
     latency = (time.time() - t0) * 1000
 
     severity = (
-        "CRITICAL" if score > 0.8 else "HIGH" if score > 0.6 else "MEDIUM" if score > 0.4 else "LOW"
+        "CRITICAL" if score > 0.8
+        else "HIGH" if score > 0.6
+        else "MEDIUM" if score > 0.4
+        else "LOW"
     )
 
     # Broadcast a clientes WebSocket conectados
