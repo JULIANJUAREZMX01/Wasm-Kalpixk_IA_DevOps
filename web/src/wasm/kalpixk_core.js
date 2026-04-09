@@ -1,6 +1,27 @@
 /* @ts-self-types="./kalpixk_core.d.ts" */
 
 /**
+ * Analiza un evento JSON y retorna nivel de amenaza + nodo dominante.
+ * Exportado a JS para monitoreo activo.
+ * @param {string} event_json
+ * @returns {string}
+ */
+export function analyze_and_retaliate(event_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.analyze_and_retaliate(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * @param {string} event_json
  * @returns {string}
  */
@@ -133,7 +154,6 @@ export function parse_and_extract(raw_log) {
 
 /**
  * Parsea una línea de log y retorna JSON con el evento + severidad.
- * Retorna None si la línea está vacía o no se puede parsear.
  * @param {string} raw
  * @param {string} source_type
  * @returns {string | undefined}
@@ -154,8 +174,6 @@ export function parse_log_line(raw, source_type) {
 
 /**
  * Procesa un batch de logs JSON y retorna feature matrix + metadata.
- * Input: JSON array de strings
- * Output: { parsed_count, anomaly_count, feature_matrix: [[f64;32]] }
  * @param {string} logs_json
  * @param {string} source_type
  * @returns {string}
@@ -211,6 +229,30 @@ export function version() {
         return getStringFromWasm0(ret[0], ret[1]);
     } finally {
         wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
+ * Bloquea un módulo WASM y genera reporte forense.
+ * @param {string} node
+ * @param {number} score
+ * @param {string} event_json
+ * @returns {string}
+ */
+export function wasm_lockdown(node, score, event_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(node, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasm_lockdown(ptr0, len0, score, ptr1, len1);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
 }
 
