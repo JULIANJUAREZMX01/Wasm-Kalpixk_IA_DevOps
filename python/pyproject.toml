@@ -70,7 +70,6 @@ dependencies = [
 
     # Cliente HTTP async — usado para llamar al LLM explainer (KYNYKOS router)
     "httpx>=0.27.0",
-    "msgpack>=1.1.0",
 
     # WebSockets — protocolo de comunicación con el dashboard en tiempo real
     "websockets>=13.0",
@@ -92,6 +91,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
 
     # Cliente HTTP para tests de la API
+    "httpx>=0.27.0",
 
     # Linter y formatter Python — más rápido que flake8 + isort
     "ruff>=0.7.0",
@@ -147,9 +147,6 @@ ignore = ["E501"]
 #
 [tool.hatch.build.targets.wheel]
 packages = ["api", "detection", "utils", "training"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["api", "models", "utils"]
 
 # =============================================================================
 # BUILD SYSTEM
