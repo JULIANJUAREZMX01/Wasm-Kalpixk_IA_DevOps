@@ -1,15 +1,4 @@
 {
-  "name": "la-primera-nacion-algoritmo",
-  "version": "1.0.0",
-  "description": "La primera nación algoritmo — Motor de detección de anomalías Wasm-Kalpixk",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "vite": "^8.0.3"
   "name": "kalpixk-dashboard",
   "version": "0.1.0",
   "private": true,
@@ -23,7 +12,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
-    "vite": "^5.2.0",
+    "vite": "^5.4.0",
     "vitest": "^1.6.0",
     "@vitest/ui": "^1.6.0",
     "typescript": "^5.4.0",
