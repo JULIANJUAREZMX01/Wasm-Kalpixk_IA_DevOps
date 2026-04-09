@@ -1,29 +1,19 @@
-/*! coi-serviceworker v0.1.7 | MIT License | https://github.com/gzuidhof/coi-serviceworker */
-if (typeof window === 'undefined') {
-    self.addEventListener("install", () => self.skipWaiting());
-    self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
-
-    self.addEventListener("fetch", (event) => {
-        if (event.request.cache === "only-if-cached" && event.request.mode !== "same-origin") {
-            return;
-        }
-
-        event.respondWith(
-            fetch(event.request).then((response) => {
-                if (response.status === 0) {
-                    return response;
-                }
-
-                const newHeaders = new Headers(response.headers);
-                newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
-                newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
-
-                return new Response(response.body, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: newHeaders,
-                });
-            })
-        );
-    });
-}
+/**
+ * coi-serviceworker.js
+ * Injects Cross-Origin-Isolation headers needed for SharedArrayBuffer (WASM).
+ * Required for GitHub Pages which does not support custom response headers.
+ */
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch", (e) => {
+  if (e.request.cache === "only-if-cached" && e.request.mode !== "same-origin") return;
+  e.respondWith(
+    fetch(e.request).then((r) => {
+      if (!r || r.status === 0) return r;
+      const h = new Headers(r.headers);
+      h.set("Cross-Origin-Opener-Policy",   "same-origin");
+      h.set("Cross-Origin-Embedder-Policy", "require-corp");
+      return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
+    }).catch(console.error)
+  );
+});
