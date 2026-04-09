@@ -119,7 +119,7 @@ jobs:
         with:
           name: kalpixk-wasm-pkg
           # El directorio pkg/ completo (incluye .wasm, .js, .d.ts)
-          path: crates/kalpixk-core/pkg/
+          path: web/src/wasm/
           # Retener el artifact 30 días (útil para debugging)
           retention-days: 30
 
