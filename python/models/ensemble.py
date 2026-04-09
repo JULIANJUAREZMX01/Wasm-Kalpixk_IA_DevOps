@@ -54,7 +54,6 @@ class DetectionEnsemble:
             - methods: método de detección que ganó para cada evento
             - confidences: confianza del modelo en cada predicción
         """
-        n = features.shape[0]
         
         # Inference en GPU
         with torch.no_grad():
@@ -71,9 +70,8 @@ class DetectionEnsemble:
         
         # Determinar método ganador y confianza
         diffs = np.abs(if_scores - ae_scores)
+        methods = np.where(if_scores > ae_scores, "isolation_forest", "autoencoder").tolist()
         confidences = np.maximum(0.5, 1.0 - diffs).tolist()
-        if_greater = if_scores > ae_scores
-        methods = np.where(if_greater, "isolation_forest", "autoencoder").tolist()
         
         return (
             ensemble_scores.tolist(),
