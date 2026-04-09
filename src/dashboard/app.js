@@ -1,7 +1,7 @@
 // ATLATL-ORDNANCE: Kalpixk Control Center — Dashboard Logic
 // Military-Grade Anomaly Detection Dashboard with WASM Edge Integration
 
-import init, { parse_and_extract, health_check, get_security_telemetry } from './pkg/kalpixk_core.js';
+import initWasmModule, { parse_and_extract, health_check, get_security_telemetry } from './pkg/kalpixk_core.js';
 
 const API = window.location.origin;
 let refreshInterval = null;
@@ -10,7 +10,7 @@ let wasmReady = false;
 // ── WASM Initialization ─────────────────────────────────────
 async function initWasm() {
     try {
-        await init();
+        await initWasmModule();
         wasmReady = true;
         const health = JSON.parse(health_check());
         log(`WASM Edge Ready: ${health.module} v${health.contract_version}`, 'ok');
@@ -93,16 +93,26 @@ async function refreshMetrics() {
         document.getElementById('anomaly-status').textContent = 'THREAT!';
         document.getElementById('anomaly-status').className = 'text-xl font-bold status-error blink';
         log(`🚨 THREAT_VECTOR DETECTED! SCORE: ${score.toFixed(6)}`, 'error');
+
+        // ATLATL-ORDNANCE: Trigger Phase Black UI if score is critical
+        if (score > threshold * 2) {
+            document.getElementById('black-overlay').style.display = 'block';
+            log('💀 PHASE BLACK: RETALIATION SEQUENCE ACTIVE', 'error');
+        }
     } else {
         document.getElementById('anomaly-status').textContent = 'CLEAN';
         document.getElementById('anomaly-status').className = 'text-xl font-bold status-ok';
+        document.getElementById('black-overlay').style.display = 'none';
     }
 
     if (wasmReady) {
-        const telemetry = JSON.parse(get_security_telemetry());
-        if (telemetry.threat_level === 'high') {
-            log(`⚠️ WASM Edge reports HIGH SHARED_ACCESS_COUNT: ${telemetry.shared_access_count}`, 'warn');
-        }
+        // Telemetry check (if implemented in WASM)
+        try {
+            const telemetry = JSON.parse(get_security_telemetry());
+            if (telemetry.threat_level === 'high') {
+                log(`⚠️ WASM Edge reports HIGH SHARED_ACCESS_COUNT: ${telemetry.shared_access_count}`, 'warn');
+            }
+        } catch(e) {}
     }
 }
 

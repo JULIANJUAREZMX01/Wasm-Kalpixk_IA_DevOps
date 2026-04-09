@@ -49,14 +49,7 @@ fn test_payload_exterminio() {
         "Unexpected offense_level: {}",
         level
     );
-<<<<<<< sentinel-security-harden-root-api-13671738899734192460
-    assert!(
-        v["lockdown"].is_boolean(),
-        "lockdown field should be present"
-    );
-=======
     assert!(v["lockdown"].is_boolean(), "lockdown field should be present");
->>>>>>> main
 }
 
 #[test]
@@ -74,12 +67,5 @@ fn test_lateral_poisoning() {
         v["node"]
     );
     assert!(v["score"].as_f64().unwrap_or(0.0) >= 0.0);
-<<<<<<< sentinel-security-harden-root-api-13671738899734192460
-    assert!(
-        v["timestamp"].as_i64().is_some(),
-        "timestamp should be present"
-    );
-=======
     assert!(v["timestamp"].as_i64().is_some(), "timestamp should be present");
->>>>>>> main
 }

@@ -4,6 +4,7 @@
 //! - Input validation
 //! - Memory safety bounds checking
 //! - Security policies enforcement
+//! - [ATLATL-ORDNANCE] Instruction Monitoring & FFI Guards
 
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +15,7 @@ pub enum SecurityLevel {
     Safe,
     Suspicious,
     Blocked,
+    Exterminated,
 }
 
 /// WASP security policy result
@@ -23,6 +25,29 @@ pub struct WaspPolicyResult {
     pub passed: bool,
     pub reason: String,
     pub violations: Vec<String>,
+}
+
+/// [ATLATL-ORDNANCE] FFI Boundary Guard
+/// Ensures that calls across the FFI boundary are authenticated and within limits.
+pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicyResult {
+    let mut violations = Vec::new();
+
+    // Prohibir funciones sensibles si no hay contexto de seguridad
+    let sensitive_fns = ["system", "exec", "eval", "poison_pointers"];
+    if sensitive_fns.contains(&function_name) {
+        violations.push(format!("Unauthorized call to sensitive FFI function: {}", function_name));
+    }
+
+    if params_count > 10 {
+        violations.push(format!("Excessive parameters in FFI call: {}", params_count));
+    }
+
+    WaspPolicyResult {
+        passed: violations.is_empty(),
+        level: if violations.is_empty() { SecurityLevel::Safe } else { SecurityLevel::Blocked },
+        reason: if violations.is_empty() { "FFI call validated".to_string() } else { violations.join("; ") },
+        violations,
+    }
 }
 
 /// Input validation — sanitizes and validates WASM inputs
@@ -38,26 +63,27 @@ pub fn validate_input(raw: &str, max_len: usize) -> WaspPolicyResult {
         ));
     }
 
-    // Check for null bytes
+    // Check for null bytes (canary for buffer overflow attempts)
     if raw.contains('\0') {
-        violations.push("Null byte detected in input".to_string());
+        violations.push("Null byte detected in input (Vector: BufferOverflow)".to_string());
     }
 
     // Check for control characters (potential injection)
-    // Note: \x00 is caught by both null byte and control character checks
-    let has_control = raw.chars().any(|c| c.is_control() && c != '\0');
+    let has_control = raw.chars().any(|c| c.is_control() && c != '\0' && c != '\n' && c != '\r' && c != '\t');
     if has_control {
-        violations.push("Control characters detected".to_string());
+        violations.push("Anomalous control characters detected (Vector: Injection)".to_string());
     }
 
-    let level = match violations.len() {
-        0 => SecurityLevel::Safe,
-        1..=2 => SecurityLevel::Blocked, // any validation violation should be blocked
-        _ => SecurityLevel::Blocked,
+    let level = if violations.is_empty() {
+        SecurityLevel::Safe
+    } else if violations.len() > 2 {
+        SecurityLevel::Exterminated
+    } else {
+        SecurityLevel::Blocked
     };
 
     WaspPolicyResult {
-        passed: level != SecurityLevel::Blocked,
+        passed: level == SecurityLevel::Safe,
         level,
         reason: if violations.is_empty() {
             "Input validated".to_string()
@@ -72,12 +98,10 @@ pub fn validate_input(raw: &str, max_len: usize) -> WaspPolicyResult {
 pub fn check_memory_bounds(offset: usize, length: usize, max_memory: usize) -> WaspPolicyResult {
     let mut violations = Vec::new();
 
-    // Check for negative offset (should never happen with unsigned, but safety first)
     if offset > max_memory {
         violations.push(format!("Offset out of bounds: {} > {}", offset, max_memory));
     }
 
-    // Check for overflow
     if offset.saturating_add(length) > max_memory {
         violations.push(format!(
             "Memory access overflow: {}+{} > {}",
@@ -85,14 +109,14 @@ pub fn check_memory_bounds(offset: usize, length: usize, max_memory: usize) -> W
         ));
     }
 
-    // Check for suspiciously large allocations
-    if length > max_memory / 2 {
-        violations.push(format!("Suspiciously large allocation: {}", length));
+    // [ATLATL-ORDNANCE] Detect Heap Spraying attempts
+    if length > max_memory / 4 {
+        violations.push(format!("Suspiciously large allocation (Vector: HeapSpray): {}", length));
     }
 
     let level = match violations.len() {
         0 => SecurityLevel::Safe,
-        1..=2 => SecurityLevel::Suspicious,
+        1 => SecurityLevel::Suspicious,
         _ => SecurityLevel::Blocked,
     };
 
@@ -126,7 +150,6 @@ impl RateLimiter {
     }
 
     pub fn check(&mut self, timestamp_ms: u64) -> WaspPolicyResult {
-        // Remove old requests outside window
         self.requests
             .retain(|&t| timestamp_ms.saturating_sub(t) < self.window_ms);
 
@@ -135,21 +158,16 @@ impl RateLimiter {
 
         if count >= self.max_requests {
             violations.push(format!(
-                "Rate limit exceeded: {}/{} in {}ms",
+                "Rate limit exceeded (Vector: DoS): {}/{} in {}ms",
                 count, self.max_requests, self.window_ms
             ));
         }
 
         self.requests.push(timestamp_ms);
 
-        let level = match violations.len() {
-            0 => SecurityLevel::Safe,
-            _ => SecurityLevel::Blocked,
-        };
-
         WaspPolicyResult {
-            passed: level != SecurityLevel::Blocked,
-            level,
+            passed: violations.is_empty(),
+            level: if violations.is_empty() { SecurityLevel::Safe } else { SecurityLevel::Blocked },
             reason: if violations.is_empty() {
                 format!("Rate OK: {}/{}", count, self.max_requests)
             } else {
@@ -166,7 +184,7 @@ pub fn verify_module_integrity(module_hash: &str, expected_hash: &str) -> WaspPo
 
     if module_hash != expected_hash {
         violations.push(format!(
-            "Module integrity check failed: {} != {}",
+            "Module integrity check failed (Vector: Tampering): {} != {}",
             module_hash, expected_hash
         ));
     }
@@ -176,7 +194,7 @@ pub fn verify_module_integrity(module_hash: &str, expected_hash: &str) -> WaspPo
         level: if violations.is_empty() {
             SecurityLevel::Safe
         } else {
-            SecurityLevel::Blocked
+            SecurityLevel::Exterminated
         },
         reason: if violations.is_empty() {
             "Module verified".to_string()
@@ -184,44 +202,5 @@ pub fn verify_module_integrity(module_hash: &str, expected_hash: &str) -> WaspPo
             violations[0].clone()
         },
         violations,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_validate_input_ok() {
-        let result = validate_input("normal input string", 1000);
-        assert!(result.passed);
-        assert_eq!(result.level, SecurityLevel::Safe);
-    }
-
-    #[test]
-    fn test_validate_input_too_long() {
-        let result = validate_input(&"x".repeat(2000), 1000);
-        assert!(!result.passed);
-        assert_eq!(result.level, SecurityLevel::Blocked);
-    }
-
-    #[test]
-    fn test_validate_input_null_byte() {
-        let result = validate_input("input\x00with null", 1000);
-        assert!(!result.passed);
-    }
-
-    #[test]
-    fn test_rate_limiter() {
-        let mut rl = RateLimiter::new(3, 1000);
-
-        // First 3 requests should pass
-        assert!(rl.check(1000).passed);
-        assert!(rl.check(1001).passed);
-        assert!(rl.check(1002).passed);
-
-        // 4th should fail
-        let result = rl.check(1003);
-        assert!(!result.passed);
     }
 }

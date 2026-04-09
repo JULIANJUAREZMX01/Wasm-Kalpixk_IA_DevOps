@@ -12,6 +12,7 @@
       --red-bright: #FF0000; --red-primary: #E31837; --red-dark: #8B0000;
       --black: #000000; --green-cyber: #00FF00; --cyan-data: #00FFFF;
       --orange-alert: #FF8C00;
+      --phase-black: rgba(255, 0, 0, 0.2);
     }
     body { background: var(--black); font-family: 'Courier New', monospace; color: white; }
     .terminal-card {
@@ -36,6 +37,17 @@
     .scanline {
       width: 100%; height: 2px; background: rgba(255, 0, 0, 0.1);
       position: absolute; pointer-events: none; animation: scan 4s linear infinite;
+      z-index: 50;
+    }
+    .phase-black-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--phase-black); pointer-events: none;
+      display: none; z-index: 100; animation: pulse-black 2s infinite;
+    }
+    @keyframes pulse-black {
+      0% { background: rgba(255, 0, 0, 0.1); }
+      50% { background: rgba(255, 0, 0, 0.3); }
+      100% { background: rgba(255, 0, 0, 0.1); }
     }
     @keyframes scan { from { top: 0; } to { top: 100%; } }
     pre { font-size: 0.6rem; line-height: 1; color: var(--red-primary); }
@@ -48,6 +60,7 @@
 </head>
 <body class="overflow-x-hidden p-2 md:p-6">
   <div class="scanline"></div>
+  <div id="black-overlay" class="phase-black-overlay"></div>
 
   <div class="max-w-6xl mx-auto space-y-4">
     <!-- Header: SACITY ASCII Art -->
@@ -146,6 +159,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="/static/app.js"></script>
 </body>
 </html>
