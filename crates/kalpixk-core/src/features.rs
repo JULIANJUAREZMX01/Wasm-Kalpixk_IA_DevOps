@@ -140,7 +140,7 @@ pub fn extract(event: &KalpixkEvent) -> Vec<f64> {
     // Prepara las versiones lowercase una sola vez para los 4 nodos
     let raw_lower_dn = event.raw.to_lowercase();
     let user_lower_dn = event.user.as_deref().unwrap_or("").to_lowercase();
-    let src_lower_dn = event.source.as_deref().unwrap_or("").to_lowercase();
+    let src_lower_dn = event.source.to_lowercase();
     f[22] = crate::defense_nodes::detect_reconnaissance(
         event,
         &raw_lower_dn,
