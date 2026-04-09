@@ -1,111 +1,133 @@
 """
-Wasm-Kalpixk API — Endpoint de detección de anomalías
+Wasm-Kalpixk API (v2) — DevSecOps Hardening
 """
 import os
 import secrets
+import json
 from contextlib import asynccontextmanager
-from typing import List
+from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, Security, status
+from fastapi import FastAPI, HTTPException, Depends, Security, status, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 import numpy as np
 from loguru import logger
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-from src.detector import AnomalyDetector
-from src.runtime import WasmRuntimeMonitor
+from src.detector.anomaly_detector import AnomalyDetector
+from src.runtime.wasm_monitor import WasmRuntimeMonitor
 from src.retaliation.atlatl import atlatl
 
 # -- Models --
 class DetectPayload(BaseModel):
-    features: List[float] = Field(..., min_length=32, max_length=32, description="32 features for anomaly detection")
+    features: List[float] = Field(..., min_length=32, max_length=32)
 
-# -- Security --
+# -- Security & Rate Limiting --
+limiter = Limiter(key_func=get_remote_address)
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
+    env = os.getenv("ENV", "development")
     expected_key = os.getenv("KALPIXK_API_KEY")
-    if not expected_key:
-        if os.getenv("ENV") == "production":
-            logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="API Key not configured"
-            )
-        return None
 
-    if not api_key or not secrets.compare_digest(api_key, expected_key):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials"
-        )
+    if env == "production":
+        if not expected_key:
+            logger.error("KALPIXK_API_KEY not set in production!")
+            raise HTTPException(status_code=500, detail="API Key not configured")
+        if not api_key or not secrets.compare_digest(api_key, expected_key):
+            raise HTTPException(status_code=403, detail="Forbidden")
+    else:
+        # In development, if no key is provided and no key is expected, allow it
+        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
+             raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Entrena el modelo con datos normales al iniciar."""
-    logger.info("Entrenando detector con baseline normal...")
-    normal_data = monitor.generate_normal_baseline(n_samples=500)
+    logger.info("Iniciando Kalpixk SIEM...")
+    # Boot training with real data
+    normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
-    logger.success("Detector listo")
+
+    # Pre-generate evaluation report
+    dataset_path = "models/dataset_real.npz"
+    if os.path.exists(dataset_path):
+        data = np.load(dataset_path)
+        metrics = detector.evaluate(data['X'], data['y'])
+        detector.save_evaluation_report(metrics)
+
+    logger.success("Sistema listo")
     yield
 
 app = FastAPI(
-    title="Wasm-Kalpixk_IA_DevOps",
-    description="Motor de detección de anomalías en WASM sobre AMD MI300X",
-    version="0.1.0",
+    title="Kalpixk SIEM API v2",
+    version="2.0.0",
     lifespan=lifespan
+)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# -- CORS Hardening --
+cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
+try:
+    cors_origins = json.loads(cors_origins_str)
+except:
+    cors_origins = ["http://localhost:8000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+    allow_credentials=True,
 )
 
 detector = AnomalyDetector()
 monitor = WasmRuntimeMonitor()
 
+# -- Endpoints --
 
 @app.get("/health")
 def health():
     return {
         "status": "ok",
         "model_trained": detector.is_trained,
-        "device": str(detector.device)
+        "device": str(detector.device),
+        "wasm_connected": True
     }
 
+@app.get("/api/v1/metrics")
+@limiter.limit("60/minute")
+def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
+    m_features = monitor.capture_metrics()
+    result = detector.predict(m_features.reshape(1, -1))
+    return {"features": m_features.tolist(), "detection": result}
 
-@app.get("/metrics")
-def get_metrics(api_key: str = Depends(verify_api_key)):
-    """Captura métricas actuales y detecta anomalías."""
-    m = monitor.capture_metrics()
-    result = detector.predict(m.to_array())
+@app.post("/api/v1/detect")
+@limiter.limit("60/minute")
+def detect(request: Request, payload: DetectPayload, api_key: str = Depends(verify_api_key)):
+    features = np.array([payload.features], dtype=np.float32)
+    result = detector.predict(features)
+    return result
 
-    # ATLATL-ORDNANCE: Represalia inmediata si hay anomalía crítica
-    if any(result["anomalies"]):
-        score = max(result["reconstruction_errors"])
-        if score > detector.threshold * 2:
-            atlatl.trigger_retaliation(score, "127.0.0.1", "generic_anomaly")
+@app.get("/api/v1/report")
+def get_report(api_key: str = Depends(verify_api_key)):
+    report_path = "models/evaluation_report.json"
+    if os.path.exists(report_path):
+        with open(report_path, "r") as f:
+            return json.load(f)
+    raise HTTPException(status_code=404, detail="Report not found")
 
-    return {"metrics": m.__dict__, "detection": result}
-
-
-@app.post("/detect")
-def detect(payload: DetectPayload, api_key: str = Depends(verify_api_key)):
-    """Detecta anomalías en métricas enviadas externamente."""
-    try:
-        features = np.array([payload.features], dtype=np.float32)
-        result = detector.predict(features)
-        return result
-    except Exception as e:
-        logger.error(f"Detection error: {e}")
-        raise HTTPException(status_code=400, detail="Invalid features payload")
-
-
-@app.get("/simulate/{anomaly_type}")
-def simulate(anomaly_type: str, api_key: str = Depends(verify_api_key)):
-    """Simula una anomalía y la detecta (testing)."""
-    m = monitor.simulate_anomaly(anomaly_type)
-    result = detector.predict(m.to_array())
+@app.get("/api/v1/status")
+def get_status(api_key: str = Depends(verify_api_key)):
     return {
-        "anomaly_type": anomaly_type,
-        "metrics": m.__dict__,
-        "detection": result,
-        "detected": any(result["anomalies"])
+        "is_trained": detector.is_trained,
+        "threshold": detector.threshold,
+        "device": str(detector.device),
+        "train_stats": detector.train_stats
     }
