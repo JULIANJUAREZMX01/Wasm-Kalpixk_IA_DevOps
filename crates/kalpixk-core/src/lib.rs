@@ -18,6 +18,8 @@ mod severity;
 use wasm_bindgen::prelude::*;
 use crate::runtime_features::extract_32_features;
 use crate::metrics::WasmEventMetrics;
+use crate::event::KalpixkEvent;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
@@ -45,10 +47,16 @@ impl exports::kalpixk::core::kalpixk_monitor::Guest for KalpixkCore {
     }
 }
 
-// Export the struct as the implementation of the world
-// In newer wit-bindgen versions, this might be required
+// Global state for telemetry
+static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
+
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
+
+#[wasm_bindgen]
+pub fn version() -> String {
+    "2.1.0".to_string()
+}
 
 #[wasm_bindgen]
 pub fn extract_features_legacy(json_event: &str) -> Vec<f32> {
@@ -57,6 +65,151 @@ pub fn extract_features_legacy(json_event: &str) -> Vec<f32> {
         Err(_) => return vec![0.0f32; 32],
     };
     extract_32_features(&event)
+}
+
+#[wasm_bindgen]
+pub fn analyze_and_retaliate(json_event: &str) -> String {
+    let event: KalpixkEvent = match serde_json::from_str(json_event) {
+        Ok(e) => e,
+        Err(_) => return "{}".to_string(),
+    };
+
+    use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
+
+    let all_nodes = analyze_all_nodes(&event);
+    let max = get_max_severity(&event);
+    let lockdown = should_lockdown(&event);
+
+    let dominant_node = all_nodes
+        .iter()
+        .max_by(|a, b| {
+            a.score
+                .partial_cmp(&b.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|n| n.node.clone())
+        .unwrap_or_else(|| "NONE".to_string());
+
+    serde_json::json!({
+        "offense_level": format!("{:?}", max.level),
+        "score": max.score,
+        "node": dominant_node,
+        "lockdown": lockdown,
+        "all_nodes": all_nodes,
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
+    SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
+
+    if !security::SecurityGuard::validate_raw_log(raw) {
+        return None;
+    }
+
+    let parser = parsers::get_parser(source_type)?;
+    let event = parser.parse(raw).ok()?;
+    serde_json::to_string(&serde_json::json!({
+        "timestamp_ms": event.timestamp_ms,
+        "event_type": event.event_type,
+        "local_severity": event.local_severity,
+        "source": event.source,
+        "destination": event.destination,
+        "user": event.user,
+        "process": event.process,
+        "metadata": event.metadata,
+        "raw": event.raw,
+        "source_type": event.source_type,
+        "fingerprint": event.fingerprint,
+    }))
+    .ok()
+}
+
+#[wasm_bindgen]
+pub fn process_batch(logs_json: &str, source_type: &str) -> String {
+    SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
+    let lines: Vec<String> = serde_json::from_str(logs_json).unwrap_or_default();
+    let parser = match parsers::get_parser(source_type) {
+        Some(p) => p,
+        None => {
+            return serde_json::json!({"error": "unknown source", "parsed_count": 0}).to_string()
+        }
+    };
+
+    let mut feature_matrix: Vec<Vec<f64>> = Vec::new();
+    let mut anomaly_count = 0usize;
+    let threshold = 0.5f64;
+
+    for line in &lines {
+        if !security::SecurityGuard::validate_raw_log(line) { continue; }
+        if let Ok(event) = parser.parse(line) {
+            let fvec = features::extract(&event);
+            if event.local_severity > threshold {
+                anomaly_count += 1;
+            }
+            feature_matrix.push(fvec);
+        }
+    }
+
+    serde_json::json!({
+        "parsed_count": feature_matrix.len(),
+        "anomaly_count": anomaly_count,
+        "feature_matrix": feature_matrix,
+        "feature_names": features::FEATURE_NAMES,
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn compute_ueba_features(events_json: &str) -> String {
+    let events: Vec<event::KalpixkEvent> = serde_json::from_str(events_json).unwrap_or_default();
+
+    if events.is_empty() {
+        return serde_json::json!({
+            "features": vec![0.0f64; features::FEATURE_DIM],
+            "risk_score": 0.0,
+            "event_count": 0
+        })
+        .to_string();
+    }
+
+    let mut avg = vec![0.0f64; features::FEATURE_DIM];
+    let n = events.len() as f64;
+    for ev in &events {
+        let fvec = features::extract(ev);
+        for (i, v) in fvec.iter().enumerate() {
+            avg[i] += v / n;
+        }
+    }
+
+    let risk_score = avg[1]; // local_severity promedio
+    serde_json::json!({
+        "features": avg,
+        "risk_score": risk_score,
+        "event_count": events.len(),
+        "contract_version": "1.0.0",
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn get_feature_names() -> Vec<String> {
+    features::FEATURE_NAMES.iter().map(|&s| s.to_string()).collect()
+}
+
+#[wasm_bindgen]
+pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
+    serde_json::json!({
+        "action": "LOCKDOWN",
+        "node": node,
+        "score": score,
+        "event_summary": event_json.chars().take(100).collect::<String>(),
+        "status": "CRITICAL_BLOCK",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
