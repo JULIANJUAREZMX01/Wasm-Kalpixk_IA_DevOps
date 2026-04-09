@@ -38,7 +38,6 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
 
 // ─── Parser Syslog RFC 5424 / RFC 3164 ────────────────────────────────────────
 
-#[derive(Default)]
 pub struct SyslogParser;
 
 impl Default for SyslogParser {
@@ -147,7 +146,6 @@ impl LogParser for SyslogParser {
 
 // ─── Parser JSON estructurado (Filebeat, Logstash, etc.) ──────────────────────
 
-#[derive(Default)]
 pub struct JsonStructuredParser;
 
 impl Default for JsonStructuredParser {
@@ -244,7 +242,6 @@ impl LogParser for JsonStructuredParser {
 
 // ─── Parser Windows Event Log ─────────────────────────────────────────────────
 
-#[derive(Default)]
 pub struct WindowsEventParser;
 
 impl Default for WindowsEventParser {
@@ -360,7 +357,6 @@ impl LogParser for WindowsEventParser {
 
 // ─── Parser DB2 Audit (IBM DB2 — Manhattan WMS) ───────────────────────────────
 
-#[derive(Default)]
 pub struct Db2AuditParser;
 
 impl Default for Db2AuditParser {
@@ -449,7 +445,6 @@ impl LogParser for Db2AuditParser {
 
 // ─── Parser NetFlow v9 / IPFIX (simplificado) ─────────────────────────────────
 
-#[derive(Default)]
 pub struct NetflowParser;
 
 impl Default for NetflowParser {
