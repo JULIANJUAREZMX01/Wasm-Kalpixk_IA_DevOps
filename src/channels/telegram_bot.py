@@ -1,3 +1,4 @@
+from telegram import Update
 """
 Kalpixk Telegram Bot
 Portado y adaptado de SAC/notificaciones_telegram.py + KynicOS
