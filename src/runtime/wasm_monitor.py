@@ -1,119 +1,88 @@
 """
-Wasm-Kalpixk — WASM Runtime Monitor
-Captura métricas del runtime WASM y las alimenta al AnomalyDetector
+Wasm-Kalpixk — WASM Runtime Monitor (v2)
 """
 import time
 import psutil
 import numpy as np
+import os
 from dataclasses import dataclass
 from loguru import logger
 from typing import Optional
-
+from src.runtime.feature_extractor import feature_extractor
 
 @dataclass
 class WasmMetrics:
-    """32 features sincronizadas con kalpixk-core (Rust)."""
-    # Original 10
-    cpu_usage: float
-    memory_mb: float
-    exec_time_ms: float
-    instructions: float
-    memory_pages: float
-    function_calls: float
-    traps: float
-    imports: float
-    exports: float
-    heap_usage: float
+    instruction_count: int
+    memory_pages: int
+    fuel_consumed: int
+    wall_time_ns: int
+    entropy: float
+    call_depth: int
+    import_calls: int
+    export_calls: int
 
-    # Extended features (22)
-    hour_normalized: float = 0.5
-    day_normalized: float = 0.5
-    is_weekend: float = 0.0
-    is_off_hours: float = 0.0
-    is_internal: float = 1.0
-    has_destination: float = 0.0
-    has_user: float = 0.0
-    source_entropy: float = 0.3
-    user_entropy: float = 0.0
-    metadata_count: float = 0.1
-    is_privileged_port: float = 0.0
-    dest_port_norm: float = 0.0
-    bytes_log10: float = 0.0
-    has_sql: float = 0.0
-    has_destructive: float = 0.0
-    is_sensitive_table: float = 0.0
-    has_bulk_op: float = 0.0
-    is_scan: float = 0.0
-    is_privileged_account: float = 0.0
-    is_known_process: float = 1.0
-    has_lateral_move: float = 0.0
-    is_cloud: float = 0.0
-
-    def to_array(self) -> np.ndarray:
-        return np.array([[
-            self.cpu_usage, self.memory_mb, self.exec_time_ms,
-            self.instructions, self.memory_pages, self.function_calls,
-            self.traps, self.imports, self.exports, self.heap_usage,
-            self.hour_normalized, self.day_normalized, self.is_weekend,
-            self.is_off_hours, self.is_internal, self.has_destination,
-            self.has_user, self.source_entropy, self.user_entropy,
-            self.metadata_count, self.is_privileged_port, self.dest_port_norm,
-            self.bytes_log10, self.has_sql, self.has_destructive,
-            self.is_sensitive_table, self.has_bulk_op, self.is_scan,
-            self.is_privileged_account, self.is_known_process,
-            self.has_lateral_move, self.is_cloud
-        ]], dtype=np.float32)
-
+    def to_dict(self):
+        return self.__dict__
 
 class WasmRuntimeMonitor:
-    """
-    Monitorea el runtime WASM y extrae métricas para el detector.
-    En producción: integrar con wasmtime o wasmer para métricas reales.
-    """
     def __init__(self, sample_interval: float = 1.0):
         self.sample_interval = sample_interval
-        self.baseline: Optional[WasmMetrics] = None
-        logger.info("WasmRuntimeMonitor inicializado")
+        logger.info("WasmRuntimeMonitor v2 inicializado")
 
-    def capture_metrics(self) -> WasmMetrics:
-        """Captura métricas actuales del sistema + runtime WASM."""
-        cpu = psutil.cpu_percent(interval=0.1)
+    def capture_metrics(self) -> np.ndarray:
+        """Captura métricas y las convierte a features de 32 dimensiones."""
+        # En una integración real con wasmtime, estos valores vendrían del profiler
+        # Por ahora, capturamos métricas del sistema como proxy o usamos valores estables
+        cpu = psutil.cpu_percent(interval=0.01)
         mem = psutil.virtual_memory()
         
         metrics = WasmMetrics(
-            cpu_usage=cpu,
-            memory_mb=mem.used / 1e6,
-            exec_time_ms=0.0,     # rellenar con wasmtime profiler
-            instructions=0.0,      # rellenar con instrumentación WASM
-            memory_pages=mem.used / (64 * 1024),
-            function_calls=0.0,    # rellenar con hooks de runtime
-            traps=0.0,
-            imports=0.0,
-            exports=0.0,
-            heap_usage=mem.percent
+            instruction_count=int(cpu * 10000),
+            memory_pages=int(mem.used / (64 * 1024)),
+            fuel_consumed=int(cpu * 5000),
+            wall_time_ns=int(time.time_ns() % 1000000),
+            entropy=0.3,
+            call_depth=5,
+            import_calls=10,
+            export_calls=5
         )
-        return metrics
+
+        return feature_extractor.extract(metrics.to_dict())
 
     def generate_normal_baseline(self, n_samples: int = 500) -> np.ndarray:
-        """Genera datos de entrenamiento simulando operación normal (32 features)."""
-        np.random.seed(42)
-        loc = [30, 512, 5, 1000, 8, 50, 0, 10, 5, 40] + [0.5]*22
-        scale = [5, 50, 1, 100, 1, 10, 0.1, 1, 0.5, 5] + [0.1]*22
-        return np.random.normal(
-            loc=loc,
-            scale=scale,
-            size=(n_samples, 32)
-        ).astype(np.float32)
+        """Usa el dataset real si existe, sino genera fallback."""
+        dataset_path = "models/dataset_real.npz"
+        if os.path.exists(dataset_path):
+            logger.info(f"Cargando baseline desde {dataset_path}")
+            data = np.load(dataset_path)
+            X = data['X']
+            y = data['y']
+            # Retornar solo los normales (y=0)
+            return X[y == 0][:n_samples]
 
-    def simulate_anomaly(self, anomaly_type: str = "memory_spike") -> WasmMetrics:
-        """Simula diferentes tipos de anomalías para testing."""
-        base = self.capture_metrics()
+        logger.warning("Dataset real no encontrado, usando fallback sintético")
+        from src.runtime.fallback import fallback_extractor
+        return np.array([fallback_extractor.extract({}) for _ in range(n_samples)])
+
+    def simulate_anomaly(self, anomaly_type: str = "memory_spike") -> np.ndarray:
+        """Simula una anomalía para testing."""
+        metrics = {
+            "instruction_count": 100000,
+            "memory_pages": 10,
+            "fuel_consumed": 50000,
+            "wall_time_ns": 1000000,
+            "entropy": 0.3,
+            "call_depth": 5,
+            "import_calls": 10,
+            "export_calls": 5
+        }
+
         if anomaly_type == "memory_spike":
-            base.memory_mb *= 10
-            base.memory_pages *= 10
+            metrics["memory_pages"] = 1000
         elif anomaly_type == "cpu_spike":
-            base.cpu_usage = 95.0
-            base.exec_time_ms = 500.0
+            metrics["instruction_count"] = 5000000
+            metrics["fuel_consumed"] = 4000000
         elif anomaly_type == "trap_storm":
-            base.traps = 100.0
-        return base
+            metrics["entropy"] = 0.9
+
+        return feature_extractor.extract(metrics)
