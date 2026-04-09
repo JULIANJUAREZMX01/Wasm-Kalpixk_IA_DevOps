@@ -1,6 +1,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
+/**
+ * Analiza un evento JSON y retorna nivel de amenaza + nodo dominante.
+ * Exportado a JS para monitoreo activo.
+ */
+export function analyze_and_retaliate(event_json: string): string;
+
 export function analyze_defense_nodes(event_json: string): string;
 
 export function check_lockdown(event_json: string): boolean;
@@ -31,14 +37,11 @@ export function parse_and_extract(raw_log: string): string;
 
 /**
  * Parsea una línea de log y retorna JSON con el evento + severidad.
- * Retorna None si la línea está vacía o no se puede parsear.
  */
 export function parse_log_line(raw: string, source_type: string): string | undefined;
 
 /**
  * Procesa un batch de logs JSON y retorna feature matrix + metadata.
- * Input: JSON array de strings
- * Output: { parsed_count, anomaly_count, feature_matrix: [[f64;32]] }
  */
 export function process_batch(logs_json: string, source_type: string): string;
 
@@ -49,10 +52,16 @@ export function validate_input_wasp(raw: string, max_len: number): string;
  */
 export function version(): string;
 
+/**
+ * Bloquea un módulo WASM y genera reporte forense.
+ */
+export function wasm_lockdown(node: string, score: number, event_json: string): string;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly analyze_and_retaliate: (a: number, b: number) => [number, number];
     readonly analyze_defense_nodes: (a: number, b: number) => [number, number];
     readonly check_lockdown: (a: number, b: number) => number;
     readonly check_memory_bounds_wasp: (a: number, b: number, c: number) => [number, number];
@@ -64,6 +73,7 @@ export interface InitOutput {
     readonly process_batch: (a: number, b: number, c: number, d: number) => [number, number];
     readonly validate_input_wasp: (a: number, b: number, c: number) => [number, number];
     readonly version: () => [number, number];
+    readonly wasm_lockdown: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
