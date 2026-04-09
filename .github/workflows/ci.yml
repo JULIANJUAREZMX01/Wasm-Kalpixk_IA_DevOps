@@ -10,9 +10,8 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # ── Rust: lint + tests (SIN cargo fmt --check) ────────────────────────────
   rust-check:
-    name: "Rust — clippy + cargo test"
+    name: "Rust — clippy + tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,14 +25,13 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Clippy
+      - name: Clippy (warnings, no fail)
         run: cargo clippy --all-targets -- -D warnings
         continue-on-error: true
 
       - name: Tests unitarios
         run: cargo test --all
 
-  # ── WASM build (verifica compilación completa) ────────────────────────────
   build-wasm:
     name: "WASM — wasm-pack build"
     runs-on: ubuntu-latest
@@ -51,11 +49,11 @@ jobs:
       - name: Instalar wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: wasm-pack build --release
+      - name: wasm-pack build
         run: |
           cd crates/kalpixk-core
           wasm-pack build --target web --release
-          echo "✅ WASM size: $(du -sh pkg/kalpixk_core_bg.wasm | cut -f1)"
+          echo "WASM: $(du -sh pkg/kalpixk_core_bg.wasm | cut -f1)"
           ls -lh pkg/
 
       - name: Upload WASM artifact
@@ -65,9 +63,8 @@ jobs:
           path: crates/kalpixk-core/pkg/
           retention-days: 7
 
-  # ── Python: tests sin GPU ─────────────────────────────────────────────────
   python-check:
-    name: "Python — pytest (CPU mode)"
+    name: "Python — pytest sin GPU"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,21 +74,19 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Instalar dependencias (pip directo, sin uv)
+      - name: Instalar dependencias
         run: |
           pip install --quiet             fastapi "uvicorn[standard]" pydantic             numpy scikit-learn msgpack websockets             httpx pytest pytest-asyncio
-          # PyTorch CPU — suficiente para tests sin GPU
           pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: pytest
         run: |
           cd python
-          python -m pytest tests/ -v --tb=short -x --ignore=tests/test_api.py
+          python -m pytest tests/ -v --tb=short --ignore=tests/test_api.py
         env:
           KALPIXK_FORCE_CPU: "true"
         continue-on-error: true
 
-  # ── Frontend build (depende de WASM) ─────────────────────────────────────
   frontend:
     name: "Frontend — Vite build"
     runs-on: ubuntu-latest
@@ -119,6 +114,4 @@ jobs:
           VITE_BASE_URL: /Wasm-Kalpixk_IA_DevOps/
 
       - name: Verificar build
-        run: |
-          echo "✅ Archivos en web/dist/:"
-          find web/dist -type f | head -20
+        run: find web/dist -type f | head -20
