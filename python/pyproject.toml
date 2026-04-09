@@ -44,6 +44,7 @@ requires-python = ">=3.11"
 # En desarrollo local (sin GPU) se instala la versión CPU normal.
 # =============================================================================
 dependencies = [
+    "rich>=13.7.0",
     # API REST y WebSocket — FastAPI es el framework que expone /api/detect,
     # /api/explain, y el WebSocket /ws/events para el dashboard en tiempo real
     "fastapi>=0.115.0",
