@@ -1,5 +1,6 @@
 target/
 **/*.rs.bk
+__pycache__/
 python/__pycache__/
 __pycache__/
 *.pyc
