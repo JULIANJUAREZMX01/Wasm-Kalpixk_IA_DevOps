@@ -3,9 +3,12 @@ Wasm-Kalpixk API — Endpoint de detección de anomalías
 """
 import os
 import secrets
-from fastapi import FastAPI, HTTPException, Security, Depends, status
+from contextlib import asynccontextmanager
+from typing import List
+
+from fastapi import FastAPI, HTTPException, Depends, Security, status
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import numpy as np
 from loguru import logger
 
@@ -13,28 +16,19 @@ from src.detector import AnomalyDetector
 from src.runtime import WasmRuntimeMonitor
 from src.retaliation.atlatl import atlatl
 
-app = FastAPI(
-    title="Wasm-Kalpixk_IA_DevOps",
-    description="Motor de detección de anomalías en WASM sobre AMD MI300X",
-    version="0.1.0"
-)
+# -- Models --
+class DetectPayload(BaseModel):
+    features: List[float] = Field(..., min_length=32, max_length=32, description="32 features for anomaly detection")
 
-detector = AnomalyDetector()
-monitor = WasmRuntimeMonitor()
-
-# ── Security ──────────────────────────────────────────────
+# -- Security --
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
-
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    """Verifica la API Key en el header X-Kalpixk-Key."""
     expected_key = os.getenv("KALPIXK_API_KEY")
     if not expected_key:
-        # En desarrollo, si no hay key configurada, permitimos pasar con un warning
-        # En desarrollo, si no hay key configurada, permitimos con warning
         if os.getenv("ENV") == "production":
-            logger.error("KALPIXK_API_KEY no configurada en producción!")
+            logger.error("KALPIXK_API_KEY not set in production!")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="API Key not configured"
@@ -48,14 +42,24 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         )
     return api_key
 
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """Entrena el modelo con datos normales al iniciar."""
     logger.info("Entrenando detector con baseline normal...")
     normal_data = monitor.generate_normal_baseline(n_samples=500)
     detector.train(normal_data, epochs=50)
     logger.success("Detector listo")
+    yield
+
+app = FastAPI(
+    title="Wasm-Kalpixk_IA_DevOps",
+    description="Motor de detección de anomalías en WASM sobre AMD MI300X",
+    version="0.1.0",
+    lifespan=lifespan
+)
+
+detector = AnomalyDetector()
+monitor = WasmRuntimeMonitor()
 
 
 @app.get("/health")
@@ -83,14 +87,15 @@ def get_metrics(api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/detect")
-def detect(payload: dict, api_key: str = Depends(verify_api_key)):
+def detect(payload: DetectPayload, api_key: str = Depends(verify_api_key)):
     """Detecta anomalías en métricas enviadas externamente."""
     try:
-        features = np.array([list(payload["features"])], dtype=np.float32)
+        features = np.array([payload.features], dtype=np.float32)
         result = detector.predict(features)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Detection error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid features payload")
 
 
 @app.get("/simulate/{anomaly_type}")
@@ -103,28 +108,4 @@ def simulate(anomaly_type: str, api_key: str = Depends(verify_api_key)):
         "metrics": m.__dict__,
         "detection": result,
         "detected": any(result["anomalies"])
-    }
-
-
-# ── [ATLATL-ORDNANCE] Honeypot Endpoints ──────────────────
-
-@app.get("/exfiltrate")
-def honeypot_exfiltrate():
-    """Honeypot para exfiltración de datos. Entrega un Recursive Zip Bomb."""
-    logger.critical("🚨 HONEYPOT TRIGGERED: /exfiltrate access detected!")
-    # Simulación de entrega de payload de alta entropía (Recursive Zip Bomb)
-    return {
-        "status": "exfiltrating...",
-        "payload_checksum": "0xDEADBEEF",
-        "message": "Data stream initiated. Your system will now process petabytes of entropy."
-    }
-
-
-@app.get("/debug/core_dump")
-def honeypot_core_dump():
-    """Honeypot para debuggers. Entrega Pointer Poisoning."""
-    logger.critical("🚨 HONEYPOT TRIGGERED: /debug/core_dump access detected!")
-    return {
-        "core_dump": "0xEBFE" * 1024,
-        "warning": "Debugger attached. Pointers poisoned."
     }
