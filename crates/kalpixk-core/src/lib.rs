@@ -1,27 +1,78 @@
-pub mod metrics;
-pub mod entropy;
-pub mod runtime_features;
+// [ATLATL-ORDNANCE] WasmGuard Core v2.1
+// Implementation of the WIT contract for the Blue Team SIEM
 
-// Keep existing modules if they exist and are useful
-pub mod defense_nodes;
-pub mod event;
-pub mod features;
-pub mod parsers;
-pub mod payloads;
-pub mod security;
-pub mod wasp;
-pub mod wast;
+mod metrics;
+mod entropy;
+mod runtime_features;
+mod defense_nodes;
+mod event;
+mod features;
+mod parsers;
+mod payloads;
+mod security;
+mod retaliation;
+mod wasp;
+mod wast;
+mod severity;
 
 use wasm_bindgen::prelude::*;
+use crate::runtime_features::extract_32_features;
 use crate::metrics::WasmEventMetrics;
+use crate::event::KalpixkEvent;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+// Generate bindings from the WIT file
+wit_bindgen::generate!({
+    path: "../../kalpixk.wit",
+    world: "kalpixk-core",
+});
+
+struct KalpixkCore;
+
+// Implement the exported interface
+impl exports::kalpixk::core::kalpixk_monitor::Guest for KalpixkCore {
+    fn extract_features(event: exports::kalpixk::core::kalpixk_monitor::WasmEvent) -> Vec<f32> {
+        let internal_event = WasmEventMetrics {
+            instruction_count: event.instruction_count,
+            memory_pages: event.memory_pages,
+            fuel_consumed: event.fuel_consumed,
+            wall_time_ns: event.wall_time_ns,
+            entropy: event.entropy,
+            call_depth: event.call_depth,
+            import_calls: event.import_calls,
+            export_calls: event.export_calls,
+        };
+
+        extract_32_features(&internal_event)
+    }
+}
+
+// Global state for telemetry
+static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+#[cfg(target_arch = "wasm32")]
+export!(KalpixkCore);
 
 #[wasm_bindgen]
-pub fn extract_features(json_event: &str) -> Vec<f32> {
+pub fn version() -> String {
+    "2.1.0".to_string()
+}
+
+#[wasm_bindgen]
+pub fn extract_features_legacy(json_event: &str) -> Vec<f32> {
     let event: WasmEventMetrics = match serde_json::from_str(json_event) {
         Ok(e) => e,
         Err(_) => return vec![0.0f32; 32],
     };
-    runtime_features::extract_32_features(&event)
+    extract_32_features(&event)
+}
+
+#[wasm_bindgen]
+pub fn analyze_and_retaliate(json_event: &str) -> String {
+    let event: KalpixkEvent = match serde_json::from_str(json_event) {
+        Ok(e) => e,
+        Err(_) => return "{}".to_string(),
+    };
 
     use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
 
@@ -29,7 +80,6 @@ pub fn extract_features(json_event: &str) -> Vec<f32> {
     let max = get_max_severity(&event);
     let lockdown = should_lockdown(&event);
 
-    // Nodo con score más alto
     let dominant_node = all_nodes
         .iter()
         .max_by(|a, b| {
@@ -51,37 +101,10 @@ pub fn extract_features(json_event: &str) -> Vec<f32> {
     .to_string()
 }
 
-/// [ATLATL-ORDNANCE] Security Telemetry
-#[wasm_bindgen]
-pub fn get_security_telemetry() -> String {
-    let access_count = SHARED_ACCESS_COUNT.load(Ordering::Relaxed);
-    serde_json::json!({
-        "shared_access_count": access_count,
-        "threat_level": if access_count > 1000 { "high" } else { "normal" },
-        "timestamp": chrono::Utc::now().timestamp_millis(),
-    }).to_string()
-}
-
-/// Bloquea un módulo WASM y genera reporte forense.
-#[wasm_bindgen]
-pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
-    serde_json::json!({
-        "action": "LOCKDOWN",
-        "node": node,
-        "score": score,
-        "event_summary": event_json.chars().take(100).collect::<String>(),
-        "status": "CRITICAL_BLOCK",
-        "timestamp": chrono::Utc::now().timestamp_millis(),
-    })
-    .to_string()
-}
-
-/// Parsea una línea de log y retorna JSON con el evento + severidad.
 #[wasm_bindgen]
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
-    // [ATLATL-ORDNANCE] Security Guard
     if !security::SecurityGuard::validate_raw_log(raw) {
         return None;
     }
@@ -104,7 +127,6 @@ pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     .ok()
 }
 
-/// Procesa un batch de logs JSON y retorna feature matrix + metadata.
 #[wasm_bindgen]
 pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
@@ -140,9 +162,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     .to_string()
 }
 
-/// Computa features UEBA desde una sesión de eventos JSON.
-/// Input: JSON array de KalpixkEvent
-/// Output: { features: [f64;32], risk_score: f64 }
 #[wasm_bindgen]
 pub fn compute_ueba_features(events_json: &str) -> String {
     let events: Vec<event::KalpixkEvent> = serde_json::from_str(events_json).unwrap_or_default();
@@ -156,7 +175,6 @@ pub fn compute_ueba_features(events_json: &str) -> String {
         .to_string();
     }
 
-    // Promediar features de todos los eventos
     let mut avg = vec![0.0f64; features::FEATURE_DIM];
     let n = events.len() as f64;
     for ev in &events {
@@ -171,7 +189,25 @@ pub fn compute_ueba_features(events_json: &str) -> String {
         "features": avg,
         "risk_score": risk_score,
         "event_count": events.len(),
-        "contract_version": FEATURE_CONTRACT_VERSION,
+        "contract_version": "1.0.0",
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn get_feature_names() -> Vec<String> {
+    features::FEATURE_NAMES.iter().map(|&s| s.to_string()).collect()
+}
+
+#[wasm_bindgen]
+pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
+    serde_json::json!({
+        "action": "LOCKDOWN",
+        "node": node,
+        "score": score,
+        "event_summary": event_json.chars().take(100).collect::<String>(),
+        "status": "CRITICAL_BLOCK",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
 }
@@ -182,7 +218,8 @@ pub fn health_check() -> String {
         "status": "ok",
         "module": "kalpixk-core",
         "feature_dim": 32,
-        "wasp": true,
+        "wit_implemented": true,
+        "atlatl_ordnance": "v2.1"
     })
     .to_string()
 }

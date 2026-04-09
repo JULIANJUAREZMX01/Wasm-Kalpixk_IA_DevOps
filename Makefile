@@ -26,6 +26,9 @@ test:
 status:
 	python skills/kalpixk_status.py
 
+wasm-build:
+	cd crates/kalpixk-core && wasm-pack build --target web --release
+
 clean:
 	find . -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null
 	find . -name '*.pyc' -delete 2>/dev/null

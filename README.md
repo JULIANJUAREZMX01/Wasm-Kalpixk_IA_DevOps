@@ -1,3 +1,5 @@
+# Kalpixk SIEM ![CI Status](https://github.com/JULIANJUAREZMX01/Wasm-Kalpixk_IA_DevOps/actions/workflows/main.yml/badge.svg)
+
 # README
 
 ## Architecture Diagram
