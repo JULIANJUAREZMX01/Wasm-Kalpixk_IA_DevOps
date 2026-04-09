@@ -119,7 +119,7 @@ jobs:
         with:
           name: kalpixk-wasm-pkg
           # El directorio pkg/ completo (incluye .wasm, .js, .d.ts)
-          path: web/src/wasm/
+          path: rates/kalpixk-core/pkg/
           # Retener el artifact 30 días (útil para debugging)
           retention-days: 30
 
@@ -150,7 +150,7 @@ jobs:
         with:
           name: kalpixk-wasm-pkg
           # Descargar el pkg/ de vuelta al mismo lugar donde wasm-pack lo dejó
-          path: crates/kalpixk-core/pkg/
+          path: web/src/wasm/
 
       - name: "Configurar Node.js 20"
         uses: actions/setup-node@v4
