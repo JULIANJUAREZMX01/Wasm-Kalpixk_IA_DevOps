@@ -289,11 +289,9 @@ pub fn detect_exfiltration(
     let raw = raw_lower;
 
     // Data staging
-    if raw.contains(".zip") || raw.contains(".tar.gz") || raw.contains(".7z") {
-        if raw.contains("/tmp/") || raw.contains("/var/tmp/") {
-            score += 0.4;
-            techniques.push("T1074".to_string()); // Data Staged
-        }
+    if (raw.contains(".zip") || raw.contains(".tar.gz") || raw.contains(".7z")) && (raw.contains("/tmp/") || raw.contains("/var/tmp/")) {
+        score += 0.4;
+        techniques.push("T1074".to_string()); // Data Staged
     }
 
     // Exfiltration tools
