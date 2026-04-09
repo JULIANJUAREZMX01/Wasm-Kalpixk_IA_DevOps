@@ -48,7 +48,7 @@ impl Default for SyslogParser {
 
 impl SyslogParser {
     pub fn new() -> Self {
-        Self
+        SyslogParser
     }
 
     fn fingerprint(raw: &str) -> String {
@@ -156,7 +156,7 @@ impl Default for JsonStructuredParser {
 
 impl JsonStructuredParser {
     pub fn new() -> Self {
-        Self
+        JsonStructuredParser
     }
 }
 
@@ -252,7 +252,7 @@ impl Default for WindowsEventParser {
 
 impl WindowsEventParser {
     pub fn new() -> Self {
-        Self
+        WindowsEventParser
     }
 }
 
@@ -367,7 +367,7 @@ impl Default for Db2AuditParser {
 
 impl Db2AuditParser {
     pub fn new() -> Self {
-        Self
+        Db2AuditParser
     }
 }
 
@@ -455,7 +455,7 @@ impl Default for NetflowParser {
 
 impl NetflowParser {
     pub fn new() -> Self {
-        Self
+        NetflowParser
     }
 }
 
