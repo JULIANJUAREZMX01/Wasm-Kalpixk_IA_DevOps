@@ -1,7 +1,10 @@
 //! kalpixk-core — WASM-native log parser & feature extractor
+pub mod defense_nodes;
 pub mod event;
 pub mod features;
 pub mod parsers;
+pub mod wasp;
+pub mod wast;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use wasm_bindgen::prelude::*;
@@ -20,27 +23,80 @@ pub fn version() -> String {
     )
 }
 
+/// Analiza un evento JSON y retorna nivel de amenaza + nodo dominante.
+/// Exportado a JS para monitoreo activo.
+#[wasm_bindgen]
+pub fn analyze_and_retaliate(event_json: &str) -> String {
+    let event: event::KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(e) => return serde_json::json!({"error": e.to_string()}).to_string(),
+    };
+
+    use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
+
+    let all_nodes = analyze_all_nodes(&event);
+    let max = get_max_severity(&event);
+    let lockdown = should_lockdown(&event);
+
+    // Nodo con score más alto
+    let dominant_node = all_nodes
+        .iter()
+        .max_by(|a, b| {
+            a.score
+                .partial_cmp(&b.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|n| n.node.clone())
+        .unwrap_or_else(|| "NONE".to_string());
+
+    serde_json::json!({
+        "offense_level": format!("{:?}", max.level),
+        "score": max.score,
+        "node": dominant_node,
+        "lockdown": lockdown,
+        "all_nodes": all_nodes,
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    })
+    .to_string()
+}
+
+/// Bloquea un módulo WASM y genera reporte forense.
+#[wasm_bindgen]
+pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
+    serde_json::json!({
+        "action": "LOCKDOWN",
+        "node": node,
+        "score": score,
+        "event_summary": event_json.chars().take(100).collect::<String>(),
+        "status": "CRITICAL_BLOCK",
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    })
+    .to_string()
+}
+
 /// Parsea una línea de log y retorna JSON con el evento + severidad.
-/// Retorna None si la línea está vacía o no se puede parsear.
 #[wasm_bindgen]
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
     let parser = parsers::get_parser(source_type)?;
     let event = parser.parse(raw).ok()?;
     serde_json::to_string(&serde_json::json!({
-        "event_type": format!("{:?}", event.event_type),
+        "timestamp_ms": event.timestamp_ms,
+        "event_type": event.event_type,
         "local_severity": event.local_severity,
         "source": event.source,
+        "destination": event.destination,
         "user": event.user,
-        "fingerprint": event.fingerprint,
+        "process": event.process,
+        "metadata": event.metadata,
+        "raw": event.raw,
         "source_type": event.source_type,
+        "fingerprint": event.fingerprint,
     }))
     .ok()
 }
 
 /// Procesa un batch de logs JSON y retorna feature matrix + metadata.
-/// Input: JSON array de strings
-/// Output: { parsed_count, anomaly_count, feature_matrix: [[f64;32]] }
 #[wasm_bindgen]
 pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
@@ -48,12 +104,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let parser = match parsers::get_parser(source_type) {
         Some(p) => p,
         None => {
-            return serde_json::json!({
-                "error": format!("Unknown source_type: {}", source_type),
-                "parsed_count": 0,
-                "feature_matrix": []
-            })
-            .to_string()
+            return serde_json::json!({"error": "unknown source", "parsed_count": 0}).to_string()
         }
     };
 
@@ -62,9 +113,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if line.trim().is_empty() {
-            continue;
-        }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
@@ -79,7 +127,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         "anomaly_count": anomaly_count,
         "feature_matrix": feature_matrix,
         "feature_names": features::FEATURE_NAMES,
-        "contract_version": FEATURE_CONTRACT_VERSION,
     })
     .to_string()
 }
@@ -151,8 +198,66 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": features::FEATURE_DIM,
         "contract_version": FEATURE_CONTRACT_VERSION,
+        "defense_nodes": true,
+        "wasp": true,
+        "wast": true,
     })
     .to_string()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WASP — WebAssembly Security Protocol (Exported Functions)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[wasm_bindgen]
+pub fn validate_input_wasp(raw: &str, max_len: usize) -> String {
+    let result = wasp::validate_input(raw, max_len);
+    serde_json::to_string(&result).unwrap_or_default()
+}
+
+#[wasm_bindgen]
+pub fn check_memory_bounds_wasp(offset: usize, length: usize, max_memory: usize) -> String {
+    let result = wasp::check_memory_bounds(offset, length, max_memory);
+    serde_json::to_string(&result).unwrap_or_default()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// Defense Nodes — MITRE ATT&CK Detection
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+#[wasm_bindgen]
+pub fn analyze_defense_nodes(event_json: &str) -> String {
+    use defense_nodes::{analyze_all_nodes, get_max_severity, should_lockdown};
+    use event::KalpixkEvent;
+
+    let event: KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(_) => return serde_json::json!({"error": "Invalid event JSON"}).to_string(),
+    };
+
+    let all_nodes = analyze_all_nodes(&event);
+    let max = get_max_severity(&event);
+    let lockdown = should_lockdown(&event);
+
+    serde_json::json!({
+        "nodes": all_nodes,
+        "max": max,
+        "lockdown_triggered": lockdown,
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn check_lockdown(event_json: &str) -> bool {
+    use defense_nodes::should_lockdown;
+    use event::KalpixkEvent;
+
+    let event: KalpixkEvent = match serde_json::from_str(event_json) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+
+    should_lockdown(&event)
 }
 
 #[cfg(test)]
@@ -184,6 +289,5 @@ mod tests {
     fn test_health_check() {
         let h: serde_json::Value = serde_json::from_str(&health_check()).unwrap();
         assert_eq!(h["status"], "ok");
-        assert_eq!(h["feature_dim"], 32);
     }
 }

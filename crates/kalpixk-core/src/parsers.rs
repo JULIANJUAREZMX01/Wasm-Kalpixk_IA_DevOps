@@ -41,6 +41,12 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
 #[derive(Default)]
 pub struct SyslogParser;
 
+impl Default for SyslogParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SyslogParser {
     pub fn new() -> Self {
         Self
@@ -144,6 +150,12 @@ impl LogParser for SyslogParser {
 #[derive(Default)]
 pub struct JsonStructuredParser;
 
+impl Default for JsonStructuredParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JsonStructuredParser {
     pub fn new() -> Self {
         Self
@@ -234,6 +246,12 @@ impl LogParser for JsonStructuredParser {
 
 #[derive(Default)]
 pub struct WindowsEventParser;
+
+impl Default for WindowsEventParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl WindowsEventParser {
     pub fn new() -> Self {
@@ -345,6 +363,12 @@ impl LogParser for WindowsEventParser {
 #[derive(Default)]
 pub struct Db2AuditParser;
 
+impl Default for Db2AuditParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Db2AuditParser {
     pub fn new() -> Self {
         Self
@@ -427,6 +451,12 @@ impl LogParser for Db2AuditParser {
 
 #[derive(Default)]
 pub struct NetflowParser;
+
+impl Default for NetflowParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl NetflowParser {
     pub fn new() -> Self {

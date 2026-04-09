@@ -1,116 +1,237 @@
+# =============================================================================
+# .github/workflows/deploy-pages.yml
+# =============================================================================
+#
+# PROPÓSITO:
+#   Compilar el WASM desde Rust → construir el frontend Vite →
+#   desplegar a GitHub Pages con una URL permanente y gratuita.
+#
+# POR QUÉ NECESITAMOS ESTO:
+#   El proyecto funciona en GitHub Codespaces, pero esa URL es temporal
+#   (muere cuando cierras el Codespace). Para el hackathon de AMD (Mayo 9)
+#   los jueces necesitan una URL permanente que cualquiera pueda visitar.
+#
+#   GitHub Pages es gratuito para repos públicos y da una URL como:
+#   https://julianjuarezmx01.github.io/Wasm-Kalpixk_IA_DevOps/
+#
+# CUÁNDO CORRE:
+#   - En cada `git push` a la rama `main`
+#   - Manualmente desde la tab Actions en GitHub
+#
+# REQUISITO MANUAL (hacer UNA VEZ):
+#   GitHub Settings → Pages → Source → "GitHub Actions"
+#   Sin este paso el workflow corre pero no puede desplegar.
+#
+# TIEMPO DE EJECUCIÓN:
+#   ~8-12 minutos en total (Rust compilation toma ~5 min la primera vez,
+#   luego el cache de Cargo lo reduce a ~1-2 min)
+#
+# COSTO: $0 (GitHub Actions es gratuito para repos públicos)
+#
+# =============================================================================
+
 name: Deploy Kalpixk WASM to GitHub Pages
 
-# Se ejecuta en cada push a main O manualmente
+# ── Triggers ─────────────────────────────────────────────────────────────────
 on:
+  # Correr automáticamente en cada push a main
   push:
     branches: [main]
+  # Permitir ejecución manual desde la tab Actions
   workflow_dispatch:
 
-# Permisos necesarios para GitHub Pages
+# ── Permisos ─────────────────────────────────────────────────────────────────
+# GitHub necesita permiso explícito para escribir en Pages
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: read   # Leer el código del repo
+  pages: write     # Escribir los archivos del sitio
+  id-token: write  # Autenticarse con el servicio de Pages
 
-# Solo un deployment a la vez
+# ── Concurrencia ─────────────────────────────────────────────────────────────
+# Si hay dos pushes rápidos, cancelar el deploy anterior y correr el nuevo
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: false  # false = esperar que termine en vez de cancelar
 
+# =============================================================================
+# JOB 1: Compilar el módulo WebAssembly desde Rust
+# =============================================================================
+#
+# CONTEXTO:
+#   El motor de detección está escrito en Rust (crates/kalpixk-core/src/).
+#   Para que corra en el browser, necesita compilarse a WebAssembly.
+#   wasm-pack es la herramienta oficial de Rust para esta compilación.
+#
+#   Salida esperada (en crates/kalpixk-core/pkg/):
+#   - kalpixk_core_bg.wasm   (~245 KB) — el binario
+#   - kalpixk_core.js        — glue code JavaScript
+#   - kalpixk_core.d.ts      — tipos TypeScript
+#
 jobs:
-  # ─── Paso 1: Compilar el WASM desde Rust ─────────────────────────────────────
   build-wasm:
-    name: Compilar Rust → WASM
+    name: "Compilar Rust → WASM"
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: "Checkout del código"
         uses: actions/checkout@v4
 
-      - name: Instalar Rust + target WASM
+      - name: "Instalar Rust stable + target wasm32"
         uses: dtolnay/rust-toolchain@stable
         with:
+          # El target wasm32-unknown-unknown es el que genera .wasm puro
+          # (sin dependencias del SO, compatible con browsers)
           targets: wasm32-unknown-unknown
 
-      - name: Cache Cargo (acelera builds futuros)
+      - name: "Cache de compilación Cargo"
         uses: Swatinem/rust-cache@v2
         with:
+          # El cache se guarda por directorio para que sea específico a kalpixk-core
           workspaces: crates/kalpixk-core
+          # Claves de cache incluyen el OS y los archivos de lock
+          # Si Cargo.lock cambia, el cache se invalida automáticamente
 
-      - name: Instalar wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: "Instalar wasm-pack"
+        run: |
+          # wasm-pack es la herramienta oficial para compilar Rust a WASM
+          # y generar los bindings de JavaScript/TypeScript automáticamente
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          echo "wasm-pack instalado: $(wasm-pack --version)"
 
-      - name: Compilar kalpixk-core a WASM
+      - name: "Compilar kalpixk-core a WebAssembly (release)"
         run: |
           cd crates/kalpixk-core
+          
+          # --target web   → Genera módulos ES compatibles con browsers modernos
+          # --release      → Optimización máxima (opt-level = 'z' en Cargo.toml)
+          #                  Reduce el .wasm de ~800KB a ~245KB
           wasm-pack build --target web --release
-          echo "WASM compilado:"
+          
+          # Reportar lo que se generó
+          echo "Archivos generados en pkg/:"
           ls -lh pkg/
-          echo "Tamaño: $(du -sh pkg/kalpixk_core_bg.wasm | cut -f1)"
+          echo ""
+          echo "Tamaño del WASM: $(du -sh pkg/kalpixk_core_bg.wasm | cut -f1)"
 
-      # Guardar el pkg/ como artifact para el siguiente job
-      - name: Upload WASM artifact
+      - name: "Subir WASM como artifact del workflow"
+        # Los artifacts permiten pasar archivos entre jobs
         uses: actions/upload-artifact@v4
         with:
           name: kalpixk-wasm-pkg
+          # El directorio pkg/ completo (incluye .wasm, .js, .d.ts)
           path: crates/kalpixk-core/pkg/
+          # Retener el artifact 30 días (útil para debugging)
+          retention-days: 30
 
-  # ─── Paso 2: Construir el sitio estático ──────────────────────────────────────
+# =============================================================================
+# JOB 2: Construir el sitio estático con Vite
+# =============================================================================
+#
+# CONTEXTO:
+#   Vite es el bundler que toma el TypeScript, el dashboard HTML,
+#   y el módulo WASM, y los empaqueta en un sitio estático optimizado
+#   que puede servirse desde GitHub Pages.
+#
+#   Este job depende del job anterior (needs: build-wasm) para tener
+#   el .wasm disponible antes de construir el frontend.
+#
   build-site:
-    name: Construir sitio GitHub Pages
+    name: "Construir sitio Vite"
     runs-on: ubuntu-latest
+    # Este job solo corre cuando build-wasm termina exitosamente
     needs: build-wasm
+
     steps:
-      - name: Checkout
+      - name: "Checkout del código"
         uses: actions/checkout@v4
 
-      - name: Descargar WASM compilado
+      - name: "Descargar el WASM compilado"
         uses: actions/download-artifact@v4
         with:
           name: kalpixk-wasm-pkg
-          # Lo ponemos directamente en web/src/wasm/ para que Vite lo encuentre
+          # Descargar el pkg/ de vuelta al mismo lugar donde wasm-pack lo dejó
           path: crates/kalpixk-core/pkg/
 
-      - name: Configurar Node.js
+      - name: "Configurar Node.js 20"
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          # Cache automático de npm para acelerar instalaciones futuras
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
 
-      - name: Instalar dependencias npm
+      - name: "Instalar dependencias npm"
         run: |
           cd web
           npm install
+          echo "Dependencias instaladas:"
+          npm list --depth=0
 
-      - name: Build de producción con Vite
+      - name: "Build de producción"
         run: |
           cd web
+          # VITE_BASE_URL define el path base del sitio en GitHub Pages
+          # Debe ser el nombre del repositorio entre slashes
           npm run build
         env:
-          # En producción, la base URL es /Wasm-Kalpixk_IA_DevOps/ (nombre del repo)
+          # GitHub Pages sirve el sitio en /Wasm-Kalpixk_IA_DevOps/
+          # no en / como en desarrollo local
           VITE_BASE_URL: /Wasm-Kalpixk_IA_DevOps/
 
-      # El dashboard HTML estático también va al sitio
-      - name: Copiar dashboard HTML al sitio
+      - name: "Copiar dashboard HTML al sitio construido"
         run: |
-          cp -r dashboard/ web/dist/dashboard/ 2>/dev/null || true
-          cp BENCHMARK_RESULTS.md web/dist/ 2>/dev/null || true
+          # El dashboard HTML funciona como página independiente (no requiere JS)
+          # Lo copiamos al build para que sea accesible en /dashboard/
+          if [[ -d "dashboard" ]]; then
+            cp -r dashboard/ web/dist/dashboard/
+            echo "Dashboard copiado a web/dist/dashboard/"
+          fi
+          
+          # El BENCHMARK_RESULTS.md también va al sitio para que los jueces
+          # puedan ver la metodología del benchmark directamente
+          if [[ -f "BENCHMARK_RESULTS.md" ]]; then
+            cp BENCHMARK_RESULTS.md web/dist/
+            echo "BENCHMARK_RESULTS.md copiado"
+          fi
+          
+          # Mostrar estructura del sitio construido
+          echo "Estructura del sitio:"
+          find web/dist -type f | head -20
 
-      - name: Configurar Pages
+      - name: "Configurar GitHub Pages"
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact de Pages
+      - name: "Subir sitio como artifact de Pages"
         uses: actions/upload-pages-artifact@v3
         with:
+          # El directorio que se desplegará en Pages
           path: web/dist/
 
-  # ─── Paso 3: Deploy a GitHub Pages ───────────────────────────────────────────
+# =============================================================================
+# JOB 3: Desplegar a GitHub Pages
+# =============================================================================
+#
+# CONTEXTO:
+#   Este job toma el artifact del job anterior y lo despliega
+#   al servicio de GitHub Pages.
+#
+#   La URL resultante es permanente y no requiere ningún servidor.
+#   GitHub sirve los archivos estáticos directamente desde su CDN.
+#
   deploy:
-    name: Deploy a GitHub Pages
+    name: "Deploy a GitHub Pages"
+    # environment define en qué "ambiente" corre (visible en GitHub)
     environment:
       name: github-pages
+      # Esta URL se muestra en el badge de deployment en GitHub
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    # Solo corre cuando build-site termina exitosamente
     needs: build-site
+
     steps:
-      - name: Deploy
+      - name: "Deploy"
         id: deployment
         uses: actions/deploy-pages@v4
+        # Este action toma el artifact subido en el job anterior
+        # y lo despliega automáticamente a GitHub Pages

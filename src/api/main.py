@@ -26,11 +26,13 @@ monitor = WasmRuntimeMonitor()
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
+
 async def verify_api_key(api_key: str = Security(api_key_header)):
     """Verifica la API Key en el header X-Kalpixk-Key."""
     expected_key = os.getenv("KALPIXK_API_KEY")
     if not expected_key:
         # En desarrollo, si no hay key configurada, permitimos pasar con un warning
+        # En desarrollo, si no hay key configurada, permitimos con warning
         if os.getenv("ENV") == "production":
             logger.error("KALPIXK_API_KEY no configurada en producción!")
             raise HTTPException(

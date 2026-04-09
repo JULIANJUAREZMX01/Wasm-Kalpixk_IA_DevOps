@@ -2,14 +2,16 @@
 # train_baseline.py - Entrenar modelo Kalpixk con datos benignos
 # Ejecutar en droplet AMD MI300X: python3 python/train_baseline.py
 
-import time
-import sys
 import pickle
-import numpy as np
+import sys
+import time
 from pathlib import Path
+
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from python.utils.device import get_rocm_device, log_gpu_info
 from python.models.ensemble import DetectionEnsemble
+from python.utils.device import get_rocm_device, log_gpu_info
 
 FEATURE_DIM = 32
 BASELINE_FILE = Path("models/baseline_model.pkl")

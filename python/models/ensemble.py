@@ -7,10 +7,9 @@ Diseñado para correr en AMD Instinct MI300X con ROCm 7.2.
 
 import logging
 from pathlib import Path
-from typing import Tuple
 
-import torch
 import numpy as np
+import torch
 
 logger = logging.getLogger("kalpixk.detection.ensemble")
 
@@ -42,7 +41,7 @@ class DetectionEnsemble:
     def predict(
         self, 
         features: torch.Tensor
-    ) -> Tuple[list[float], list[str], list[float]]:
+    ) -> tuple[list[float], list[str], list[float]]:
         """
         Predecir scores de anomalía para un batch de features.
         
@@ -125,7 +124,9 @@ class DetectionEnsemble:
                 # Fit con datos aleatorios si no hay modelo guardado
                 dummy = np.random.randn(200, 32).astype(np.float32)
                 self._sklearn_if.fit(dummy)
-                logger.warning("Usando sklearn IsolationForest (CPU) — entrena el modelo con datos reales")
+                logger.warning(
+                    "Usando sklearn IsolationForest (CPU) — entrena el modelo con datos reales"
+                )
             
             raw_scores = self._sklearn_if.score_samples(features_np)
             min_s, max_s = raw_scores.min(), raw_scores.max()
