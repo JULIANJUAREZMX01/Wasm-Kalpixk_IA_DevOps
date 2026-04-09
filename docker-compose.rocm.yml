@@ -8,7 +8,7 @@ services:
   
   # ── Backend de detección (AMD ROCm) ──────────────────────────────────────────
   kalpixk-api:
-    image: rocm/pytorch:latest  # Imagen oficial AMD con ROCm + PyTorch
+    image: rocm/pytorch:rocm6.2_ubuntu22.04_py3.10_pytorch_release_2.1.0  # Imagen oficial AMD con ROCm + PyTorch
     container_name: kalpixk-api
     restart: unless-stopped
     working_dir: /app
@@ -49,7 +49,7 @@ services:
 
   # ── LLM Explainer (Llama 70B vía vLLM) ───────────────────────────────────────
   kalpixk-llm:
-    image: rocm/vllm:latest   # vLLM con ROCm
+    image: rocm/vllm:rocm6.2   # vLLM con ROCm
     container_name: kalpixk-llm
     restart: unless-stopped
     environment:
