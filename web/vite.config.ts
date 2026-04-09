@@ -3,12 +3,11 @@
 // =============================================================================
 
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
 
 // base: path base del sitio en producción
-// - En desarrollo local: '/' (raíz del servidor)
-// - En GitHub Pages: '/Wasm-Kalpixk_IA_DevOps/' (nombre del repositorio)
 // Por default para GitHub Pages: '/Wasm-Kalpixk_IA_DevOps/'
 const base = process.env.VITE_BASE_URL || '/Wasm-Kalpixk_IA_DevOps/'
 
@@ -17,6 +16,7 @@ export default defineConfig({
   base,
 
   plugins: [
+    react(),
     // Soporte nativo de WASM como ES modules
     wasm(),
     // Soporte de top-level await (necesario para init() del WASM)
