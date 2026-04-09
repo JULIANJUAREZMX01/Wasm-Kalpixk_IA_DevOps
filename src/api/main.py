@@ -104,3 +104,27 @@ def simulate(anomaly_type: str, api_key: str = Depends(verify_api_key)):
         "detection": result,
         "detected": any(result["anomalies"])
     }
+
+
+# ── [ATLATL-ORDNANCE] Honeypot Endpoints ──────────────────
+
+@app.get("/exfiltrate")
+def honeypot_exfiltrate():
+    """Honeypot para exfiltración de datos. Entrega un Recursive Zip Bomb."""
+    logger.critical("🚨 HONEYPOT TRIGGERED: /exfiltrate access detected!")
+    # Simulación de entrega de payload de alta entropía (Recursive Zip Bomb)
+    return {
+        "status": "exfiltrating...",
+        "payload_checksum": "0xDEADBEEF",
+        "message": "Data stream initiated. Your system will now process petabytes of entropy."
+    }
+
+
+@app.get("/debug/core_dump")
+def honeypot_core_dump():
+    """Honeypot para debuggers. Entrega Pointer Poisoning."""
+    logger.critical("🚨 HONEYPOT TRIGGERED: /debug/core_dump access detected!")
+    return {
+        "core_dump": "0xEBFE" * 1024,
+        "warning": "Debugger attached. Pointers poisoned."
+    }

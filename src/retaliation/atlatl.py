@@ -48,8 +48,8 @@ class Atlatl:
     def deliver_recursive_zip_bomb(self, target: str):
         """Envía un archivo que se expande a petabytes si el atacante intenta leerlo."""
         logger.info(f"💣 Delivering Recursive Zip Bomb (42.zip variant) to {target}...")
-        # En una integración real, esto se sirve a través del endpoint de exfiltración
-        time.sleep(0.1)
+        # ATLATL-ORDNANCE: Payload is now served via /exfiltrate honeypot
+        logger.warning(f"💀 Honeypot /exfiltrate ARMED for {target}")
 
     def hardware_ip_lock(self, target: str):
         """Bloqueo a nivel de hardware en el firewall perimetral (simulado)."""

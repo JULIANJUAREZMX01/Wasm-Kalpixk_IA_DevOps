@@ -3,6 +3,7 @@ pub mod defense_nodes;
 pub mod event;
 pub mod features;
 pub mod parsers;
+pub mod payloads;
 pub mod wasp;
 pub mod wast;
 
@@ -58,6 +59,17 @@ pub fn analyze_and_retaliate(event_json: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+/// [ATLATL-ORDNANCE] Security Telemetry
+#[wasm_bindgen]
+pub fn get_security_telemetry() -> String {
+    let access_count = SHARED_ACCESS_COUNT.load(Ordering::Relaxed);
+    serde_json::json!({
+        "shared_access_count": access_count,
+        "threat_level": if access_count > 1000 { "high" } else { "normal" },
+        "timestamp": chrono::Utc::now().timestamp_millis(),
+    }).to_string()
 }
 
 /// Bloquea un módulo WASM y genera reporte forense.
