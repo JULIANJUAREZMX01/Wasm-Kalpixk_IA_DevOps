@@ -1,0 +1,3 @@
+## 2024-05-19 - [React `useMemo` Optimization for Derived State]
+**Learning:** Found unnecessary recalculations of arrays and derived states (`chartData`, `avgSev`, and inline filters) during re-renders in `Dashboard.tsx`. These recalcs were triggered frequently by `addLog` state updates to `wasmLog`, even though the source dependency (`events`) did not change.
+**Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original array (e.g. `events`) as the dependency array. This prevents performance degradation when independent state variables (like localized terminal logs) trigger component re-renders.
