@@ -3,11 +3,11 @@ Manhattan WMS / IBM DB2 Connector — Kalpixk SIEM
 Adapts the 22 SAC queries from CEDIS Cancún to Kalpixk log format.
 SECURITY: Connection string loaded from env — never hardcoded.
 """
-import os
 import logging
+import os
+from collections.abc import Generator
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Generator
+from datetime import UTC, datetime
 
 logger = logging.getLogger("kalpixk.wms")
 
@@ -93,7 +93,7 @@ class WmsConnector:
             "TIMESTAMP={ts} AUTHID=UNKNOWN HOSTNAME=10.0.3.99 SQL=DROP TABLE WMS_USER SQLCODE=-551 ROWS=0",
             "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=GRANT SELECT ON INVENTORY TO PUBLIC SQLCODE=0 ROWS=0",
         ]
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
         for i in range(100): # Limited to 100 for shorter runs
             ts = (base_time - timedelta(seconds=i * 30)).strftime("%Y-%m-%d %H:%M:%S")
             tpl = random.choice(templates)

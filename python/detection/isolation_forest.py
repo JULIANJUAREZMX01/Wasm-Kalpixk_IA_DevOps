@@ -2,13 +2,16 @@
 KalpixkIsolationForest — GPU-accelerated anomaly detection
 Wraps cuML IsolationForest (AMD ROCm) with CPU fallback (sklearn).
 """
+
 import logging
+from pathlib import Path
+
 import numpy as np
 import torch
-from pathlib import Path
 
 logger = logging.getLogger("kalpixk.detection.isolation_forest")
 MODELS_DIR = Path(__file__).parent.parent / "models"
+
 
 class KalpixkIsolationForest:
     VERSION = "0.1.0"
@@ -26,6 +29,7 @@ class KalpixkIsolationForest:
         model_path = MODELS_DIR / "isolation_forest.pkl"
         if model_path.exists():
             import joblib
+
             try:
                 self._model = joblib.load(model_path)
                 self._is_trained = True
@@ -38,6 +42,7 @@ class KalpixkIsolationForest:
         if str(self.device) != "cpu":
             try:
                 from cuml.ensemble import IsolationForest as cuIsolationForest
+
                 self._model = cuIsolationForest(
                     n_estimators=self.N_ESTIMATORS,
                     contamination=self.CONTAMINATION,
@@ -50,6 +55,7 @@ class KalpixkIsolationForest:
 
         if self._model is None:
             from sklearn.ensemble import IsolationForest
+
             self._model = IsolationForest(
                 n_estimators=self.N_ESTIMATORS,
                 contamination=self.CONTAMINATION,
@@ -79,13 +85,14 @@ class KalpixkIsolationForest:
         if max_s == min_s:
             normalized = [0.3] * len(raw_scores)
         else:
-            normalized = [float(1.0 - (s - min_s) / (max_s - min_s)) for s in raw_scores]
+            normalized = (1.0 - (raw_scores - min_s) / (max_s - min_s)).tolist()
 
-        confidences = [min(1.0, abs(float(s)) / 0.5) for s in raw_scores]
+        confidences = np.clip(np.abs(raw_scores) / 0.5, 0.0, 1.0).tolist()
         return normalized, confidences
 
     def save(self):
         MODELS_DIR.mkdir(exist_ok=True)
         import joblib
+
         joblib.dump(self._model, MODELS_DIR / "isolation_forest.pkl")
         logger.info(f"Modelo guardado en {MODELS_DIR / 'isolation_forest.pkl'}")

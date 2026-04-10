@@ -1,0 +1,3 @@
+## 2026-04-09 - Frontend & Backend Performance Boost
+**Learning:** React re-renders in Dashboards can be severely impacted by unfiltered derivations like `events.reduce` and `events.filter` inside the render function. Meanwhile, native Python loops in performance critical ML sections (like autoencoder normalisation and Isolation Forest score computations) bottleneck the system throughput on GPU-accelerated environments like MI300X.
+**Action:** Always wrap derived states with `useMemo` in React components when processing large arrays of logs (like `events`). For Python, replace list comprehensions in array transformations with `numpy` vectorized operations (`np.clip`, `np.abs`) to exploit fast vector arithmetic.

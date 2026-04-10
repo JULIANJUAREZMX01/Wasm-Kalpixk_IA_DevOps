@@ -3,27 +3,40 @@ KalpixkAutoencoder — PyTorch anomaly detection via reconstruction error.
 Runs on AMD MI300X via ROCm.
 Architecture: 32 → 16 → 8 → 4 → 8 → 16 → 32 (symmetric encoder-decoder)
 """
+
 import logging
+from pathlib import Path
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from pathlib import Path
 
 logger = logging.getLogger("kalpixk.detection.autoencoder")
 MODELS_DIR = Path(__file__).parent.parent / "models"
+
 
 class _AutoencoderNet(nn.Module):
     def __init__(self, input_dim: int = 32):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 16), nn.ReLU(), nn.BatchNorm1d(16),
-            nn.Linear(16, 8),         nn.ReLU(), nn.BatchNorm1d(8),
-            nn.Linear(8, 4),          nn.ReLU(),
+            nn.Linear(input_dim, 16),
+            nn.ReLU(),
+            nn.BatchNorm1d(16),
+            nn.Linear(16, 8),
+            nn.ReLU(),
+            nn.BatchNorm1d(8),
+            nn.Linear(8, 4),
+            nn.ReLU(),
         )
         self.decoder = nn.Sequential(
-            nn.Linear(4, 8),          nn.ReLU(), nn.BatchNorm1d(8),
-            nn.Linear(8, 16),         nn.ReLU(), nn.BatchNorm1d(16),
-            nn.Linear(16, input_dim), nn.Sigmoid(),
+            nn.Linear(4, 8),
+            nn.ReLU(),
+            nn.BatchNorm1d(8),
+            nn.Linear(8, 16),
+            nn.ReLU(),
+            nn.BatchNorm1d(16),
+            nn.Linear(16, input_dim),
+            nn.Sigmoid(),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -33,6 +46,7 @@ class _AutoencoderNet(nn.Module):
         with torch.no_grad():
             recon = self.forward(x)
             return torch.mean((x - recon) ** 2, dim=1)
+
 
 class KalpixkAutoencoder:
     VERSION = "0.1.0"
@@ -95,12 +109,14 @@ class KalpixkAutoencoder:
         # Normalize: error / threshold. Cap at 1.0.
         # If error > threshold, score > 1.0, but we want [0, 1] usually.
         # Actually, let's follow the brief's min(1.0, e / threshold)
-        scores = [float(min(1.0, e / (self._threshold + 1e-8))) for e in errors]
-        confidences = [min(1.0, s * 1.2) for s in scores]
-        return scores, confidences
+        scores = np.clip(errors / (self._threshold + 1e-8), 0.0, 1.0)
+        confidences = np.clip(scores * 1.2, 0.0, 1.0)
+        return scores.tolist(), confidences.tolist()
 
     def save(self):
         MODELS_DIR.mkdir(exist_ok=True)
-        torch.save({"model": self.net.state_dict(), "threshold": self._threshold},
-                   MODELS_DIR / "autoencoder.pt")
+        torch.save(
+            {"model": self.net.state_dict(), "threshold": self._threshold},
+            MODELS_DIR / "autoencoder.pt",
+        )
         logger.info(f"Autoencoder guardado en {MODELS_DIR / 'autoencoder.pt'}")
