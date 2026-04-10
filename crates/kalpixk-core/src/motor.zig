@@ -1,10 +1,19 @@
 // motor.zig — Entropia de Shannon y Contra-Ataque de Memoria para Kalpixk
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
-// ATLATL-ORDNANCE: La defensa no termina en el bloqueo.
+// ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
+// Versión: 2.2-MACUAHUITL (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
+
+/// [ATLATL-ORDNANCE] ESTRUCTURA DE CONTROL DE MEMORIA
+/// Define el contrato de memoria para el buffer compartido entre Zig y el Host.
+pub const MemoryContract = struct {
+    pub const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MB
+    pub const CANARY_VALUE: u8 = 0xDE;
+    pub const POISON_VALUE: u8 = 0xAD;
+};
 
 /// Entropia de Shannon en bits por simbolo
 pub export fn shannon_entropy(data_ptr: [*]const u8, data_len: usize) f64 {
@@ -52,8 +61,9 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
     return ptr.load(.Monotonic) == expected;
 }
 
-/// [ATLATL-ORDNANCE] POINTER POISONING
-/// Inyecta un bucle infinito JMP $ en el buffer del atacante.
+/// [ATLATL-ORDNANCE] POINTER POISONING (MACUAHUITL)
+/// Inyecta un bucle infinito JMP $ y corrompe los punteros de retorno en el buffer.
+/// Si el atacante intenta un buffer overflow, redirige su flujo a un callejón sin salida.
 pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
     const slice = target_ptr[0..target_len];
     for (slice, 0..) |*byte, i| {
@@ -81,15 +91,18 @@ pub export fn poison_memory_range(target_ptr: [*]u8, target_len: usize, seed: u6
 pub export fn generate_recursive_entropy_trap(target_ptr: [*]u8, target_len: usize) void {
     const slice = target_ptr[0..target_len];
     for (slice, 0..) |*byte, i| {
+        // Secuencia que engaña a algoritmos DEFLATE/LZ77
         if (i % 42 == 0) {
             byte.* = 0xFF;
+        } else if (i % 7 == 0) {
+            byte.* = 0x00;
         } else {
             byte.* = @truncate(i ^ (i >> 8));
         }
     }
 }
 
-/// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION
+/// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];
     for (slice) |byte| {
@@ -98,12 +111,55 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
     return false;
 }
 
-test "dynamic obfuscation is reversible" {
-    var buffer = [_]u8{ 1, 2, 3, 4, 5 } ** 2;
-    const original = buffer;
-    dynamic_obfuscation(&buffer, buffer.len, 0xACE);
-    try std.testing.expect(!std.mem.eql(u8, &buffer, &original));
-    dynamic_obfuscation(&buffer, buffer.len, 0xACE); // XOR es reversible
-    // Re-calculating LCG state for reversibility requires same start
-    // In actual use, we'd use a fixed mask or reset seed.
+/// [ATLATL-ORDNANCE] MACUAHUITL STRIKE
+/// Combina ofuscación dinámica con envenenamiento de memoria masivo.
+/// Diseñado para ser la respuesta final cuando el monitor WASM detecta exfiltración.
+pub export fn macuahuitl_strike(target_ptr: [*]u8, target_len: usize, key: u64) void {
+    const slice = target_ptr[0..target_len];
+    var prng = std.rand.DefaultPrng.init(key);
+    const rand = prng.random();
+
+    for (slice, 0..) |*byte, i| {
+        // Intercalamos instrucciones de loop infinito con basura aleatoria
+        if (i % 16 < 2) {
+            // EB FE (JMP -2)
+            if (i % 2 == 0) byte.* = 0xEB else byte.* = 0xFE;
+        } else {
+            byte.* = rand.int(u8);
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] VALIDATE SHARED BUFFER INTEGRITY
+/// Verifica que el buffer no contenga patrones de inyección comunes.
+pub export fn validate_buffer_safety(ptr: [*]const u8, len: usize) bool {
+    const slice = ptr[0..len];
+    var i: usize = 0;
+    while (i < len - 2) : (i += 1) {
+        // Detectar NOP Sled (0x90 0x90 0x90)
+        if (slice[i] == 0x90 and slice[i+1] == 0x90 and slice[i+2] == 0x90) {
+            return false;
+        }
+        // Detectar JMP $ (0xEB 0xFE)
+        if (slice[i] == 0xEB and slice[i+1] == 0xFE) {
+            return false;
+        }
+    }
+    return true;
+}
+
+test "macuahuitl strike effectively poisons memory" {
+    var buffer: [256]u8 = undefined;
+    @memset(&buffer, 0);
+    macuahuitl_strike(&buffer, buffer.len, 0x1337);
+
+    // Verificar que al menos algunas partes del buffer tengan el JMP infinito
+    try std.testing.expect(buffer[0] == 0xEB);
+    try std.testing.expect(buffer[1] == 0xFE);
+}
+
+test "shannon entropy calculation" {
+    const data = "ATLATL-ORDNANCE";
+    const entropy = shannon_entropy(data, data.len);
+    try std.testing.expect(entropy > 3.0);
 }

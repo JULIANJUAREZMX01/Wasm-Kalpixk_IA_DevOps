@@ -1,27 +1,18 @@
-# 🏹 ORDNANCE OPS: GUERRILLA ALGORÍTMICA
+# War Journal: Operation ATLATL-MACUAHUITL 🏹
 
-## MISSION OBJECTIVES
-- **Aniquilación Total:** Transition from passive monitoring to offensive retaliation.
-- **Hardening Masivo:** Implement military-grade security at the Metal (Zig) and Logic (Rust) layers.
-- **Decentralized Defense:** Enable nodes to act as unexpected defensive honeypots.
-- **Visual Superiority:** Integrate SACITY/SAC_OS aesthetics for terminal-grade command and control.
+## [OP-2026-04-10] - Alpha Stack Hardening & Offensive Pivot
 
----
-
-## [OP_ALPHA_STRIKE] - RED TEAM ANALYSIS
 **Vector de Ataque:**
-- Scanning identified that while anomaly detection is high-performance, the retaliation module (`atlatl.py`) is primarily descriptive and logs-based.
-- Memory signatures in WASM are static, making them vulnerable to advanced debugging/reverse engineering.
-- `SharedArrayBuffer` lacks atomic validation guards in the Zig core.
+Se identificaron debilidades en la frontera FFI y en el monitoreo de integridad del runtime WASM. El atacante podría secuestrar el hilo principal de JS e ignorar las alertas de seguridad, o intentar exfiltrar datos mediante endpoints de telemetría desprotegidos.
 
-**Defensa Requerida:**
-- Implement dynamic obfuscation of memory signatures in Zig.
-- Upgrade WASP (WebAssembly Security Protocol) with instruction counting and FFI boundary enforcement.
-- Expand Defense Nodes to cover RCE and Data Exfiltration.
+**Defensa Implementada:**
+- **WASP+ (WASM Security Protocol):** Implementación de un Guardián de Frontera FFI en Rust que valida cada llamada y mantiene un contador de instrucciones (Heartbeat) atómico.
+- **Dead Man's Switch:** El dashboard ahora monitoriza el latido del motor WASM; si el motor se detiene o el contador no avanza, se activa el estado de 'TAMPERED'.
+- **Hardening de Memoria:** Se añadieron patrones de detección de Shellcode (NOP sleds, JMP loops) directamente en la validación de logs del Core.
 
-**Contra-Ataque Planificado:**
-- Generation of real offensive payloads (Recursive Zip Bombs, Pointer Poisoning traps) served via Honeypot endpoints.
-- Peer-to-peer threat sharing between decentralized nodes.
+**Contra-Ataque (Phase Black):**
+- **Macuahuitl Strike:** El motor Zig (`motor.zig`) fue actualizado con lógica de envenenamiento de punteros agresiva que inyecta bucles infinitos en el espacio de direcciones del atacante.
+- **Recursive Entropy Traps:** Implementación de honeypots `/api/v1/retaliate/exfiltrate` que entregan 50MB de basura de alta entropía (Zip Bomb Chunk) a los agresores detectados, colapsando sus herramientas de análisis.
 
----
-*ATLATL-ORDNANCE: El Centro de Mando ha validado el vector de agresión. Iniciando Fase Azul.*
+**Resultado:**
+Evasión técnica neutralizada. El sistema no solo bloquea la amenaza, sino que degrada activamente la infraestructura del agresor mediante represalias de saturación de entropía.

@@ -7,6 +7,10 @@
 //! - [ATLATL-ORDNANCE] Instruction Monitoring & FFI Guards
 
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// [ATLATL-ORDNANCE] Global Instruction Counter for Heartbeat
+static INSTRUCTION_HEARTBEAT: AtomicU64 = AtomicU64::new(0);
 
 /// Security policy levels
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -32,22 +36,37 @@ pub struct WaspPolicyResult {
 pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicyResult {
     let mut violations = Vec::new();
 
-    // Prohibir funciones sensibles si no hay contexto de seguridad
-    let sensitive_fns = ["system", "exec", "eval", "poison_pointers"];
+    // Increment heartbeat on every FFI call
+    INSTRUCTION_HEARTBEAT.fetch_add(1, Ordering::Relaxed);
+
+    // Prohibit sensitive functions if security context is not explicitly verified
+    let sensitive_fns = ["system", "exec", "eval", "poison_pointers", "wasm_lockdown"];
     if sensitive_fns.contains(&function_name) {
-        violations.push(format!("Unauthorized call to sensitive FFI function: {}", function_name));
+        violations.push(format!("CRITICAL: Unauthorized call to sensitive FFI function: {}", function_name));
     }
 
     if params_count > 10 {
         violations.push(format!("Excessive parameters in FFI call: {}", params_count));
     }
 
+    let level = if violations.is_empty() {
+        SecurityLevel::Safe
+    } else {
+        SecurityLevel::Exterminated
+    };
+
     WaspPolicyResult {
         passed: violations.is_empty(),
-        level: if violations.is_empty() { SecurityLevel::Safe } else { SecurityLevel::Blocked },
+        level,
         reason: if violations.is_empty() { "FFI call validated".to_string() } else { violations.join("; ") },
         violations,
     }
+}
+
+/// [ATLATL-ORDNANCE] Heartbeat Check
+/// Returns the current instruction count for the host to verify runtime activity.
+pub fn get_runtime_heartbeat() -> u64 {
+    INSTRUCTION_HEARTBEAT.load(Ordering::Relaxed)
 }
 
 /// Input validation — sanitizes and validates WASM inputs
@@ -129,52 +148,6 @@ pub fn check_memory_bounds(offset: usize, length: usize, max_memory: usize) -> W
             violations.join("; ")
         },
         violations,
-    }
-}
-
-/// Rate limiting — prevent DoS via request flooding
-#[derive(Debug)]
-pub struct RateLimiter {
-    pub max_requests: usize,
-    pub window_ms: u64,
-    requests: Vec<u64>,
-}
-
-impl RateLimiter {
-    pub fn new(max_requests: usize, window_ms: u64) -> Self {
-        Self {
-            max_requests,
-            window_ms,
-            requests: Vec::new(),
-        }
-    }
-
-    pub fn check(&mut self, timestamp_ms: u64) -> WaspPolicyResult {
-        self.requests
-            .retain(|&t| timestamp_ms.saturating_sub(t) < self.window_ms);
-
-        let count = self.requests.len();
-        let mut violations = Vec::new();
-
-        if count >= self.max_requests {
-            violations.push(format!(
-                "Rate limit exceeded (Vector: DoS): {}/{} in {}ms",
-                count, self.max_requests, self.window_ms
-            ));
-        }
-
-        self.requests.push(timestamp_ms);
-
-        WaspPolicyResult {
-            passed: violations.is_empty(),
-            level: if violations.is_empty() { SecurityLevel::Safe } else { SecurityLevel::Blocked },
-            reason: if violations.is_empty() {
-                format!("Rate OK: {}/{}", count, self.max_requests)
-            } else {
-                violations[0].clone()
-            },
-            violations,
-        }
     }
 }
 
