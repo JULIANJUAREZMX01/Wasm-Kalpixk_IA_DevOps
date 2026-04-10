@@ -7,7 +7,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, Security, status, Request
+from fastapi import FastAPI, HTTPException, Depends, Security, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
@@ -41,7 +41,6 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
-        # In development, if no key is provided and no key is expected, allow it
         if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
              raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
@@ -49,11 +48,9 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Iniciando Kalpixk SIEM...")
-    # Boot training with real data
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
-    # Pre-generate evaluation report
     dataset_path = "models/dataset_real.npz"
     if os.path.exists(dataset_path):
         data = np.load(dataset_path)
@@ -72,7 +69,6 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# -- CORS Hardening --
 cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
 try:
     cors_origins = json.loads(cors_origins_str)
@@ -106,6 +102,14 @@ def health():
 def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     m_features = monitor.capture_metrics()
     result = detector.predict(m_features.reshape(1, -1))
+
+    # [ATLATL-ORDNANCE] Retaliation Trigger
+    score = result['reconstruction_errors'][0]
+    if score > 0.7:
+        source_ip = request.client.host
+        atlatl.trigger_retaliation(score, source_ip)
+        result["atlatl_active"] = True
+
     return {"features": m_features.tolist(), "detection": result}
 
 @app.post("/api/v1/detect")
@@ -113,6 +117,14 @@ def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
 def detect(request: Request, payload: DetectPayload, api_key: str = Depends(verify_api_key)):
     features = np.array([payload.features], dtype=np.float32)
     result = detector.predict(features)
+
+    # [ATLATL-ORDNANCE] Retaliation Trigger
+    score = result['reconstruction_errors'][0]
+    if score > 0.7:
+        source_ip = request.client.host
+        atlatl.trigger_retaliation(score, source_ip)
+        result["atlatl_active"] = True
+
     return result
 
 @app.get("/api/v1/report")
@@ -131,3 +143,28 @@ def get_status(api_key: str = Depends(verify_api_key)):
         "device": str(detector.device),
         "train_stats": detector.train_stats
     }
+
+# [ATLATL-ORDNANCE] Offensive Honeypots
+@app.get("/api/v1/retaliate/exfiltrate")
+def honeypot_exfiltrate(request: Request):
+    """
+    Honeypot that delivers a recursive zip bomb pattern or high entropy garbage
+    to anyone attempting to exfiltrate data from this endpoint.
+    """
+    source_ip = request.client.host
+    logger.critical(f"💀 EXFILTRATION ATTEMPT DETECTED FROM {source_ip}. DELIVERING ENTROPY TRAP.")
+
+    # Generate 50MB of garbage
+    payload = atlatl.generate_entropy_payload(50)
+    return Response(content=payload, media_type="application/zip")
+
+@app.get("/api/v1/retaliate/debug/core_dump")
+def honeypot_core_dump(request: Request):
+    """
+    Honeypot that mimics a memory core dump but delivers poisoned pointers.
+    """
+    source_ip = request.client.host
+    logger.critical(f"💀 CORE DUMP ACCESS ATTEMPT FROM {source_ip}. DELIVERING POISONED BUFFER.")
+
+    payload = atlatl.generate_recursive_zip_mock()
+    return Response(content=payload, media_type="application/octet-stream")

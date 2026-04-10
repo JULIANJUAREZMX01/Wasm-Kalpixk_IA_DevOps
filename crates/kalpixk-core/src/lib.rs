@@ -1,4 +1,4 @@
-// [ATLATL-ORDNANCE] WasmGuard Core v2.1
+// [ATLATL-ORDNANCE] WasmGuard Core v2.2
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod metrics;
@@ -55,7 +55,16 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "2.1.0".to_string()
+    "2.2.0-atlatl".to_string()
+}
+
+#[wasm_bindgen]
+pub fn get_security_telemetry() -> String {
+    serde_json::json!({
+        "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
+        "heartbeat": wasp::get_runtime_heartbeat(),
+        "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" }
+    }).to_string()
 }
 
 #[wasm_bindgen]
@@ -105,6 +114,12 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
+    // [ATLATL-ORDNANCE] FFI Guard check
+    let guard = wasp::validate_ffi_call("parse_log_line", 2);
+    if !guard.passed {
+        return None;
+    }
+
     if !security::SecurityGuard::validate_raw_log(raw) {
         return None;
     }
@@ -130,6 +145,12 @@ pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
 #[wasm_bindgen]
 pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
+
+    let guard = wasp::validate_ffi_call("process_batch", 2);
+    if !guard.passed {
+        return serde_json::json!({"error": guard.reason}).to_string();
+    }
+
     let lines: Vec<String> = serde_json::from_str(logs_json).unwrap_or_default();
     let parser = match parsers::get_parser(source_type) {
         Some(p) => p,
@@ -201,6 +222,11 @@ pub fn get_feature_names() -> Vec<String> {
 
 #[wasm_bindgen]
 pub fn wasm_lockdown(node: &str, score: f64, event_json: &str) -> String {
+    let guard = wasp::validate_ffi_call("wasm_lockdown", 3);
+    if !guard.passed {
+        return serde_json::json!({"error": "unauthorized lockdown"}).to_string();
+    }
+
     serde_json::json!({
         "action": "LOCKDOWN",
         "node": node,
@@ -219,7 +245,8 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v2.1"
+        "atlatl_ordnance": "v2.2-atlatl",
+        "heartbeat": wasp::get_runtime_heartbeat()
     })
     .to_string()
 }

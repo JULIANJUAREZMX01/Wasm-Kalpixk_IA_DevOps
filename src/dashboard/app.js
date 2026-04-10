@@ -1,11 +1,17 @@
-// ATLATL-ORDNANCE: Kalpixk Control Center — Dashboard Logic
-// Military-Grade Anomaly Detection Dashboard with WASM Edge Integration
+// ATLATL-ORDNANCE: Dashboard Logic v2.2
+// Implementation of SACITY aesthetic and WASM Heartbeat
 
-import initWasmModule, { parse_and_extract, health_check, get_security_telemetry } from './pkg/kalpixk_core.js';
+import initWasmModule, {
+    health_check,
+    get_security_telemetry,
+    parse_log_line,
+    analyze_and_retaliate
+} from './pkg/kalpixk_core.js';
 
 const API = window.location.origin;
-let refreshInterval = null;
 let wasmReady = false;
+let heartbeatInterval = null;
+let lastHeartbeat = 0;
 
 // ── WASM Initialization ─────────────────────────────────────
 async function initWasm() {
@@ -13,175 +19,153 @@ async function initWasm() {
         await initWasmModule();
         wasmReady = true;
         const health = JSON.parse(health_check());
-        log(`WASM Edge Ready: ${health.module} v${health.contract_version}`, 'ok');
+        log(`WASM Core Armoured: ${health.atlatl_ordnance}`, 'info');
         document.getElementById('wasm-status').textContent = '● WASM_ACTIVE';
-        document.getElementById('wasm-status').className = 'text-[10px] status-ok blink';
+        document.getElementById('wasm-status').className = 'text-[10px] status-ok';
+
+        // Start Heartbeat
+        startHeartbeat();
     } catch (e) {
-        log(`WASM_LOAD_FAILURE: ${e.message}`, 'error');
-        document.getElementById('wasm-status').textContent = '● WASM_OFFLINE';
+        log(`CRITICAL_WASM_FAILURE: ${e.message}`, 'error');
+        document.getElementById('wasm-status').textContent = '● WASM_TAMPERED';
         document.getElementById('wasm-status').className = 'text-[10px] status-error';
     }
 }
 
-// ── Clock ──────────────────────────────────────────────────
-function updateClock() {
-    document.getElementById('clock').textContent =
-        new Date().toLocaleTimeString('es-MX', { hour12: false });
+// ── Heartbeat Mechanism ──────────────────────────────────────
+function startHeartbeat() {
+    heartbeatInterval = setInterval(() => {
+        if (!wasmReady) return;
+        try {
+            const telemetry = JSON.parse(get_security_telemetry());
+            const hb = telemetry.heartbeat;
+
+            document.getElementById('hb-val').textContent = hb;
+
+            if (hb === lastHeartbeat && hb > 0) {
+                log('WARNING: WASM Runtime Stalled! Possible Tampering.', 'warn');
+                document.getElementById('wasm-integrity').textContent = 'STALLED';
+                document.getElementById('wasm-integrity').className = 'text-2xl font-bold status-error';
+            } else {
+                document.getElementById('wasm-integrity').textContent = 'VERIFIED';
+                document.getElementById('wasm-integrity').className = 'text-2xl font-bold status-ok';
+            }
+            lastHeartbeat = hb;
+        } catch (e) {
+            log(`HEARTBEAT_LOST: ${e.message}`, 'error');
+        }
+    }, 2000);
 }
-setInterval(updateClock, 1000);
-updateClock();
 
 // ── Log Terminal ───────────────────────────────────────────
 function log(msg, type = 'ok') {
-    const colors = { ok: '#00FF00', error: '#FF0000', warn: '#FF8C00', info: '#00FFFF' };
-    const el = document.getElementById('log');
+    const el = document.getElementById('log-terminal');
     const line = document.createElement('div');
     const ts = new Date().toLocaleTimeString('es-MX', { hour12: false });
 
-    line.style.color = colors[type] || colors.ok;
-    line.textContent = `[${ts}] ${msg}`;
+    const classes = {
+        ok: 'status-ok',
+        error: 'status-error',
+        warn: 'status-warn',
+        info: 'status-info'
+    };
+
+    line.className = classes[type] || 'status-ok';
+    line.innerHTML = `<span class="text-gray-600">[${ts}]</span> ${msg}`;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
-    while (el.children.length > 100) el.removeChild(el.firstChild);
+
+    if (el.children.length > 100) el.removeChild(el.firstChild);
 }
 
 // ── API helpers ────────────────────────────────────────────
 async function apiFetch(endpoint, opts = {}) {
     try {
-        const r = await fetch(`${API}${endpoint}`, {
-            headers: { 'Content-Type': 'application/json' },
+        const response = await fetch(`${API}${endpoint}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Kalpixk-Key': localStorage.getItem('kalpixk_key') || 'development'
+            },
             ...opts
         });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return await r.json();
+        if (!response.ok) throw new Error(`HTTP_${response.status}`);
+        return await response.json();
     } catch (e) {
         log(`COMM_FAILURE: ${e.message}`, 'error');
         return null;
     }
 }
 
-// ── Health / Status ────────────────────────────────────────
-async function refreshStatus() {
-    const data = await apiFetch('/health');
-    if (!data) {
-        document.getElementById('conn-status').textContent = '● OFFLINE_DANGER';
-        document.getElementById('conn-status').className = 'text-sm status-error blink';
-        return;
-    }
-    document.getElementById('conn-status').textContent = '● SYSTEM_ARMOURED';
-    document.getElementById('conn-status').className = 'text-sm status-ok blink';
-    log(`Neural Core Status: ${data.status} | Engine: ${data.device}`, 'info');
-}
-
+// ── Metrics & Anomaly Logic ─────────────────────────────────
 async function refreshMetrics() {
-    const data = await apiFetch('/metrics');
+    const data = await apiFetch('/api/v1/metrics');
     if (!data) return;
 
-    const m = data.metrics;
-    document.getElementById('cpu-pct').textContent = m.cpu_usage?.toFixed(1) + '%' || '--';
-    document.getElementById('ram-pct').textContent = m.heap_usage?.toFixed(1) + '%' || '--';
+    const score = data.detection.reconstruction_errors[0];
+    const threshold = data.detection.threshold || 0.7;
 
-    const score = data.detection?.reconstruction_errors?.[0] ?? 0;
-    const isAnomaly = data.detection?.anomalies?.[0] ?? false;
-    const threshold = data.detection?.threshold ?? 0.5;
+    updateScoreUI(score, threshold);
 
-    document.getElementById('score-val').textContent = score.toFixed(6);
-    const pct = Math.min(100, (score / Math.max(threshold * 3, 0.1)) * 100);
-    document.getElementById('score-bar').style.width = pct + '%';
-
-    if (isAnomaly) {
-        document.getElementById('anomaly-status').textContent = 'THREAT!';
-        document.getElementById('anomaly-status').className = 'text-xl font-bold status-error blink';
-        log(`🚨 THREAT_VECTOR DETECTED! SCORE: ${score.toFixed(6)}`, 'error');
-
-        // ATLATL-ORDNANCE: Trigger Phase Black UI if score is critical
-        if (score > threshold * 2) {
-            document.getElementById('black-overlay').style.display = 'block';
-            log('💀 PHASE BLACK: RETALIATION SEQUENCE ACTIVE', 'error');
-        }
+    if (score > threshold) {
+        triggerPhaseBlack(score);
     } else {
-        document.getElementById('anomaly-status').textContent = 'CLEAN';
-        document.getElementById('anomaly-status').className = 'text-xl font-bold status-ok';
         document.getElementById('black-overlay').style.display = 'none';
-    }
-
-    if (wasmReady) {
-        // Telemetry check (if implemented in WASM)
-        try {
-            const telemetry = JSON.parse(get_security_telemetry());
-            if (telemetry.threat_level === 'high') {
-                log(`⚠️ WASM Edge reports HIGH SHARED_ACCESS_COUNT: ${telemetry.shared_access_count}`, 'warn');
-            }
-        } catch(e) {}
+        document.getElementById('anomaly-status').textContent = 'NOMINAL';
+        document.getElementById('anomaly-status').className = 'text-2xl font-bold status-ok';
     }
 }
 
-// ── WASM Processing Example ────────────────────────────────
-async function processLocalLog(rawJson) {
-    if (!wasmReady) return;
-    try {
-        log('> WASM_EDGE: Parsing local log vector...', 'info');
-        const result = JSON.parse(parse_and_extract(rawJson));
-        log(`> WASM_EXTRACT: ${result.event_type} | Severity: ${result.local_severity}`, 'ok');
-        return result.features;
-    } catch (e) {
-        log(`WASM_EXEC_ERROR: ${e}`, 'error');
+function updateScoreUI(score, threshold) {
+    const scorePct = Math.min(100, (score / (threshold * 2)) * 100);
+    document.getElementById('score-progress').style.width = `${scorePct}%`;
+    document.getElementById('score-text').textContent = score.toFixed(6);
+
+    if (score > threshold) {
+        document.getElementById('score-text').className = 'status-error font-mono text-sm blink';
+    } else {
+        document.getElementById('score-text').className = 'status-info font-mono text-sm';
     }
 }
 
-// ── Acciones ───────────────────────────────────────────────
-async function runDetect() {
-    log('> THREAD_SCAN SEQUENCE INITIATED...', 'info');
+function triggerPhaseBlack(score) {
+    document.getElementById('black-overlay').style.display = 'block';
+    document.getElementById('anomaly-status').textContent = 'THREAT!';
+    document.getElementById('anomaly-status').className = 'text-2xl font-bold status-error blink';
+    log(`🚨 THREAT DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 PHASE BLACK: INITIATING RECURSIVE RETALIATION', 'error');
+}
 
-    // Simulate local WASM parsing before sending to GPU
-    const mockLog = JSON.stringify({
-        timestamp_ms: Date.now(),
-        event_type: "FileAccess",
-        local_severity: 0.1,
-        source: "127.0.0.1",
-        source_type: "syslog",
-        raw: "Feb 10 10:00:00 server sshd[123]: Accepted password for root"
-    });
-
-    await processLocalLog(mockLog);
+// ── UI Actions ──────────────────────────────────────────────
+window.triggerScan = async () => {
+    log('> Manual Thread Scan Sequence Initiated...', 'info');
     await refreshMetrics();
+};
+
+window.triggerRetaliationDemo = () => {
+    log('> SIMULATING AGGRESSION VECTOR: Ransomware_Exploit', 'warn');
+    triggerPhaseBlack(0.985421);
+};
+
+window.updateThreshold = (val) => {
+    document.getElementById('threshold-val').textContent = val;
+    log(`Aggression threshold recalibrated to: ${val}`, 'info');
+};
+
+// ── System Boot ─────────────────────────────────────────────
+function updateClock() {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-MX', { hour12: false });
 }
 
-async function runTrain() {
-    log('> RE-OPTIMIZING NEURAL WEIGHTS ON MI300X...', 'warn');
-    const data = await apiFetch('/train', { method: 'POST' });
-    if (data?.success) {
-        log('> NEURAL CALIBRATION COMPLETE ✅', 'ok');
-    }
-}
-
-async function simulateAnomaly(type) {
-    log(`> SIMULATING AGGRESSION VECTOR: ${type}`, 'warn');
-    const data = await apiFetch(`/simulate/${type}`);
-    if (data) {
-        const detected = data.detected;
-        const score = data.detection?.reconstruction_errors?.[0]?.toFixed(6);
-        log(`> RESULT: ${detected ? 'THREAT_NEUTRALIZED 🚨' : 'SYSTEM_UNAWARE'} | Score: ${score}`,
-            detected ? 'error' : 'warn');
-    }
-}
-
-function updateThreshold(val) {
-    document.getElementById('threshold-val').textContent = parseFloat(val).toFixed(1);
-    log(`> AGGRESSION_THRESHOLD UPDATED: ${val}`, 'info');
-}
-
-// ── Auto-refresh ────────────────────────────────────────────
 async function init() {
-    log('> ATLATL-ORDNANCE: GUERRILLA ALGORÍTMICA LOADED', 'ok');
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    log('ATLATL-ORDNANCE: GUIERRILLA ALGORÍTMICA LOADED', 'info');
     await initWasm();
-    log('> CONNECTING TO MI300X NEURAL ARRAY...', 'info');
-    await refreshStatus();
+
+    // Initial data fetch
     await refreshMetrics();
-    refreshInterval = setInterval(async () => {
-        await refreshMetrics();
-    }, 5000);
-    log('> ACTIVE_MONITORING: ON (5000ms latency)', 'ok');
+    setInterval(refreshMetrics, 5000);
 }
 
 init();
