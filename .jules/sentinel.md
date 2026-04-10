@@ -10,6 +10,11 @@
 **Vulnerability:** The root `main.py` entry point lacked the same security hardening as `src/api/main.py`.
 **Learning:** In projects with multiple entry points (e.g., for different deployment modes or legacy support), security fixes are often applied to one but missed in others. The root `main.py` had a public `/metrics` endpoint and used non-constant-time string comparison for API keys.
 **Prevention:** Maintain a centralized security dependency module or ensure all entry points are audited simultaneously when applying security patches.
+
+## 2026-04-10 - Main Entry Point DoS and Auth Hardening
+**Vulnerability:** Lack of input validation on training parameters and missing rate limiting on resource-intensive endpoints in `main.py`.
+**Learning:** While `src/api/main.py` was hardened, the unified entry point `main.py` was still vulnerable to DoS via large training payloads and unauthenticated access if the environment was not properly configured (fail-open).
+**Prevention:** Enforce strict Pydantic `Field` constraints on all user-controlled numeric parameters and apply rate limiting to all public or authenticated endpoints that trigger heavy computation (e.g., GPU training).
 =======
 ## 2026-04-05 - API Security Fix for Standalone API
 **Vulnerability:** Missing authentication on `src/api/main.py` endpoints.

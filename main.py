@@ -9,10 +9,13 @@ import threading
 import time
 from pathlib import Path
 from loguru import logger
-from fastapi import FastAPI, Depends, Security, HTTPException, status
+from fastapi import FastAPI, Depends, Security, HTTPException, status, Request
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from typing import List
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,22 +62,35 @@ if not detector.is_trained:
 
 # -- Models --
 class TrainPayload(BaseModel):
-    n_samples: int = 500
-    epochs: int = 50
+    n_samples: int = Field(500, ge=1, le=10000)
+    epochs: int = Field(50, ge=1, le=500)
 
 # -- API Security --
+limiter = Limiter(key_func=get_remote_address)
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
+    env = os.getenv("ENV", "development")
     expected_key = os.getenv("KALPIXK_API_KEY")
-    if not expected_key: return None
-    if not api_key or not secrets.compare_digest(api_key, expected_key):
-        raise HTTPException(status_code=403, detail="Invalid credentials")
+
+    if env == "production":
+        if not expected_key:
+            logger.error("KALPIXK_API_KEY not set in production!")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="API Key not configured")
+        if not api_key or not secrets.compare_digest(api_key, expected_key):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+    else:
+        # In development, if a key is set, enforce it. If not, allow access.
+        if expected_key:
+            if not api_key or not secrets.compare_digest(api_key, expected_key):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 # -- FastAPI App --
 app = FastAPI(title="Kalpixk SIEM", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.get("/health")
@@ -87,13 +103,16 @@ def health():
     }
 
 @app.get("/metrics")
-def get_metrics(api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     m = monitor_wasm.capture_metrics()
-    result = detector.predict(m.to_array())
-    return {"metrics": m.__dict__, "detection": result}
+    # Fixed: m is already a numpy array from capture_metrics()
+    result = detector.predict(m.reshape(1, -1))
+    return {"metrics": m.tolist(), "detection": result}
 
 @app.post("/train")
-def train_api(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")
+def train_api(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     data = monitor_wasm.generate_normal_baseline(n_samples=payload.n_samples)
     detector.train(data, epochs=payload.epochs)
     return {"success": True}
