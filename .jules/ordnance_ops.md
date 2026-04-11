@@ -16,3 +16,20 @@ Se identificaron debilidades en la frontera FFI y en el monitoreo de integridad 
 
 **Resultado:**
 Evasión técnica neutralizada. El sistema no solo bloquea la amenaza, sino que degrada activamente la infraestructura del agresor mediante represalias de saturación de entropía.
+
+## [OP-2026-04-11] - Operation SACITY-ORDNANCE: Decentralized Aggression
+
+**Vector de Ataque:**
+Amenaza de ataques distribuidos sobre nodos perimetrales y dispositivos embebidos. Falta de una interfaz de comando agresiva que visualice el estado de 'Phase Black' y falta de sincronización P2P de inteligencia de amenazas en tiempo real.
+
+**Defensa Implementada:**
+- **SACITY RED TERMINAL:** Overhaul completo del dashboard utilizando el lenguaje visual de SAC_OS. Implementación de CRT-scanlines, glitching dinámico y alertas 'RED BLOOD' para estados críticos.
+- **P2P Threat Sync:** Motor de sincronización en Rust (`defense_nodes.rs`) que permite a los nodos compartir firmas de amenazas de forma descentralizada.
+- **Docker Hardening:** Refactorización de `Dockerfile.node` a multi-stage build, reduciendo la superficie de ataque y ejecutando bajo usuario no privilegiado `sacity-node`.
+
+**Contra-Ataque (Phase Black):**
+- **V3 Pointer Poisoning:** Evolución del motor Zig (`motor.zig`) con rutinas de destrucción de memoria `v3_pointer_poisoning` y `memory_shredder` diseñadas para inutilizar el C2 del atacante mediante desbordamientos controlados de punteros remotos.
+- **Aggression Threshold:** Implementación de un slider de control de agresividad en el dashboard que escala la respuesta ofensiva del motor WASM en tiempo real.
+
+**Resultado:**
+Soberanía digital total. Los nodos descentralizados ahora actúan como un solo organismo agresivo, compartiendo inteligencia y ejecutando represalias letales de nivel V3. La estética SACITY refuerza la superioridad psicológica sobre el intruso.

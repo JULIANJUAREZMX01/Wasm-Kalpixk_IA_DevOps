@@ -1,10 +1,10 @@
-// ATLATL-ORDNANCE: Dashboard Logic v2.2
-// Implementation of SACITY aesthetic and WASM Heartbeat
+// ATLATL-ORDNANCE: SACITY Dashboard Logic v1.0
+// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat
 
 import initWasmModule, {
     health_check,
     get_security_telemetry,
-    parse_log_line,
+    get_global_blacklist_wasm,
     analyze_and_retaliate
 } from './pkg/kalpixk_core.js';
 
@@ -19,16 +19,17 @@ async function initWasm() {
         await initWasmModule();
         wasmReady = true;
         const health = JSON.parse(health_check());
-        log(`WASM Core Armoured: ${health.atlatl_ordnance}`, 'info');
-        document.getElementById('wasm-status').textContent = '● WASM_ACTIVE';
-        document.getElementById('wasm-status').className = 'text-[10px] status-ok';
+        log(`SACITY Core Armoured: ${health.atlatl_ordnance}`, 'info');
+        document.getElementById('wasm-status').textContent = '● WASM_SECURE';
+        document.getElementById('wasm-status').className = 'text-[10px] status-ok font-bold';
 
-        // Start Heartbeat
+        // Start Heartbeat & Sync
         startHeartbeat();
+        syncBlacklist();
     } catch (e) {
         log(`CRITICAL_WASM_FAILURE: ${e.message}`, 'error');
         document.getElementById('wasm-status').textContent = '● WASM_TAMPERED';
-        document.getElementById('wasm-status').className = 'text-[10px] status-error';
+        document.getElementById('wasm-status').className = 'text-[10px] status-error font-bold';
     }
 }
 
@@ -43,18 +44,30 @@ function startHeartbeat() {
             document.getElementById('hb-val').textContent = hb;
 
             if (hb === lastHeartbeat && hb > 0) {
-                log('WARNING: WASM Runtime Stalled! Possible Tampering.', 'warn');
-                document.getElementById('wasm-integrity').textContent = 'STALLED';
-                document.getElementById('wasm-integrity').className = 'text-2xl font-bold status-error';
-            } else {
-                document.getElementById('wasm-integrity').textContent = 'VERIFIED';
-                document.getElementById('wasm-integrity').className = 'text-2xl font-bold status-ok';
+                log('🚨 WARNING: WASM Runtime Stalled! Possible Buffer Injection.', 'warn');
+                document.getElementById('anomaly-status').textContent = 'TAMPERED';
+                document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
+                applyGlitchEffect();
             }
             lastHeartbeat = hb;
         } catch (e) {
             log(`HEARTBEAT_LOST: ${e.message}`, 'error');
         }
     }, 2000);
+}
+
+// ── P2P Sync Logic ───────────────────────────────────────────
+async function syncBlacklist() {
+    if (!wasmReady) return;
+    try {
+        const blacklist = JSON.parse(get_global_blacklist_wasm());
+        if (blacklist.length > 0) {
+            log(`📡 P2P Sync: ${blacklist.length} global threat signatures fetched.`, 'info');
+            document.getElementById('nodes-sync').textContent = `${blacklist.length} DETECTED`;
+        }
+    } catch (e) {
+        log('P2P_SYNC_ERROR: UNABLE TO CONTACT DEFENSE_NODES', 'error');
+    }
 }
 
 // ── Log Terminal ───────────────────────────────────────────
@@ -70,8 +83,8 @@ function log(msg, type = 'ok') {
         info: 'status-info'
     };
 
-    line.className = classes[type] || 'status-ok';
-    line.innerHTML = `<span class="text-gray-600">[${ts}]</span> ${msg}`;
+    line.className = `${classes[type] || 'status-ok'} font-bold`;
+    line.innerHTML = `<span class="text-red-900">[${ts}]</span> [SACITY] ${msg}`;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
 
@@ -96,13 +109,29 @@ async function apiFetch(endpoint, opts = {}) {
     }
 }
 
+// ── Visual Effects ──────────────────────────────────────────
+function applyGlitchEffect() {
+    const body = document.body;
+    body.classList.add('glitch');
+    setTimeout(() => body.classList.remove('glitch'), 500);
+}
+
+function triggerPhaseBlack(score) {
+    document.getElementById('black-overlay').style.display = 'block';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK';
+    document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
+    log(`💀 AGGRESSION DETECTED: Score ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION: Initiating Pointer Poisoning (v3)...', 'error');
+    applyGlitchEffect();
+}
+
 // ── Metrics & Anomaly Logic ─────────────────────────────────
 async function refreshMetrics() {
     const data = await apiFetch('/api/v1/metrics');
     if (!data) return;
 
     const score = data.detection.reconstruction_errors[0];
-    const threshold = data.detection.threshold || 0.7;
+    const threshold = parseFloat(document.getElementById('threshold-val').textContent) || 0.7;
 
     updateScoreUI(score, threshold);
 
@@ -110,29 +139,31 @@ async function refreshMetrics() {
         triggerPhaseBlack(score);
     } else {
         document.getElementById('black-overlay').style.display = 'none';
-        document.getElementById('anomaly-status').textContent = 'NOMINAL';
-        document.getElementById('anomaly-status').className = 'text-2xl font-bold status-ok';
+        document.getElementById('anomaly-status').textContent = 'CLEAN';
+        document.getElementById('anomaly-status').className = 'text-2xl font-black status-ok';
+    }
+
+    if (data.features) {
+        const entropy = calculateSimulatedEntropy(data.features);
+        document.getElementById('entropy-val').textContent = entropy.toFixed(2);
     }
 }
 
+function calculateSimulatedEntropy(features) {
+    // Shannon entropy mock based on feature variance
+    return 7.0 + (features[0] % 1.0);
+}
+
 function updateScoreUI(score, threshold) {
-    const scorePct = Math.min(100, (score / (threshold * 2)) * 100);
+    const scorePct = Math.min(100, (score / (threshold * 1.5)) * 100);
     document.getElementById('score-progress').style.width = `${scorePct}%`;
     document.getElementById('score-text').textContent = score.toFixed(6);
 
     if (score > threshold) {
-        document.getElementById('score-text').className = 'status-error font-mono text-sm blink';
+        document.getElementById('score-text').className = 'status-error font-mono text-sm font-black glitch';
     } else {
-        document.getElementById('score-text').className = 'status-info font-mono text-sm';
+        document.getElementById('score-text').className = 'status-info font-mono text-sm font-bold';
     }
-}
-
-function triggerPhaseBlack(score) {
-    document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'THREAT!';
-    document.getElementById('anomaly-status').className = 'text-2xl font-bold status-error blink';
-    log(`🚨 THREAT DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 PHASE BLACK: INITIATING RECURSIVE RETALIATION', 'error');
 }
 
 // ── UI Actions ──────────────────────────────────────────────
@@ -142,7 +173,7 @@ window.triggerScan = async () => {
 };
 
 window.triggerRetaliationDemo = () => {
-    log('> SIMULATING AGGRESSION VECTOR: Ransomware_Exploit', 'warn');
+    log('> SIMULATING AGGRESSION VECTOR: Ransomware_Exploit_T1485', 'warn');
     triggerPhaseBlack(0.985421);
 };
 
@@ -153,19 +184,21 @@ window.updateThreshold = (val) => {
 
 // ── System Boot ─────────────────────────────────────────────
 function updateClock() {
-    document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-MX', { hour12: false });
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString('es-MX', { hour12: false });
 }
 
 async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    log('ATLATL-ORDNANCE: GUIERRILLA ALGORÍTMICA LOADED', 'info');
+    log('SACITY // THE RED TERMINAL // GUIERRILLA ALGORÍTMICA', 'info');
     await initWasm();
 
     // Initial data fetch
     await refreshMetrics();
-    setInterval(refreshMetrics, 5000);
+    setInterval(refreshMetrics, 4000);
+    setInterval(syncBlacklist, 10000);
 }
 
 init();

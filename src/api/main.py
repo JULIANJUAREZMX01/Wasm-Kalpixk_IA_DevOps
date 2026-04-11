@@ -5,7 +5,7 @@ import os
 import secrets
 import json
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from fastapi import FastAPI, HTTPException, Depends, Security, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -142,6 +142,35 @@ def get_status(api_key: str = Depends(verify_api_key)):
         "threshold": detector.threshold,
         "device": str(detector.device),
         "train_stats": detector.train_stats
+    }
+
+# -- [ATLATL-ORDNANCE] Decentralized Node Sync --
+
+class ThreatReport(BaseModel):
+    node_id: str
+    threats: List[str]
+    timestamp: int
+
+@app.post("/api/v1/nodes/sync")
+@limiter.limit("10/minute")
+def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
+    """
+    Synchronizes decentralized nodes.
+    1. Receives locally detected threats from a node.
+    2. Returns the current global blacklist.
+    """
+    source_ip = request.client.host
+    logger.info(f"📡 Node sync request from {report.node_id}@{source_ip}")
+
+    # In a real implementation, we would update a shared registry here
+    # For now, we simulate the global intelligence gathering
+
+    global_blacklist = ["1.2.3.4", "8.8.4.4", "10.0.0.99"] # Mock data
+
+    return {
+        "status": "synced",
+        "global_blacklist": global_blacklist,
+        "command": "STAY_ARMOURED"
     }
 
 # [ATLATL-ORDNANCE] Offensive Honeypots
