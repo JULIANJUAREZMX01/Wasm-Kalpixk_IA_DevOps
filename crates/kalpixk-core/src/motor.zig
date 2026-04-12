@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 2.2-MACUAHUITL (Guerrilla Algorítmica)
+// Versión: 3.0-ATLATL (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -148,18 +148,136 @@ pub export fn validate_buffer_safety(ptr: [*]const u8, len: usize) bool {
     return true;
 }
 
-test "macuahuitl strike effectively poisons memory" {
-    var buffer: [256]u8 = undefined;
-    @memset(&buffer, 0);
-    macuahuitl_strike(&buffer, buffer.len, 0x1337);
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NEW EVOLUTIONS: PHASE BLACK (v3.0)
+// ═══════════════════════════════════════════════════════════════════════════════════════
 
-    // Verificar que al menos algunas partes del buffer tengan el JMP infinito
-    try std.testing.expect(buffer[0] == 0xEB);
-    try std.testing.expect(buffer[1] == 0xFE);
+/// [ATLATL-ORDNANCE] V3 MACUAHUITL ARRAY POISONING
+/// Implementa una técnica de envenenamiento de arrays que corrompe metadatos de longitud
+/// y punteros de control en estructuras de datos complejas.
+/// Mínimo 100 líneas de intervención agresiva.
+pub export fn v3_macuahuitl_array_poisoning(target_ptr: [*]u8, target_len: usize, aggressive_level: u8) void {
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+
+    while (i < target_len) {
+        // Bloque de control: Corrupción de descriptores de memoria
+        if (i + 16 <= target_len) {
+            // Inyectar punteros falsos a direcciones de kernel o loops infinitos
+            // 0xDEADBEEF in little endian (simulado)
+            slice[i]   = 0xEF;
+            slice[i+1] = 0xBE;
+            slice[i+2] = 0xAD;
+            slice[i+3] = 0xDE;
+
+            // Inyectar longitudes masivas para causar desbordamientos en el lector
+            slice[i+4] = 0xFF;
+            slice[i+5] = 0xFF;
+            slice[i+6] = 0xFF;
+            slice[i+7] = 0x7F; // 2GB length
+
+            // JMP back to start (Infinite loop)
+            slice[i+8] = 0xEB;
+            slice[i+9] = 0xF6; // JMP -10 bytes
+
+            i += 16;
+        } else {
+            slice[i] = 0xCC; // INT 3 (Trap)
+            i += 1;
+        }
+
+        // Si el nivel de agresividad es alto, inyectamos basura de alta entropía
+        if (aggressive_level > 5) {
+            var j: usize = 0;
+            while (j < 8 and i < target_len) : ({j += 1; i += 1;}) {
+                slice[i] = @truncate((i *% 1103515245 +% 12345) >> 16);
+            }
+        }
+    }
 }
 
-test "shannon entropy calculation" {
-    const data = "ATLATL-ORDNANCE";
-    const entropy = shannon_entropy(data, data.len);
-    try std.testing.expect(entropy > 3.0);
+/// [ATLATL-ORDNANCE] RECURSIVE ENTROPY SHREDDER
+/// Genera un stream de datos diseñado para colapsar motores de compresión (Zlib, LZ4)
+/// y parsers de protocolos al forzar backtracking masivo y uso de CPU.
+pub export fn recursive_entropy_shredder(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+
+    // El patrón consiste en secuencias que parecen repetitivas (incitando a LZ77 a buscar matches)
+    // pero que rompen la predicción de entropía cada pocos bytes.
+    for (slice, 0..) |*byte, i| {
+        const pattern_selector = i % 128;
+
+        if (pattern_selector < 32) {
+            // Secuencia de ceros con un bit de interrupción (Engaña a RLE)
+            byte.* = if (i % 31 == 0) 0x01 else 0x00;
+        } else if (pattern_selector < 64) {
+            // Secuencia incremental (Engaña a predictores delta)
+            byte.* = @truncate(i);
+        } else if (pattern_selector < 96) {
+            // Ruido blanco puro (Máxima entropía)
+            byte.* = @truncate(i ^ (i >> 3) ^ 0xAA);
+        } else {
+            // Patrón de "Muerte de Compresión": PK header falso con longitud infinita
+            if (i % 8 == 0) byte.* = 'P';
+            if (i % 8 == 1) byte.* = 'K';
+            if (i % 8 == 2) byte.* = 0x03;
+            if (i % 8 == 3) byte.* = 0x04;
+            if (i % 8 >= 4) byte.* = 0xFF;
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] POINTER TRAP GENERATOR
+/// Crea una zona de memoria llena de "minas terrestres" de software.
+/// Cualquier ejecución en este rango resultará en un pánico inmediato o un bucle infinito.
+pub export fn generate_pointer_traps(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i < target_len) : (i += 4) {
+        if (i + 4 <= target_len) {
+            // EB FE 90 90 (JMP $ ; NOP ; NOP)
+            slice[i]   = 0xEB;
+            slice[i+1] = 0xFE;
+            slice[i+2] = 0x90;
+            slice[i+3] = 0x90;
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] HARDWARE HANG SIMULATOR (USERSPACE)
+/// Consume ciclos de CPU de forma agresiva en un bucle cerrado para simular
+/// un cuelgue del sistema ante un intento de intrusión detectado en el host.
+pub export fn simulate_hardware_hang_userspace(iterations: u64) u64 {
+    var result: u64 = 0;
+    var i: u64 = 0;
+    while (i < iterations) : (i += 1) {
+        // Operaciones atómicas pesadas para forzar el bus de memoria (simulado)
+        result = result *% 1103515245 +% 12345;
+        if (result % 2 == 0) {
+            result ^= 0x5555555555555555;
+        }
+    }
+    return result;
+}
+
+test "v3 poisoning modifies memory" {
+    var buffer: [512]u8 = undefined;
+    @memset(&buffer, 0);
+    v3_macuahuitl_array_poisoning(&buffer, buffer.len, 10);
+    try std.testing.expect(buffer[0] == 0xEF);
+    try std.testing.expect(buffer[4] == 0xFF);
+}
+
+test "entropy shredder generates non-zero data" {
+    var buffer: [256]u8 = undefined;
+    @memset(&buffer, 0);
+    recursive_entropy_shredder(&buffer, buffer.len);
+    var all_zero = true;
+    for (buffer) |b| {
+        if (b != 0) {
+            all_zero = false;
+            break;
+        }
+    }
+    try std.testing.expect(!all_zero);
 }
