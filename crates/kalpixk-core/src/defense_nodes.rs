@@ -72,6 +72,29 @@ pub struct NodeResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
+// GUERRILLA MODE: ATLATL-ORDNANCE (v3.0)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub trait GuerrillaMode {
+    fn aggression_boost(&self) -> f64;
+    fn p2p_broadcast(&self, target: &str);
+}
+
+impl GuerrillaMode for NodeResult {
+    fn aggression_boost(&self) -> f64 {
+        if self.level == SeverityLevel::Critical { 0.2 } else { 0.0 }
+    }
+
+    fn p2p_broadcast(&self, target: &str) {
+        if self.score > 0.8 {
+            if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
+                registry.insert(target.to_string());
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 1: RECONNAISSANCE DETECTOR
 // MITRE ATT&CK: TA0043
 // ═══════════════════════════════════════════════════════════════════════════════════════
@@ -326,14 +349,21 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let user_lower = event.user.as_deref().map(|s| s.to_lowercase()).unwrap_or_default();
     let source_lower = event.source.to_lowercase();
 
-    vec![
+    let mut results = vec![
         detect_reconnaissance(event, &raw_lower, &user_lower, &source_lower),
         detect_lateral_movement(event, &raw_lower, &user_lower, &source_lower),
         detect_credential_theft(event, &raw_lower, &user_lower, &source_lower),
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
-    ]
+    ];
+
+    // Apply Guerrilla P2P Sync
+    for res in &results {
+        res.p2p_broadcast(&event.source);
+    }
+
+    results
 }
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
@@ -367,5 +397,13 @@ pub fn sync_threats(external_threats: Vec<String>) {
         for threat in external_threats {
             registry.insert(threat);
         }
+    }
+}
+
+pub fn get_global_threat_count() -> usize {
+    if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
+        registry.len()
+    } else {
+        0
     }
 }

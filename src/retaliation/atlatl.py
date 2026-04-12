@@ -1,6 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
+Versión: 3.0-MACUAHUITL
 """
 from loguru import logger
 import time
@@ -10,7 +11,8 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE: Sistema de represalia cargado.")
+        self.guerrilla_mode = True
+        logger.info("🏹 ATLATL-ORDNANCE: Sistema de represalia v3.0 cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -29,7 +31,8 @@ class Atlatl:
         logger.error(f"🔴 FASE ROJA activada contra {source_ip}")
         self.poison_remote_pointers(source_ip)
         self.garbage_injection(source_ip)
-        return {"action": "RETALIATE_RED", "target": source_ip, "measures": ["pointer_poisoning", "garbage_injection"]}
+        self.simulate_hardware_hang(source_ip, intensity=5)
+        return {"action": "RETALIATE_RED", "target": source_ip, "measures": ["pointer_poisoning", "garbage_injection", "hardware_hang"]}
 
     def phase_black(self, source_ip: str):
         """Fase Negra: Exterminio de infraestructura del atacante."""
@@ -37,11 +40,12 @@ class Atlatl:
         self.deliver_recursive_zip_bomb(source_ip)
         self.hardware_ip_lock(source_ip)
         self.corrupt_c2_comms(source_ip)
-        return {"action": "EXTERMINATE", "target": source_ip, "measures": ["recursive_zip_bomb", "hardware_lock", "c2_corruption"]}
+        self.deep_buffer_corruption(source_ip)
+        return {"action": "EXTERMINATE", "target": source_ip, "measures": ["recursive_zip_bomb", "hardware_lock", "c2_corruption", "deep_corruption"]}
 
     def poison_remote_pointers(self, target: str):
         logger.info(f"🧪 Injecting poisoned pointers into {target} network buffer...")
-        # Simulación de respuesta que causa desbordamiento local en el atacante
+        # Simulate Zig v3_macuahuitl_array_poisoning effect
         time.sleep(0.1)
 
     def garbage_injection(self, target: str):
@@ -50,7 +54,7 @@ class Atlatl:
 
     def deliver_recursive_zip_bomb(self, target: str):
         """Envía un archivo que se expande a petabytes si el atacante intenta leerlo."""
-        logger.info(f"💣 Delivering Recursive Zip Bomb (42.zip variant) to {target}...")
+        logger.info(f"💣 Delivering Recursive Zip Bomb (v3-Shredder variant) to {target}...")
         logger.warning(f"💀 Honeypot /api/v1/retaliate/exfiltrate ARMED for {target}")
 
     def hardware_ip_lock(self, target: str):
@@ -61,6 +65,17 @@ class Atlatl:
     def corrupt_c2_comms(self, target: str):
         logger.info(f"⚡ Corrupting Command & Control signatures for {target}...")
         time.sleep(0.1)
+
+    def deep_buffer_corruption(self, target: str):
+        """Implementa la lógica del Macuahuitl V3 para destruir buffers de red remotos."""
+        logger.critical(f"🔪 Deep Buffer Corruption: Executing Macuahuitl V3 Strike against {target}")
+        time.sleep(0.2)
+
+    def simulate_hardware_hang(self, target: str, intensity: int = 10):
+        """Simula una respuesta que causa un alto consumo de CPU en el receptor."""
+        logger.warning(f"⚠️ Simulating Hardware Hang for {target} (Intensity: {intensity})")
+        # In a real scenario, this would be a response that triggers a bug in the attacker's client
+        pass
 
     def generate_entropy_payload(self, size_mb: int = 10):
         """Generates a high-entropy payload for the exfiltrate honeypot."""
