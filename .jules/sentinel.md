@@ -15,6 +15,11 @@
 **Vulnerability:** Lack of input validation on training parameters and missing rate limiting on resource-intensive endpoints in `main.py`.
 **Learning:** While `src/api/main.py` was hardened, the unified entry point `main.py` was still vulnerable to DoS via large training payloads and unauthenticated access if the environment was not properly configured (fail-open).
 **Prevention:** Enforce strict Pydantic `Field` constraints on all user-controlled numeric parameters and apply rate limiting to all public or authenticated endpoints that trigger heavy computation (e.g., GPU training).
+
+## 2026-04-15 - Defensive Feature DoS and Memory Exhaustion
+**Vulnerability:** Honeypots and metadata endpoints lacked resource controls.
+**Learning:** Defensive features like honeypots can themselves be leveraged for DoS if they serve large payloads (e.g., entropy traps) without streaming or rate limiting. An attacker could exhaust server memory by requesting multiple large payloads simultaneously.
+**Prevention:** Always use streaming responses for large defensive payloads and apply strict rate limits to all honeypot and metadata endpoints to ensure the "counter-attack" doesn't crash the defender.
 =======
 ## 2026-04-05 - API Security Fix for Standalone API
 **Vulnerability:** Missing authentication on `src/api/main.py` endpoints.
