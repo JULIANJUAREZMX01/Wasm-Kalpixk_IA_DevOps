@@ -15,6 +15,11 @@
 **Vulnerability:** Lack of input validation on training parameters and missing rate limiting on resource-intensive endpoints in `main.py`.
 **Learning:** While `src/api/main.py` was hardened, the unified entry point `main.py` was still vulnerable to DoS via large training payloads and unauthenticated access if the environment was not properly configured (fail-open).
 **Prevention:** Enforce strict Pydantic `Field` constraints on all user-controlled numeric parameters and apply rate limiting to all public or authenticated endpoints that trigger heavy computation (e.g., GPU training).
+
+## 2026-04-12 - Missing Rate Limiting on Data and Honeypot Endpoints
+**Vulnerability:** Missing rate limiting decorators on sensitive data endpoints and offensive honeypots in `src/api/main.py`.
+**Learning:** Even when a `Limiter` is globally initialized, it must be explicitly applied to each endpoint. Honeypots that generate large or high-entropy responses (like `atlatl` entropy traps) can be weaponized against the host if not rate-limited, turning a defense mechanism into a DoS vector.
+**Prevention:** Always apply rate limits to endpoints that return large payloads or perform disk/GPU intensive tasks. For `slowapi`, ensure the `Request` object is included in the endpoint signature.
 =======
 ## 2026-04-05 - API Security Fix for Standalone API
 **Vulnerability:** Missing authentication on `src/api/main.py` endpoints.

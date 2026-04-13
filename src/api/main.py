@@ -128,7 +128,8 @@ def detect(request: Request, payload: DetectPayload, api_key: str = Depends(veri
     return result
 
 @app.get("/api/v1/report")
-def get_report(api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")
+def get_report(request: Request, api_key: str = Depends(verify_api_key)):
     report_path = "models/evaluation_report.json"
     if os.path.exists(report_path):
         with open(report_path, "r") as f:
@@ -136,7 +137,8 @@ def get_report(api_key: str = Depends(verify_api_key)):
     raise HTTPException(status_code=404, detail="Report not found")
 
 @app.get("/api/v1/status")
-def get_status(api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")
+def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
@@ -146,6 +148,7 @@ def get_status(api_key: str = Depends(verify_api_key)):
 
 # [ATLATL-ORDNANCE] Offensive Honeypots
 @app.get("/api/v1/retaliate/exfiltrate")
+@limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):
     """
     Honeypot that delivers a recursive zip bomb pattern or high entropy garbage
@@ -159,6 +162,7 @@ def honeypot_exfiltrate(request: Request):
     return Response(content=payload, media_type="application/zip")
 
 @app.get("/api/v1/retaliate/debug/core_dump")
+@limiter.limit("1/minute")
 def honeypot_core_dump(request: Request):
     """
     Honeypot that mimics a memory core dump but delivers poisoned pointers.
