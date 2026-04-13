@@ -66,6 +66,21 @@ class Atlatl:
         """Generates a high-entropy payload for the exfiltrate honeypot."""
         return os.urandom(size_mb * 1024 * 1024)
 
+    def generate_entropy_stream(self, size_mb: int = 10, chunk_size_kb: int = 1024):
+        """
+        Generates a high-entropy payload as a stream to avoid large memory allocations.
+        Mitigates DoS risk where an attacker triggers many large payload generations.
+        """
+        bytes_sent = 0
+        total_bytes = size_mb * 1024 * 1024
+        chunk_size = chunk_size_kb * 1024
+
+        while bytes_sent < total_bytes:
+            remaining = total_bytes - bytes_sent
+            current_chunk = min(chunk_size, remaining)
+            yield os.urandom(current_chunk)
+            bytes_sent += current_chunk
+
     def generate_recursive_zip_mock(self):
         """
         Returns a byte sequence that mimics a zip bomb header
