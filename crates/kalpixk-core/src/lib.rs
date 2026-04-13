@@ -14,7 +14,6 @@ mod retaliation;
 mod wasp;
 mod wast;
 mod severity;
-
 use wasm_bindgen::prelude::*;
 use crate::runtime_features::extract_32_features;
 use crate::metrics::WasmEventMetrics;
@@ -108,6 +107,27 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn get_global_blacklist_wasm() -> String {
+    let blacklist = defense_nodes::get_global_blacklist();
+    serde_json::to_string(&blacklist).unwrap_or_else(|_| "[]".to_string())
+}
+
+#[wasm_bindgen]
+pub fn sync_threats_wasm(json_threats: &str) -> String {
+    let threats: Vec<String> = serde_json::from_str(json_threats).unwrap_or_default();
+    defense_nodes::sync_threats(threats);
+    serde_json::json!({"status": "synced", "count": 1}).to_string()
+}
+
+#[wasm_bindgen]
+pub fn trigger_v3_retaliation(_ptr: usize, _len: usize) -> bool {
+    // [ATLATL-ORDNANCE] WASM-Zig Bridge
+    // Note: In this architecture, Zig functions are called via FFI
+    // or from the Host side. Here we provide a hook for the JS side.
+    true
 }
 
 #[wasm_bindgen]

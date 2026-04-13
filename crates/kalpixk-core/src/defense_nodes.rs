@@ -11,11 +11,24 @@
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
+
+/// [ATLATL-ORDNANCE] Global Threat Data Structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThreatSignature {
+    pub source: String,
+    pub node_id: String,
+    pub technique: String,
+    pub score: f64,
+    pub timestamp: i64,
+}
 
 lazy_static::lazy_static! {
     /// Decentralized Peer-to-Peer Threat Sharing (Simulated)
     static ref GLOBAL_THREAT_REGISTRY: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
+
+    /// [ATLATL-ORDNANCE] Detailed Threat Signatures for P2P Sync
+    static ref THREAT_SIGNATURE_DB: Mutex<HashMap<String, ThreatSignature>> = Mutex::new(HashMap::new());
 }
 
 /// Severity score from 0.0 to 1.0
@@ -38,6 +51,33 @@ impl SeverityScore {
             0.50..=0.69 => SeverityLevel::Anomaly,
             _ => SeverityLevel::Critical,
         }
+    }
+}
+
+/// [ATLATL-ORDNANCE] Export Global Blacklist for synchronization
+pub fn get_global_blacklist() -> Vec<String> {
+    if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
+        registry.iter().cloned().collect()
+    } else {
+        Vec::new()
+    }
+}
+
+/// [ATLATL-ORDNANCE] Detailed Sync Logic
+pub fn register_threat_signature(sig: ThreatSignature) {
+    if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
+        registry.insert(sig.source.clone());
+    }
+    if let Ok(mut db) = THREAT_SIGNATURE_DB.lock() {
+        db.insert(sig.source.clone(), sig);
+    }
+}
+
+pub fn get_threat_signatures() -> Vec<ThreatSignature> {
+    if let Ok(db) = THREAT_SIGNATURE_DB.lock() {
+        db.values().cloned().collect()
+    } else {
+        Vec::new()
     }
 }
 

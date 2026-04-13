@@ -130,6 +130,49 @@ pub export fn macuahuitl_strike(target_ptr: [*]u8, target_len: usize, key: u64) 
     }
 }
 
+/// [ATLATL-ORDNANCE] V3 POINTER POISONING (DESTRUCTIVE REDIRECTION)
+/// Inyecta secuencias de salto destructivas que desestabilizan el pipeline del atacante.
+pub export fn v3_pointer_poisoning(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        // Combinación de JMP, HLT y desplazamientos erróneos
+        switch (i % 4) {
+            0 => byte.* = 0xEB, // JMP
+            1 => byte.* = 0xFD, // -3 (Salto al byte anterior al JMP)
+            2 => byte.* = 0xF4, // HLT (Halt execution)
+            3 => byte.* = 0xCC, // INT 3 (Trap to debugger)
+            else => unreachable,
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] RECURSIVE ENTROPY GENERATOR (COMPRESSION-BREAKING)
+/// Genera un flujo de datos diseñado para causar pánico en algoritmos de descompresión (Zip Bomb).
+pub export fn recursive_entropy_generator(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        if (i % 31 == 0) {
+            byte.* = 0x4B; // PK Zip Header Start (partial)
+        } else if (i % 17 == 0) {
+            byte.* = rand.int(u8); // Random noise to break compression dictionary
+        } else {
+            byte.* = @truncate(i ^ (i >> 3));
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] MEMORY SHREDDER
+/// Sobrescribe la memoria con patrones de alta frecuencia para evitar recuperación forense.
+pub export fn memory_shredder(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        byte.* = if (i % 2 == 0) 0xAA else 0x55;
+    }
+}
+
 /// [ATLATL-ORDNANCE] VALIDATE SHARED BUFFER INTEGRITY
 /// Verifica que el buffer no contenga patrones de inyección comunes.
 pub export fn validate_buffer_safety(ptr: [*]const u8, len: usize) bool {
