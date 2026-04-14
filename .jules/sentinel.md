@@ -20,6 +20,11 @@
 **Vulnerability:** Resource exhaustion (memory and request rate) on offensive honeypot endpoints in `src/api/main.py`.
 **Learning:** Offensive retaliation measures like `atlatl` can be turned against the defender if not properly hardened. The `exfiltrate` honeypot was generating 50MB of random data in memory per request without rate limiting, allowing an attacker to cause an Out-Of-Memory (OOM) crash by making concurrent requests.
 **Prevention:** Use `StreamingResponse` for large dynamic payloads to keep memory usage constant regardless of response size. Always apply rate limiting to defensive/offensive endpoints to prevent them from becoming DoS vectors.
+
+## 2026-04-15 - Endpoint and Environment Inconsistency
+**Vulnerability:** Inconsistent endpoint paths (/metrics vs /api/v1/metrics) and environment variables (ENV vs KALPIXK_ENV) across multiple entry points.
+**Learning:** In microservices or multi-entry-point architectures, security hardening and API versioning must be applied globally. Inconsistency leads to broken tests, bypassable security checks, and configuration drift.
+**Prevention:** Use a centralized security dependency and enforce a standard versioning scheme across all entry points. Ensure all configuration (CORS, Auth, Environment) is loaded from the same set of project-specific environment variables.
 =======
 ## 2026-04-05 - API Security Fix for Standalone API
 **Vulnerability:** Missing authentication on `src/api/main.py` endpoints.

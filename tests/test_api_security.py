@@ -24,34 +24,34 @@ def setup_env(monkeypatch):
     monkeypatch.setenv("KALPIXK_API_KEY", "testkey")
 
 def test_metrics_unauthenticated():
-    response = client.get("/metrics")
+    response = client.get("/api/v1/metrics")
     assert response.status_code == 403
 
 def test_metrics_authenticated():
-    response = client.get("/metrics", headers={"X-Kalpixk-Key": "testkey"})
+    response = client.get("/api/v1/metrics", headers={"X-Kalpixk-Key": "testkey"})
     assert response.status_code == 200
 
 def test_detect_unauthenticated():
     payload = {"features": [0.0]*32}
-    response = client.post("/detect", json=payload)
+    response = client.post("/api/v1/detect", json=payload)
     assert response.status_code == 403
 
 def test_detect_authenticated_valid():
     payload = {"features": [0.0]*32}
-    response = client.post("/detect", json=payload, headers={"X-Kalpixk-Key": "testkey"})
+    response = client.post("/api/v1/detect", json=payload, headers={"X-Kalpixk-Key": "testkey"})
     assert response.status_code == 200
 
 def test_detect_invalid_length():
     payload = {"features": [0.0]*10} # Invalid length (not 32)
-    response = client.post("/detect", json=payload, headers={"X-Kalpixk-Key": "testkey"})
+    response = client.post("/api/v1/detect", json=payload, headers={"X-Kalpixk-Key": "testkey"})
     assert response.status_code == 422 # Pydantic validation error
 
-def test_simulate_unauthenticated():
-    response = client.get("/simulate/cpu_spike")
+def test_status_unauthenticated():
+    response = client.get("/api/v1/status")
     assert response.status_code == 403
 
-def test_simulate_authenticated():
-    response = client.get("/simulate/cpu_spike", headers={"X-Kalpixk-Key": "testkey"})
+def test_status_authenticated():
+    response = client.get("/api/v1/status", headers={"X-Kalpixk-Key": "testkey"})
     assert response.status_code == 200
 
 def test_health_public():
@@ -60,9 +60,9 @@ def test_health_public():
     assert response.status_code == 200
 
 def test_production_fails_if_no_key(monkeypatch):
-    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("KALPIXK_ENV", "production")
     monkeypatch.delenv("KALPIXK_API_KEY", raising=False)
 
-    response = client.get("/metrics")
+    response = client.get("/api/v1/metrics")
     assert response.status_code == 500
-    assert response.json()["detail"] == "API Key not configured"
+    assert response.json()["detail"] == "Internal Server Error"

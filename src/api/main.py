@@ -32,13 +32,13 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    env = os.getenv("ENV", "development")
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
     if env == "production":
         if not expected_key:
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=500, detail="API Key not configured")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
@@ -81,7 +81,7 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
 )
 
 detector = AnomalyDetector()
