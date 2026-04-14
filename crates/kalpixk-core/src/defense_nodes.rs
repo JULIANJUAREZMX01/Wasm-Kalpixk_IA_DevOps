@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
 //! 6 nodes for detecting Red Team techniques:
@@ -9,6 +10,8 @@
 //! - Node-6: Exfiltration
 //!
 //! [ATLATL-ORDNANCE] Version 3.0: GuerrillaMode & P2P Orchestration
+
+#![allow(dead_code)]
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -125,7 +128,7 @@ pub fn detect_reconnaissance(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
-    let source = source_lower;
+    let _source = source_lower;
     let user = user_lower;
     let raw = raw_lower;
 
@@ -144,12 +147,12 @@ pub fn detect_reconnaissance(
         techniques.push("T1595".to_string());
     }
 
-    if raw.contains(".git") || raw.contains(".env") || raw.contains(".aws/credentials") {
+    if raw.contains(".git") || raw.contains(".env") || raw.contains(".aws/credentials") || raw.contains("cve-") || raw.contains("nuclei") {
         score += 0.5;
         techniques.push("T1593".to_string());
     }
 
-    if user.contains("spiderfoot") || user.contains("shodan") || user.contains("censys") {
+    if user.contains("spiderfoot") || user.contains("shodan") || user.contains("censys") || user.contains("nuclei") {
         score += 0.5;
         techniques.push("T1595".to_string());
     }
@@ -260,12 +263,11 @@ pub fn detect_payload_execution(
         techniques.push("T1059.001".to_string());
     }
 
-    if raw.contains("bitsadmin") || raw.contains("certutil") || raw.contains("curl -s") || raw.contains("wget -q") {
-        if raw.contains("http") || raw.contains(".exe") || raw.contains(".sh") || raw.contains(".ps1") {
+    if (raw.contains("bitsadmin") || raw.contains("certutil") || raw.contains("curl -s") || raw.contains("wget -q"))
+        && (raw.contains("http") || raw.contains(".exe") || raw.contains(".sh") || raw.contains(".ps1")) {
             score += 0.7;
             techniques.push("T1105".to_string());
         }
-    }
 
     if raw.contains("msfvenom") || raw.contains("meterpreter") || raw.contains("cobaltstrike") {
         score += 1.0;
@@ -341,6 +343,13 @@ pub fn detect_exfiltration(
     if (raw.contains(".zip") || raw.contains(".7z") || raw.contains(".rar")) && raw.contains("-p") {
         score += 0.6;
         techniques.push("T1074".to_string());
+    }
+
+    if (raw.contains("bitsadmin") || raw.contains("certutil") || raw.contains("curl -s") || raw.contains("wget -q"))
+        && (raw.contains("http") || raw.contains(".exe") || raw.contains(".sh") || raw.contains(".ps1"))
+    {
+        score += 0.7;
+        techniques.push("T1105".to_string());
     }
 
     if raw.contains("dns") && raw.contains("txt") && raw.len() > 200 {

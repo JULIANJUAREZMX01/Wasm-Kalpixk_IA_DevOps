@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! WASP — WebAssembly Security Protocol
 //!
 //! Security layer for Kalpixk WASM modules:

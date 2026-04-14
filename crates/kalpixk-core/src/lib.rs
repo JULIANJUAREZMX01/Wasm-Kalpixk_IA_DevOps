@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // [ATLATL-ORDNANCE] WasmGuard Core v2.2
 // Implementation of the WIT contract for the Blue Team SIEM
 
