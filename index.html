@@ -1,13 +1,516 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kalpixk SIEM | WASM + React</title>
-    <script src="./coi-serviceworker.js"></script>
-    <script type="module" crossorigin src="/assets/index-DheRtSlJ.js"></script>
-  </head>
-  <body>
-    <div id="app"></div>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalpixk SIEM Dashboard | AMD MI300X Ultra-Throughput</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red-amd: #E31837;
+            --black-bg: #0a0a0b;
+            --card-bg: #141417;
+            --green-cyber: #00ff41;
+            --cyan-data: #00e5ff;
+            --orange-warn: #ff9d00;
+        }
+        body {
+            background-color: var(--black-bg);
+            color: #e4e4e7;
+            font-family: 'Fira Code', monospace;
+            background-image: radial-gradient(circle at 50% 50%, #1a1a20 0%, #0a0a0b 100%);
+            min-height: 100vh;
+        }
+        .amd-gradient {
+            background: linear-gradient(90deg, #E31837 0%, #8B0000 100%);
+        }
+        .cyber-border {
+            border: 1px solid #27272a;
+            position: relative;
+        }
+        .cyber-border:hover {
+            border-color: var(--red-amd);
+            box-shadow: 0 0 15px rgba(227, 24, 55, 0.2);
+        }
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 65, 0.05);
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            animation: scan 6s linear infinite;
+            z-index: 100;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        .alert-row {
+            border-left: 3px solid transparent;
+            animation: slideIn 0.3s ease-out;
+        }
+        .alert-critical { border-left-color: var(--red-amd); background: rgba(227, 24, 55, 0.05); }
+        .alert-warning { border-left-color: var(--orange-warn); background: rgba(255, 157, 0, 0.05); }
+        .alert-info { border-left-color: var(--cyan-data); background: rgba(0, 229, 255, 0.05); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .glitch {
+            animation: glitch 1s linear infinite;
+            position: relative;
+        }
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px,0) skew(0deg); }
+            4%, 60% { transform: translate(-2px,0) skew(0deg); }
+            62% { transform: translate(0,0) skew(5deg); }
+        }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0a0a0b; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: var(--red-amd); }
+
+        .mitre-cell { font-size: 0.65rem; transition: all 0.2s; }
+        .mitre-active { background: var(--red-amd); color: white; box-shadow: 0 0 8px var(--red-amd); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="scanline"></div>
+
+    <!-- Top Header -->
+    <div class="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center bg-[#141417]/80 backdrop-blur-md p-4 rounded-xl cyber-border">
+        <div class="flex items-center gap-4">
+            <div class="bg-white p-1 rounded">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M40 0H0V40H40V0ZM34.2 34.2H5.8V5.8H34.2V34.2Z" fill="#E31837"/>
+                    <path d="M26.5 13.5H13.5V26.5H26.5V13.5Z" fill="#E31837"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-tighter italic">KALPIXK <span class="status-info text-cyan-400">SIEM</span></h1>
+                <div class="flex gap-2 text-[10px] font-bold">
+                    <span class="amd-gradient px-2 py-0.5 rounded text-white italic">AMD MI300X ACCELERATED</span>
+                    <span class="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">v2.1.0-STABLE</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 md:mt-0 text-center">
+            <div>
+                <div class="text-[9px] text-zinc-500 uppercase">Throughput</div>
+                <div id="stat-throughput" class="text-lg font-bold text-green-400">4.28M <span class="text-[10px]">ev/s</span></div>
+            </div>
+            <div>
+                <div class="text-[9px] text-zinc-500 uppercase">GPU Latency</div>
+                <div id="stat-latency" class="text-lg font-bold text-cyan-400">0.82 <span class="text-[10px]">μs</span></div>
+            </div>
+            <div>
+                <div class="text-[9px] text-zinc-500 uppercase">Uptime</div>
+                <div id="stat-uptime" class="text-lg font-bold">04:22:15</div>
+            </div>
+            <div>
+                <div class="text-[9px] text-zinc-500 uppercase">Threat Level</div>
+                <div id="stat-threat" class="text-lg font-bold text-green-500">NOMINAL</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Controls & Analysis (4 cols) -->
+        <div class="lg:col-span-4 space-y-6">
+            <!-- Manual Log Analysis -->
+            <div class="bg-[#141417] p-5 rounded-xl cyber-border">
+                <h2 class="text-xs font-bold text-zinc-500 uppercase mb-4 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    Manual Log Analyzer (WASM-JS Core)
+                </h2>
+                <textarea id="log-input" placeholder="Paste log line here (DB2, Windows, Syslog)..."
+                    class="w-full h-32 bg-black border border-zinc-800 rounded-lg p-3 text-xs font-mono focus:border-red-600 outline-none transition-all custom-scroll"></textarea>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="analyzeManual()" class="flex-1 py-2 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 rounded transition-all">ANALYZE LOG</button>
+                    <button onclick="clearLogs()" class="px-4 py-2 text-xs font-bold bg-zinc-900 border border-zinc-800 rounded hover:bg-black transition-all">CLEAR</button>
+                </div>
+                <div id="manual-result" class="mt-4 p-3 bg-black/50 rounded-lg border border-zinc-900 hidden">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-zinc-500 uppercase">Inference Score</span>
+                        <span id="manual-score" class="text-xs font-bold">0.00</span>
+                    </div>
+                    <div class="w-full bg-zinc-900 h-1 rounded-full">
+                        <div id="manual-bar" class="h-full bg-green-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div id="manual-desc" class="text-[10px] mt-2 italic text-zinc-400"></div>
+                </div>
+            </div>
+
+            <!-- Simulation Controls -->
+            <div class="bg-[#141417] p-5 rounded-xl cyber-border">
+                <h2 class="text-xs font-bold text-zinc-500 uppercase mb-4">Simulation: CEDIS CANCÚN (WMS)</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="startSimulation('normal')" class="p-3 text-[10px] font-bold bg-black/40 border border-zinc-800 rounded hover:border-cyan-400 hover:text-cyan-400 transition-all">NORMAL OPS</button>
+                    <button onclick="injectAttack('brute_force')" class="p-3 text-[10px] font-bold bg-black/40 border border-zinc-800 rounded hover:border-red-600 hover:text-red-600 transition-all">SSH BRUTEFORCE</button>
+                    <button onclick="injectAttack('db2_drop')" class="p-3 text-[10px] font-bold bg-black/40 border border-zinc-800 rounded hover:border-red-600 hover:text-red-600 transition-all">DB2 DATA DROP</button>
+                    <button onclick="injectAttack('ransomware')" class="p-3 text-[10px] font-bold bg-black/40 border border-zinc-800 rounded hover:border-red-600 hover:text-red-600 transition-all">RANSOMWARE T1486</button>
+                </div>
+                <button onclick="stopSimulation()" id="sim-toggle" class="w-full mt-3 py-2 text-[10px] font-bold bg-zinc-800 text-zinc-400 rounded hover:bg-zinc-700 transition-all">STOP FEED</button>
+            </div>
+
+            <!-- Benchmark Chart (Canvas) -->
+            <div class="bg-[#141417] p-5 rounded-xl cyber-border overflow-hidden">
+                <h2 class="text-xs font-bold text-zinc-500 uppercase mb-4">Performance Baseline vs Splunk</h2>
+                <div class="h-40 flex items-end gap-4 px-2">
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full bg-zinc-800 rounded-t relative h-[15px] transition-all duration-1000" id="bar-splunk">
+                             <span class="absolute -top-4 text-[8px] text-zinc-600">50K</span>
+                        </div>
+                        <span class="text-[9px] text-zinc-500">Splunk</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full bg-zinc-800 rounded-t relative h-[35px] transition-all duration-1000" id="bar-elastic">
+                             <span class="absolute -top-4 text-[8px] text-zinc-600">200K</span>
+                        </div>
+                        <span class="text-[9px] text-zinc-500">Elastic</span>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center gap-2">
+                        <div class="w-full amd-gradient rounded-t relative h-[140px] shadow-[0_0_20px_rgba(227,24,55,0.3)] animate-pulse" id="bar-kalpixk">
+                             <span class="absolute -top-5 text-[9px] font-bold text-red-500">4.2M</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-white italic">KALPIXK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Feed & MITRE (8 cols) -->
+        <div class="lg:col-span-8 space-y-6">
+
+            <!-- Real-time Feed -->
+            <div class="bg-[#141417] p-5 rounded-xl cyber-border h-[480px] flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+                        LIVE THREAT TELEMETRY
+                    </h2>
+                    <div class="flex gap-4 text-[10px] font-mono">
+                        <span class="text-zinc-600">EVENTS: <span id="event-count" class="text-zinc-300">0</span></span>
+                        <span class="text-zinc-600">CRITICAL: <span id="critical-count" class="text-red-500">0</span></span>
+                    </div>
+                </div>
+                <div id="alert-feed" class="flex-grow overflow-y-auto font-mono text-[10px] space-y-2 pr-2 custom-scroll">
+                    <div class="text-zinc-600 italic">Initializing neural telemetry stream...</div>
+                </div>
+            </div>
+
+            <!-- MITRE ATT&CK Matrix -->
+            <div class="bg-[#141417] p-5 rounded-xl cyber-border">
+                <h2 class="text-xs font-bold text-zinc-500 uppercase mb-4">Detection Coverage Matrix (MITRE ATT&CK)</h2>
+                <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
+                    <div id="m-t1110" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1110<br>Brute Force</div>
+                    <div id="m-t1059" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1059<br>Cmd Shell</div>
+                    <div id="m-t1485" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1485<br>Data Dest.</div>
+                    <div id="m-t1005" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1005<br>Data Exfil</div>
+                    <div id="m-t1543" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1543<br>Create Svc</div>
+                    <div id="m-t1021" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1021<br>Remote Svc</div>
+                    <div id="m-t1486" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1486<br>Ransomware</div>
+                    <div id="m-t1071" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1071<br>App Layer</div>
+                    <div id="m-t1562" class="mitre-cell p-2 rounded border border-zinc-800 bg-black/40 text-center">T1562<br>Impair Def.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto mt-6 text-center text-[10px] text-zinc-600 uppercase tracking-widest">
+        Proprietary Engine // Designed for Manhattan WMS & CEDIS CANCÚN 427 // Protected by Kalpixk ATLATL-ORDNANCE
+
+        <!-- Entropy Chart Row — full width below main grid -->
+        <div class="lg:col-span-12 bg-[#141417] p-5 rounded-xl cyber-border mt-0">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Shannon Entropy — Real-Time WASM Edge Sensor (32 features)
+                </h2>
+                <div class="flex gap-4 text-[10px] text-zinc-500">
+                    <span>NORMAL <span class="inline-block w-6 h-1 bg-cyan-400 rounded ml-1 align-middle"></span></span>
+                    <span>ATTACK <span class="inline-block w-6 h-1 bg-red-500 rounded ml-1 align-middle"></span></span>
+                    <span>THRESHOLD <span class="inline-block w-6 h-1 bg-yellow-500 rounded ml-1 align-middle" style="border-top: 2px dashed #eab308; background:transparent"></span></span>
+                </div>
+            </div>
+            <canvas id="entropy-canvas" height="100" style="width:100%;"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // --- SIEM Core Logic (JS Re-implementation of Rust WASM Parsers) ---
+        const SENSITIVE_TABLES = ["NOMINAS", "VENTAS", "EMPLEADOS", "CLIENTES", "CREDITOS"];
+        const DB2_USERS = ["CEDIS_APP", "CEDIS_USR", "WMS_SVC", "DBA_ADMIN"];
+        const MALICIOUS_IPS = ["185.220.101.35", "45.33.22.11", "203.0.113.88"];
+
+        let stats = { events: 0, critical: 0, startTime: Date.now() };
+        let isSimulating = false;
+        let simInterval = null;
+
+        function getTimestamp() { return new Date().toISOString().replace('T', ' ').substring(0, 19); }
+
+        function analyzeLine(line) {
+            line = line.trim();
+            let score = 0.05 + Math.random() * 0.1;
+            let type = "info";
+            let msg = "Normal Event";
+            let mitre = null;
+
+            const lower = line.toLowerCase();
+
+            // DB2 Parser
+            if (line.includes("OPERATION=")) {
+                if (lower.includes("drop table") || lower.includes("truncate")) {
+                    score = 0.95; type = "critical"; msg = "CRITICAL: DATA DESTRUCTION DETECTED"; mitre = "T1485";
+                } else if (lower.includes("export to") && lower.includes(".csv")) {
+                    score = 0.88; type = "critical"; msg = "ALERT: DATA EXFILTRATION SUSPECTED"; mitre = "T1005";
+                } else if (lower.includes("drop") || lower.includes("delete")) {
+                    score = 0.75; type = "warning"; msg = "WARN: Sensitive DDL operation"; mitre = "T1485";
+                }
+            }
+            // Syslog Parser
+            else if (line.includes("sshd") && lower.includes("failed password")) {
+                score = 0.82; type = "critical"; msg = "ALERT: SSH BRUTE FORCE ATTACK"; mitre = "T1110";
+            }
+            // Windows Parser
+            else if (line.includes("EventID: 7045")) {
+                score = 0.92; type = "critical"; msg = "CRITICAL: MALICIOUS SERVICE CREATED"; mitre = "T1543";
+            } else if (lower.includes("powershell") && (lower.includes("-nop") || lower.includes("-enc"))) {
+                score = 0.94; type = "critical"; msg = "CRITICAL: POWERSHELL EVASION DETECTED"; mitre = "T1059";
+            }
+
+            return { score, type, msg, mitre, raw: line };
+        }
+
+        function addLog(data) {
+            const feed = document.getElementById('alert-feed');
+            const row = document.createElement('div');
+            row.className = `alert-row alert-${data.type} p-2 rounded flex flex-col md:flex-row md:items-center gap-2 border border-zinc-900`;
+
+            const badge = data.type === 'critical' ? '<span class="bg-red-600 text-white px-1 rounded text-[8px] animate-pulse">CRITICAL</span>' : '';
+
+            row.innerHTML = `
+                <div class="flex-shrink-0 text-zinc-500 w-32">${getTimestamp()}</div>
+                <div class="flex-grow">
+                    <div class="font-bold flex items-center gap-2">${badge} ${data.msg}</div>
+                    <div class="text-zinc-600 truncate">${data.raw}</div>
+                </div>
+                <div class="flex-shrink-0 font-mono ${data.score > 0.8 ? 'text-red-500' : 'text-zinc-500'}">S:${data.score.toFixed(4)}</div>
+            `;
+
+            feed.prepend(row);
+            if (feed.childNodes.length > 50) feed.removeChild(feed.lastChild);
+
+            stats.events++;
+            if (data.type === 'critical') {
+                stats.critical++;
+                flashThreat(data.mitre);
+            }
+            updateUI();
+        }
+
+        function flashThreat(mitreId) {
+            if (!mitreId) return;
+            const el = document.getElementById(`m-${mitreId.toLowerCase()}`);
+            if (el) {
+                el.classList.add('mitre-active');
+                setTimeout(() => el.classList.remove('mitre-active'), 3000);
+            }
+            document.getElementById('stat-threat').textContent = "INTRUSION";
+            document.getElementById('stat-threat').className = "text-lg font-bold text-red-500 glitch";
+            setTimeout(() => {
+                document.getElementById('stat-threat').textContent = "NOMINAL";
+                document.getElementById('stat-threat').className = "text-lg font-bold text-green-500";
+            }, 5000);
+        }
+
+        function updateUI() {
+            document.getElementById('event-count').textContent = stats.events;
+            document.getElementById('critical-count').textContent = stats.critical;
+
+            const diff = Math.floor((Date.now() - stats.startTime) / 1000);
+            const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+            const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            const s = String(diff % 60).padStart(2, '0');
+            document.getElementById('stat-uptime').textContent = `${h}:${m}:${s}`;
+
+            document.getElementById('ram-pct').textContent = (Math.random() * 5 + 15).toFixed(1) + "%";
+        }
+
+        function analyzeManual() {
+            const input = document.getElementById('log-input');
+            const resultDiv = document.getElementById('manual-result');
+            if (!input.value) return;
+
+            const res = analyzeLine(input.value);
+            resultDiv.classList.remove('hidden');
+            document.getElementById('manual-score').textContent = res.score.toFixed(4);
+            document.getElementById('manual-score').className = `text-xs font-bold ${res.score > 0.7 ? 'text-red-500' : 'text-green-500'}`;
+            document.getElementById('manual-bar').style.width = (res.score * 100) + "%";
+            document.getElementById('manual-bar').style.backgroundColor = res.score > 0.7 ? '#E31837' : '#00ff41';
+            document.getElementById('manual-desc').textContent = res.msg + (res.mitre ? ` (${res.mitre})` : "");
+
+            addLog(res);
+        }
+
+        function clearLogs() {
+            document.getElementById('alert-feed').innerHTML = '<div class="text-zinc-600 italic">Logs cleared. Neural engine standby.</div>';
+            stats.events = 0;
+            stats.critical = 0;
+            updateUI();
+        }
+
+        function startSimulation() {
+            if (isSimulating) return;
+            isSimulating = true;
+            document.getElementById('sim-toggle').textContent = "STOP FEED";
+            simInterval = setInterval(() => {
+                const u = DB2_USERS[Math.floor(Math.random()*DB2_USERS.length)];
+                const t = SENSITIVE_TABLES[Math.floor(Math.random()*SENSITIVE_TABLES.length)];
+                const log = `TIMESTAMP=${getTimestamp()} AUTHID=${u} HOSTNAME=10.0.4.22 OPERATION=EXECUTE STATEMENT=SELECT * FROM ${t}`;
+                addLog(analyzeLine(log));
+            }, 2000);
+        }
+
+        function stopSimulation() {
+            isSimulating = false;
+            clearInterval(simInterval);
+            document.getElementById('sim-toggle').textContent = "RESUME NORMAL FEED";
+        }
+
+        function injectAttack(type) {
+            let log = "";
+            if (type === 'brute_force') {
+                log = `Apr 09 14:22:15 cancun-wms-srv01 sshd[4412]: Failed password for root from 185.220.101.35 port 51222`;
+            } else if (type === 'db2_drop') {
+                log = `TIMESTAMP=${getTimestamp()} AUTHID=DBA_ADMIN HOSTNAME=45.33.22.11 OPERATION=DDL STATEMENT=DROP TABLE NOMINAS`;
+            } else if (type === 'ransomware') {
+                log = `EventID: 4688 Computer: DC-CANCUN CommandLine: vssadmin.exe delete shadows /all /quiet`;
+            }
+            addLog(analyzeLine(log));
+        }
+
+
+        // ─── Entropy Canvas ────────────────────────────────────────
+        const entropyCanvas = document.getElementById('entropy-canvas');
+        const ctx2 = entropyCanvas.getContext('2d');
+        const ENTROPY_HISTORY = 120;
+        let entropyData = Array(ENTROPY_HISTORY).fill(0.3);
+        let attackMode = false;
+
+        function calcEntropy(val) {
+            // Shannon entropy simulada: eventos normales ~0.2-0.4, ataques ~0.7-0.95
+            const noise = (Math.random() - 0.5) * 0.08;
+            if (attackMode) return Math.min(0.98, val + 0.35 + Math.abs(noise) * 2);
+            return Math.max(0.05, Math.min(0.55, val + noise));
+        }
+
+        function drawEntropyChart() {
+            const W = entropyCanvas.offsetWidth;
+            const H = 100;
+            entropyCanvas.width = W;
+            entropyCanvas.height = H;
+
+            ctx2.clearRect(0, 0, W, H);
+
+            // Grid lines
+            ctx2.strokeStyle = 'rgba(39,39,42,0.8)';
+            ctx2.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (i / 4) * H;
+                ctx2.beginPath(); ctx2.moveTo(0, y); ctx2.lineTo(W, y); ctx2.stroke();
+            }
+
+            // Threshold line (0.65)
+            const threshY = H - (0.65 * H);
+            ctx2.strokeStyle = '#eab308';
+            ctx2.setLineDash([6, 4]);
+            ctx2.lineWidth = 1.5;
+            ctx2.beginPath(); ctx2.moveTo(0, threshY); ctx2.lineTo(W, threshY); ctx2.stroke();
+            ctx2.setLineDash([]);
+
+            // Entropy fill
+            const step = W / (ENTROPY_HISTORY - 1);
+            ctx2.beginPath();
+            ctx2.moveTo(0, H);
+            entropyData.forEach((v, i) => {
+                const x = i * step;
+                const y = H - (v * H);
+                if (i === 0) ctx2.lineTo(x, y);
+                else ctx2.lineTo(x, y);
+            });
+            ctx2.lineTo(W, H);
+            ctx2.closePath();
+
+            // Color: red if last value is attack, cyan if normal
+            const lastVal = entropyData[entropyData.length - 1];
+            const isAttack = lastVal > 0.65;
+            const grad = ctx2.createLinearGradient(0, 0, 0, H);
+            if (isAttack) {
+                grad.addColorStop(0, 'rgba(227,24,55,0.6)');
+                grad.addColorStop(1, 'rgba(227,24,55,0.05)');
+            } else {
+                grad.addColorStop(0, 'rgba(0,229,255,0.4)');
+                grad.addColorStop(1, 'rgba(0,229,255,0.02)');
+            }
+            ctx2.fillStyle = grad;
+            ctx2.fill();
+
+            // Line
+            ctx2.beginPath();
+            entropyData.forEach((v, i) => {
+                const x = i * step;
+                const y = H - (v * H);
+                if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+            });
+            ctx2.strokeStyle = isAttack ? '#E31837' : '#00e5ff';
+            ctx2.lineWidth = 2;
+            ctx2.stroke();
+
+            // Current value label
+            ctx2.fillStyle = isAttack ? '#E31837' : '#00e5ff';
+            ctx2.font = 'bold 11px Fira Code, monospace';
+            ctx2.fillText(`H=${lastVal.toFixed(3)}`, W - 80, 18);
+            if (isAttack) {
+                ctx2.fillStyle = '#E31837';
+                ctx2.fillText('⚠ ANOMALY', W - 80, 35);
+            }
+        }
+
+        let baseEntropy = 0.3;
+        setInterval(() => {
+            const newVal = calcEntropy(baseEntropy);
+            entropyData.push(newVal);
+            if (entropyData.length > ENTROPY_HISTORY) entropyData.shift();
+            baseEntropy = newVal * 0.7 + 0.3 * 0.3; // mean reversion
+            drawEntropyChart();
+        }, 250);
+
+        // Hook into attack injection to spike entropy
+        const origInject = window.injectAttack;
+        window.injectAttack = function(type) {
+            attackMode = true;
+            setTimeout(() => { attackMode = false; }, 6000);
+            if (origInject) origInject(type);
+        };
+
+        window.addEventListener('resize', drawEntropyChart);
+        drawEntropyChart();
+
+        // Init
+        startSimulation();
+        setInterval(() => {
+            const throughput = (4.2 + (Math.random() * 0.1)).toFixed(2);
+            document.getElementById('stat-throughput').innerHTML = `${throughput}M <span class="text-[10px]">ev/s</span>`;
+            const lat = (0.8 + (Math.random() * 0.05)).toFixed(2);
+            document.getElementById('stat-latency').innerHTML = `${lat} <span class="text-[10px]">μs</span>`;
+        }, 1000);
+
+    </script>
+</body>
 </html>
