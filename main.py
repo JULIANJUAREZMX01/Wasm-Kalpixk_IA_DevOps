@@ -3,6 +3,7 @@ Kalpixk — Unified SIEM Entry Point
 Integrates: AI Anomaly Engine + WASM Monitor + FastAPI + Terminal TUI + Web Dashboard
 """
 import os
+import json
 import secrets
 import socket
 import threading
@@ -71,13 +72,13 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    env = os.getenv("ENV", "development")
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
     if env == "production":
         if not expected_key:
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="API Key not configured")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
@@ -91,7 +92,20 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 app = FastAPI(title="Kalpixk SIEM", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
+try:
+    cors_origins = json.loads(cors_origins_str)
+except:
+    cors_origins = ["http://localhost:8000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+    allow_credentials=False,
+)
 
 @app.get("/health")
 def health():
@@ -102,7 +116,7 @@ def health():
         "ip_assigned": get_local_ip()
     }
 
-@app.get("/metrics")
+@app.get("/api/v1/metrics")
 @limiter.limit("60/minute")
 def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     m = monitor_wasm.capture_metrics()
@@ -110,7 +124,7 @@ def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     result = detector.predict(m.reshape(1, -1))
     return {"metrics": m.tolist(), "detection": result}
 
-@app.post("/train")
+@app.post("/api/v1/train")
 @limiter.limit("5/minute")
 def train_api(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     data = monitor_wasm.generate_normal_baseline(n_samples=payload.n_samples)
@@ -123,7 +137,7 @@ if dist_path.exists():
     app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        if full_path.startswith("health") or full_path.startswith("metrics") or full_path.startswith("train") or full_path.startswith("docs"):
+        if full_path.startswith("health") or full_path.startswith("api/v1") or full_path.startswith("docs"):
             raise HTTPException(status_code=404)
         return FileResponse(dist_path / "index.html")
 
