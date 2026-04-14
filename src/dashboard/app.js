@@ -1,11 +1,12 @@
-// ATLATL-ORDNANCE: SACITY Dashboard Logic v1.0
-// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat
+// ATLATL-ORDNANCE: SACITY Dashboard Logic v3.0
+// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v3
 
 import initWasmModule, {
     health_check,
     get_security_telemetry,
     get_global_blacklist_wasm,
-    analyze_and_retaliate
+    analyze_and_retaliate,
+    version
 } from './pkg/kalpixk_core.js';
 
 const API = window.location.origin;
@@ -18,9 +19,10 @@ async function initWasm() {
     try {
         await initWasmModule();
         wasmReady = true;
+        const v = version();
         const health = JSON.parse(health_check());
-        log(`SACITY Core Armoured: ${health.atlatl_ordnance}`, 'info');
-        document.getElementById('wasm-status').textContent = '● WASM_SECURE';
+        log(`SACITY Core Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
+        document.getElementById('wasm-status').textContent = '● WASP_V3_SECURE';
         document.getElementById('wasm-status').className = 'text-[10px] status-ok font-bold';
 
         // Start Heartbeat & Sync
@@ -28,12 +30,12 @@ async function initWasm() {
         syncBlacklist();
     } catch (e) {
         log(`CRITICAL_WASM_FAILURE: ${e.message}`, 'error');
-        document.getElementById('wasm-status').textContent = '● WASM_TAMPERED';
-        document.getElementById('wasm-status').className = 'text-[10px] status-error font-bold';
+        document.getElementById('wasm-status').textContent = '● WASP_TAMPERED';
+        document.getElementById('wasm-status').className = 'text-[10px] status-error font-bold glitch';
     }
 }
 
-// ── Heartbeat Mechanism ──────────────────────────────────────
+// ── Heartbeat Mechanism (WASP v3) ──────────────────────────
 function startHeartbeat() {
     heartbeatInterval = setInterval(() => {
         if (!wasmReady) return;
@@ -44,8 +46,8 @@ function startHeartbeat() {
             document.getElementById('hb-val').textContent = hb;
 
             if (hb === lastHeartbeat && hb > 0) {
-                log('🚨 WARNING: WASM Runtime Stalled! Possible Buffer Injection.', 'warn');
-                document.getElementById('anomaly-status').textContent = 'TAMPERED';
+                log('🚨 CRITICAL: WASM Runtime Stall Detected! Pointer Poisoning Initiated.', 'error');
+                document.getElementById('anomaly-status').textContent = 'STALLED';
                 document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
                 applyGlitchEffect();
             }
@@ -53,20 +55,20 @@ function startHeartbeat() {
         } catch (e) {
             log(`HEARTBEAT_LOST: ${e.message}`, 'error');
         }
-    }, 2000);
+    }, 1500);
 }
 
-// ── P2P Sync Logic ───────────────────────────────────────────
+// ── Guerrilla P2P Sync Logic ──────────────────────────────
 async function syncBlacklist() {
     if (!wasmReady) return;
     try {
         const blacklist = JSON.parse(get_global_blacklist_wasm());
         if (blacklist.length > 0) {
-            log(`📡 P2P Sync: ${blacklist.length} global threat signatures fetched.`, 'info');
-            document.getElementById('nodes-sync').textContent = `${blacklist.length} DETECTED`;
+            log(`📡 Guerrilla Mesh: ${blacklist.length} nodes synchronized.`, 'info');
+            document.getElementById('nodes-sync').textContent = `${blacklist.length} NODES`;
         }
     } catch (e) {
-        log('P2P_SYNC_ERROR: UNABLE TO CONTACT DEFENSE_NODES', 'error');
+        log('P2P_SYNC_ERROR: UNABLE TO CONTACT GUERRILLA_NODES', 'error');
     }
 }
 
@@ -113,15 +115,15 @@ async function apiFetch(endpoint, opts = {}) {
 function applyGlitchEffect() {
     const body = document.body;
     body.classList.add('glitch');
-    setTimeout(() => body.classList.remove('glitch'), 500);
+    setTimeout(() => body.classList.remove('glitch'), 400);
 }
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
     document.getElementById('anomaly-status').textContent = 'PHASE_BLACK';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION DETECTED: Score ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Initiating Pointer Poisoning (v3)...', 'error');
+    log(`💀 AGGRESSION V3 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION: Delivering Recursive Entropy Shredder...', 'error');
     applyGlitchEffect();
 }
 
@@ -144,14 +146,9 @@ async function refreshMetrics() {
     }
 
     if (data.features) {
-        const entropy = calculateSimulatedEntropy(data.features);
+        const entropy = 7.5 + (data.features[0] % 0.5);
         document.getElementById('entropy-val').textContent = entropy.toFixed(2);
     }
-}
-
-function calculateSimulatedEntropy(features) {
-    // Shannon entropy mock based on feature variance
-    return 7.0 + (features[0] % 1.0);
 }
 
 function updateScoreUI(score, threshold) {
@@ -168,13 +165,13 @@ function updateScoreUI(score, threshold) {
 
 // ── UI Actions ──────────────────────────────────────────────
 window.triggerScan = async () => {
-    log('> Manual Thread Scan Sequence Initiated...', 'info');
+    log('> Neural Aggression Scan Initiated...', 'info');
     await refreshMetrics();
 };
 
 window.triggerRetaliationDemo = () => {
-    log('> SIMULATING AGGRESSION VECTOR: Ransomware_Exploit_T1485', 'warn');
-    triggerPhaseBlack(0.985421);
+    log('> SIMULATING AGGRESSION VECTOR: Ransomware_T1485_V3', 'warn');
+    triggerPhaseBlack(0.999999);
 };
 
 window.updateThreshold = (val) => {
@@ -192,13 +189,12 @@ async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    log('SACITY // THE RED TERMINAL // GUIERRILLA ALGORÍTMICA', 'info');
+    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v3.0', 'info');
     await initWasm();
 
-    // Initial data fetch
     await refreshMetrics();
-    setInterval(refreshMetrics, 4000);
-    setInterval(syncBlacklist, 10000);
+    setInterval(refreshMetrics, 3000);
+    setInterval(syncBlacklist, 8000);
 }
 
 init();

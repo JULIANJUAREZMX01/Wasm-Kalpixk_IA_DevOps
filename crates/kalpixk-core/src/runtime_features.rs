@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::metrics::WasmEventMetrics;
 use std::sync::Mutex;
 use lazy_static::lazy_static;

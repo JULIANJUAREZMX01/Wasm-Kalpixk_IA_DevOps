@@ -1,5 +1,5 @@
 """
-Wasm-Kalpixk API (v2) — DevSecOps Hardening
+Wasm-Kalpixk API (v3) — ATLATL-ORDNANCE Guerrilla Hardening
 """
 import os
 import secrets
@@ -32,13 +32,13 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    env = os.getenv("ENV", "development")
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
     if env == "production":
         if not expected_key:
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=500, detail="API Key not configured")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
@@ -48,7 +48,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Iniciando Kalpixk SIEM...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -58,30 +58,30 @@ async def lifespan(app: FastAPI):
         metrics = detector.evaluate(data['X'], data['y'])
         detector.save_evaluation_report(metrics)
 
-    logger.success("Sistema listo")
+    logger.success("🏹 Sistema ATLATL Armado y Operacional")
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v2",
-    version="2.0.0",
+    title="Kalpixk SIEM API v3",
+    version="3.0.0-atlatl",
     lifespan=lifespan
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
+cors_origins_str = os.getenv("CORS_ORIGINS", '["*"]')
 try:
     cors_origins = json.loads(cors_origins_str)
 except:
-    cors_origins = ["http://localhost:8000"]
+    cors_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
 )
 
 detector = AnomalyDetector()
@@ -93,8 +93,9 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
+        "version": "3.0.0-atlatl",
+        "atlatl_ordnance": "v3-macuahuitl",
         "model_trained": detector.is_trained,
-        "device": str(detector.device),
         "wasm_connected": True
     }
 
@@ -104,12 +105,12 @@ def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     m_features = monitor.capture_metrics()
     result = detector.predict(m_features.reshape(1, -1))
 
-    # [ATLATL-ORDNANCE] Retaliation Trigger
     score = result['reconstruction_errors'][0]
     if score > 0.7:
         source_ip = request.client.host
-        atlatl.trigger_retaliation(score, source_ip)
+        retaliation = atlatl.trigger_retaliation(score, source_ip)
         result["atlatl_active"] = True
+        result["retaliation"] = retaliation
 
     return {"features": m_features.tolist(), "detection": result}
 
@@ -119,17 +120,17 @@ def detect(request: Request, payload: DetectPayload, api_key: str = Depends(veri
     features = np.array([payload.features], dtype=np.float32)
     result = detector.predict(features)
 
-    # [ATLATL-ORDNANCE] Retaliation Trigger
     score = result['reconstruction_errors'][0]
     if score > 0.7:
         source_ip = request.client.host
-        atlatl.trigger_retaliation(score, source_ip)
+        retaliation = atlatl.trigger_retaliation(score, source_ip)
         result["atlatl_active"] = True
+        result["retaliation"] = retaliation
 
     return result
 
 @app.get("/api/v1/report")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def get_report(request: Request, api_key: str = Depends(verify_api_key)):
     report_path = "models/evaluation_report.json"
     if os.path.exists(report_path):
@@ -138,16 +139,16 @@ def get_report(request: Request, api_key: str = Depends(verify_api_key)):
     raise HTTPException(status_code=404, detail="Report not found")
 
 @app.get("/api/v1/status")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "device": str(detector.device),
-        "train_stats": detector.train_stats
+        "atlatl_version": "3.0-atlatl",
+        "device": str(detector.device)
     }
 
-# -- [ATLATL-ORDNANCE] Decentralized Node Sync --
+# -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
 
 class ThreatReport(BaseModel):
     node_id: str
@@ -157,52 +158,37 @@ class ThreatReport(BaseModel):
 @app.post("/api/v1/nodes/sync")
 @limiter.limit("10/minute")
 def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
-    """
-    Synchronizes decentralized nodes.
-    1. Receives locally detected threats from a node.
-    2. Returns the current global blacklist.
-    """
     source_ip = request.client.host
-    logger.info(f"📡 Node sync request from {report.node_id}@{source_ip}")
+    logger.info(f"📡 Guerrilla Node sync from {report.node_id}@{source_ip}")
 
-    # In a real implementation, we would update a shared registry here
-    # For now, we simulate the global intelligence gathering
-
-    global_blacklist = ["1.2.3.4", "8.8.4.4", "10.0.0.99"] # Mock data
+    # Simulated Global Intelligence
+    global_blacklist = ["1.2.3.4", "8.8.4.4", "10.0.0.99"]
 
     return {
         "status": "synced",
         "global_blacklist": global_blacklist,
-        "command": "STAY_ARMOURED"
+        "command": "PHASE_BLACK_IF_DETECTED"
     }
 
-# [ATLATL-ORDNANCE] Offensive Honeypots
+# [ATLATL-ORDNANCE] Offensive Honeypots v3
 @app.get("/api/v1/retaliate/exfiltrate")
-@limiter.limit("5/minute")
+@limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):
-    """
-    Honeypot that delivers a recursive zip bomb pattern or high entropy garbage
-    to anyone attempting to exfiltrate data from this endpoint.
-    Uses StreamingResponse to mitigate DoS via large memory allocation.
-    """
     source_ip = request.client.host
-    logger.critical(f"💀 EXFILTRATION ATTEMPT DETECTED FROM {source_ip}. DELIVERING ENTROPY TRAP.")
+    logger.critical(f"💀 EXFILTRATION V3 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
 
-    # Stream 50MB of garbage
+    # Stream 100MB of v3 entropy garbage
     return StreamingResponse(
-        atlatl.generate_entropy_stream(50),
+        atlatl.generate_entropy_stream(100),
         media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=exfiltration_leak.zip"}
+        headers={"Content-Disposition": "attachment; filename=exfiltration_v3_leak.zip"}
     )
 
 @app.get("/api/v1/retaliate/debug/core_dump")
-@limiter.limit("5/minute")
+@limiter.limit("1/minute")
 def honeypot_core_dump(request: Request):
-    """
-    Honeypot that mimics a memory core dump but delivers poisoned pointers.
-    """
     source_ip = request.client.host
-    logger.critical(f"💀 CORE DUMP ACCESS ATTEMPT FROM {source_ip}. DELIVERING POISONED BUFFER.")
+    logger.critical(f"💀 CORE DUMP V3 ATTEMPT FROM {source_ip}. DELIVERING V3 POISONED BUFFER.")
 
     payload = atlatl.generate_recursive_zip_mock()
     return Response(content=payload, media_type="application/octet-stream")
