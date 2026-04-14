@@ -5,6 +5,8 @@
 //! - Memory safety bounds checking
 //! - Security policies enforcement
 //! - [ATLATL-ORDNANCE] Instruction Monitoring & FFI Guards
+//!
+//! Version 3.0: Atomic Heartbeat & Instruction Monitoring
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -36,11 +38,11 @@ pub struct WaspPolicyResult {
 pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicyResult {
     let mut violations = Vec::new();
 
-    // Increment heartbeat on every FFI call
-    INSTRUCTION_HEARTBEAT.fetch_add(1, Ordering::Relaxed);
+    // Increment heartbeat on every FFI call to track runtime integrity
+    INSTRUCTION_HEARTBEAT.fetch_add(1, Ordering::SeqCst);
 
     // Prohibit sensitive functions if security context is not explicitly verified
-    let sensitive_fns = ["system", "exec", "eval", "poison_pointers", "wasm_lockdown"];
+    let sensitive_fns = ["system", "exec", "eval", "poison_pointers", "wasm_lockdown", "macuahuitl_strike"];
     if sensitive_fns.contains(&function_name) {
         violations.push(format!("CRITICAL: Unauthorized call to sensitive FFI function: {}", function_name));
     }
@@ -66,31 +68,24 @@ pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicy
 /// [ATLATL-ORDNANCE] Heartbeat Check
 /// Returns the current instruction count for the host to verify runtime activity.
 pub fn get_runtime_heartbeat() -> u64 {
-    INSTRUCTION_HEARTBEAT.load(Ordering::Relaxed)
+    INSTRUCTION_HEARTBEAT.load(Ordering::SeqCst)
 }
 
 /// Input validation — sanitizes and validates WASM inputs
 pub fn validate_input(raw: &str, max_len: usize) -> WaspPolicyResult {
     let mut violations = Vec::new();
 
-    // Check length
     if raw.len() > max_len {
-        violations.push(format!(
-            "Input exceeds max length: {} > {}",
-            raw.len(),
-            max_len
-        ));
+        violations.push(format!("Input exceeds max length: {} > {}", raw.len(), max_len));
     }
 
-    // Check for null bytes (canary for buffer overflow attempts)
     if raw.contains('\0') {
-        violations.push("Null byte detected in input (Vector: BufferOverflow)".to_string());
+        violations.push("Null byte detected (BufferOverflow)".to_string());
     }
 
-    // Check for control characters (potential injection)
-    let has_control = raw.chars().any(|c| c.is_control() && c != '\0' && c != '\n' && c != '\r' && c != '\t');
+    let has_control = raw.chars().any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t');
     if has_control {
-        violations.push("Anomalous control characters detected (Vector: Injection)".to_string());
+        violations.push("Anomalous control characters detected (Injection)".to_string());
     }
 
     let level = if violations.is_empty() {
@@ -104,11 +99,7 @@ pub fn validate_input(raw: &str, max_len: usize) -> WaspPolicyResult {
     WaspPolicyResult {
         passed: level == SecurityLevel::Safe,
         level,
-        reason: if violations.is_empty() {
-            "Input validated".to_string()
-        } else {
-            violations.join("; ")
-        },
+        reason: if violations.is_empty() { "Input validated".to_string() } else { violations.join("; ") },
         violations,
     }
 }
@@ -117,20 +108,12 @@ pub fn validate_input(raw: &str, max_len: usize) -> WaspPolicyResult {
 pub fn check_memory_bounds(offset: usize, length: usize, max_memory: usize) -> WaspPolicyResult {
     let mut violations = Vec::new();
 
-    if offset > max_memory {
-        violations.push(format!("Offset out of bounds: {} > {}", offset, max_memory));
+    if offset > max_memory || offset.saturating_add(length) > max_memory {
+        violations.push(format!("Memory access out of bounds: {}+{} > {}", offset, length, max_memory));
     }
 
-    if offset.saturating_add(length) > max_memory {
-        violations.push(format!(
-            "Memory access overflow: {}+{} > {}",
-            offset, length, max_memory
-        ));
-    }
-
-    // [ATLATL-ORDNANCE] Detect Heap Spraying attempts
     if length > max_memory / 4 {
-        violations.push(format!("Suspiciously large allocation (Vector: HeapSpray): {}", length));
+        violations.push(format!("Suspiciously large allocation (HeapSpray): {}", length));
     }
 
     let level = match violations.len() {
@@ -142,38 +125,7 @@ pub fn check_memory_bounds(offset: usize, length: usize, max_memory: usize) -> W
     WaspPolicyResult {
         passed: level != SecurityLevel::Blocked,
         level,
-        reason: if violations.is_empty() {
-            "Memory access safe".to_string()
-        } else {
-            violations.join("; ")
-        },
-        violations,
-    }
-}
-
-/// WASM module integrity check
-pub fn verify_module_integrity(module_hash: &str, expected_hash: &str) -> WaspPolicyResult {
-    let mut violations = Vec::new();
-
-    if module_hash != expected_hash {
-        violations.push(format!(
-            "Module integrity check failed (Vector: Tampering): {} != {}",
-            module_hash, expected_hash
-        ));
-    }
-
-    WaspPolicyResult {
-        passed: violations.is_empty(),
-        level: if violations.is_empty() {
-            SecurityLevel::Safe
-        } else {
-            SecurityLevel::Exterminated
-        },
-        reason: if violations.is_empty() {
-            "Module verified".to_string()
-        } else {
-            violations[0].clone()
-        },
+        reason: if violations.is_empty() { "Memory access safe".to_string() } else { violations.join("; ") },
         violations,
     }
 }

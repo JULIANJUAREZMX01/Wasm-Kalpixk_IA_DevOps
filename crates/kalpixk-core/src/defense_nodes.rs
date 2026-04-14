@@ -7,6 +7,8 @@
 //! - Node-4: Payload Execution
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
+//!
+//! [ATLATL-ORDNANCE] Version 3.0: GuerrillaMode & P2P Orchestration
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -24,7 +26,7 @@ pub struct ThreatSignature {
 }
 
 lazy_static::lazy_static! {
-    /// Decentralized Peer-to-Peer Threat Sharing (Simulated)
+    /// Decentralized Peer-to-Peer Threat Sharing (GuerrillaMode)
     static ref GLOBAL_THREAT_REGISTRY: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
 
     /// [ATLATL-ORDNANCE] Detailed Threat Signatures for P2P Sync
@@ -113,7 +115,6 @@ pub struct NodeResult {
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 1: RECONNAISSANCE DETECTOR
-// MITRE ATT&CK: TA0043
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_reconnaissance(
@@ -128,27 +129,27 @@ pub fn detect_reconnaissance(
     let user = user_lower;
     let raw = raw_lower;
 
-    if raw.contains("dns enumeration") || raw.contains("dns_query") || raw.contains("zone_transfer") {
-        score += 0.3;
-        techniques.push("T1595".to_string());
-    }
-
-    if raw.contains("scan") || raw.contains(" SYN") || raw.contains("sYN") {
+    // Advanced heuristics for recon
+    if raw.contains("dns") && (raw.contains("enum") || raw.contains("axfr") || raw.contains("zone")) {
         score += 0.4;
         techniques.push("T1595".to_string());
     }
 
-    if raw.contains("subdomain") || raw.contains("subenum") || source.contains("test") {
-        score += 0.3;
+    if raw.contains("scan") || raw.contains("syn") || raw.contains("ack") || raw.contains("fin") {
+        if raw.contains("nmap") || raw.contains("masscan") || raw.contains("zmap") {
+            score += 0.6;
+        } else {
+            score += 0.3;
+        }
+        techniques.push("T1595".to_string());
+    }
+
+    if raw.contains(".git") || raw.contains(".env") || raw.contains(".aws/credentials") {
+        score += 0.5;
         techniques.push("T1593".to_string());
     }
 
-    if raw.contains("nuclei") || raw.contains("cve-") || raw.contains("vulnerability") {
-        score += 0.4;
-        techniques.push("T1595".to_string());
-    }
-
-    if user.contains("spiderfoot") || user.contains("nmap") || user.contains("scan") {
+    if user.contains("spiderfoot") || user.contains("shodan") || user.contains("censys") {
         score += 0.5;
         techniques.push("T1595".to_string());
     }
@@ -158,13 +159,12 @@ pub fn detect_reconnaissance(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: if score > 0.0 { format!("Reconnaissance detected (score: {:.2})", score) } else { "No reconnaissance detected".to_string() },
+        description: format!("Recon score: {:.2}", score),
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 2: LATERAL MOVEMENT DETECTOR
-// MITRE ATT&CK: TA0008
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_lateral_movement(
@@ -179,18 +179,18 @@ pub fn detect_lateral_movement(
     let metadata = &event.metadata;
 
     let dst_port = metadata.get("dst_port").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-    if dst_port == 5985 || dst_port == 5986 || dst_port == 3389 {
-        score += 0.4;
+    if [5985, 5986, 3389, 22, 445].contains(&dst_port) {
+        score += 0.3;
         techniques.push("T1021".to_string());
     }
 
-    if raw.contains("smb") || raw.contains("\\\\") || raw.contains("IPC$") || raw.contains("evil-winrm") {
-        score += 0.5;
+    if raw.contains("psexec") || raw.contains("wmic") || raw.contains("winrm") || raw.contains("ssh -o") {
+        score += 0.6;
         techniques.push("T1021".to_string());
     }
 
-    if raw.contains("llmnr") || raw.contains("nbt-ns") || raw.contains("mdns") {
-        score += 0.5;
+    if raw.contains("responder") || raw.contains("poison") || raw.contains("llmnr") {
+        score += 0.7;
         techniques.push("T1557".to_string());
     }
 
@@ -199,13 +199,12 @@ pub fn detect_lateral_movement(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: if score > 0.0 { format!("Lateral movement detected (score: {:.2})", score) } else { "No lateral movement detected".to_string() },
+        description: format!("Lateral movement score: {:.2}", score),
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 3: CREDENTIAL THEFT DETECTOR
-// MITRE ATT&CK: TA0006
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_credential_theft(
@@ -218,14 +217,19 @@ pub fn detect_credential_theft(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    if raw.contains("lsass") || raw.contains("mimikatz") || raw.contains("procdump") {
-        score += 0.9;
+    if raw.contains("lsass") || raw.contains("mimikatz") || raw.contains("sekurlsa") || raw.contains("logonpasswords") {
+        score += 0.95;
         techniques.push("T1003".to_string());
     }
 
-    if raw.contains("sam") && (raw.contains("dump") || raw.contains("read")) {
+    if raw.contains("ntds.dit") || raw.contains("shadowcopy") || raw.contains("vssadmin") {
+        score += 0.9;
+        techniques.push("T1003.003".to_string());
+    }
+
+    if raw.contains("kerberoast") || raw.contains("tgs-rep") || raw.contains("as-rep") {
         score += 0.8;
-        techniques.push("T1003".to_string());
+        techniques.push("T1558".to_string());
     }
 
     NodeResult {
@@ -233,13 +237,12 @@ pub fn detect_credential_theft(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: if score > 0.0 { format!("Credential theft detected (score: {:.2})", score) } else { "No credential theft detected".to_string() },
+        description: format!("Credential theft score: {:.2}", score),
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 4: PAYLOAD/EXECUTION DETECTOR
-// MITRE ATT&CK: TA0002
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_payload_execution(
@@ -252,14 +255,21 @@ pub fn detect_payload_execution(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    if raw.contains("encodedcommand") || raw.contains("downloadstring") || raw.contains("iex") || raw.contains("msfvenom") {
+    if raw.contains("powershell") && (raw.contains("-enc") || raw.contains("-e ") || raw.contains("bypass") || raw.contains("hidden")) {
         score += 0.8;
-        techniques.push("T1059".to_string());
+        techniques.push("T1059.001".to_string());
     }
 
-    if raw.contains("shellcode") || raw.contains("virtualalloc") {
-        score += 0.7;
-        techniques.push("T1055".to_string());
+    if raw.contains("bitsadmin") || raw.contains("certutil") || raw.contains("curl -s") || raw.contains("wget -q") {
+        if raw.contains("http") || raw.contains(".exe") || raw.contains(".sh") || raw.contains(".ps1") {
+            score += 0.7;
+            techniques.push("T1105".to_string());
+        }
+    }
+
+    if raw.contains("msfvenom") || raw.contains("meterpreter") || raw.contains("cobaltstrike") {
+        score += 1.0;
+        techniques.push("T1059".to_string());
     }
 
     NodeResult {
@@ -267,13 +277,12 @@ pub fn detect_payload_execution(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: if score > 0.0 { format!("Payload execution detected (score: {:.2})", score) } else { "No payload execution detected".to_string() },
+        description: format!("Execution score: {:.2}", score),
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 5: RCE / INJECTION DETECTOR
-// MITRE ATT&CK: TA0002 / TA0001
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_rce_injection(
@@ -286,22 +295,19 @@ pub fn detect_rce_injection(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    // SQL Injection
-    if raw.contains("select") && (raw.contains("union") || raw.contains("sleep(") || raw.contains("benchmark(")) {
-        score += 0.6;
-        techniques.push("T1190".to_string()); // Exploit Public-Facing Application
+    if raw.contains("union select") || raw.contains("order by") || raw.contains("information_schema") {
+        score += 0.8;
+        techniques.push("T1190".to_string());
     }
 
-    // Command Injection
-    if raw.contains(";") && (raw.contains("cat /etc/passwd") || raw.contains("whoami") || raw.contains("id")) {
-        score += 0.8;
+    if raw.contains("base64") || raw.contains("eval(") || raw.contains("system(") || raw.contains("exec(") {
+        score += 0.7;
         techniques.push("T1059".to_string());
     }
 
-    // Log4Shell / JNDI
-    if raw.contains("${jndi:ldap") || raw.contains("${jndi:rmi") {
-        score += 0.95;
-        techniques.push("T1210".to_string()); // Exploitation of Remote Services
+    if raw.contains("${") && (raw.contains("jndi") || raw.contains("ldap") || raw.contains("rmi")) {
+        score += 1.0;
+        techniques.push("T1210".to_string());
     }
 
     NodeResult {
@@ -309,13 +315,12 @@ pub fn detect_rce_injection(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: if score > 0.0 { format!("RCE/Injection attempt detected (score: {:.2})", score) } else { "No RCE/Injection detected".to_string() },
+        description: format!("RCE score: {:.2}", score),
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
 // NODE 6: EXFILTRATION DETECTOR
-// MITRE ATT&CK: TA0010
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_exfiltration(
@@ -328,22 +333,17 @@ pub fn detect_exfiltration(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    // Data staging
-    if raw.contains(".zip") || raw.contains(".tar.gz") || raw.contains(".7z") {
-        if raw.contains("/tmp/") || raw.contains("/var/tmp/") {
-            score += 0.4;
-            techniques.push("T1074".to_string()); // Data Staged
-        }
+    if raw.contains("rclone") || raw.contains("mega.nz") || raw.contains("dropbox") || raw.contains("googledrive") {
+        score += 0.8;
+        techniques.push("T1567".to_string());
     }
 
-    // Exfiltration tools
-    if raw.contains("rclone") || raw.contains("scp") || raw.contains("rsync") {
-        score += 0.3;
-        techniques.push("T1048".to_string()); // Exfiltration Over Alternative Protocol
+    if (raw.contains(".zip") || raw.contains(".7z") || raw.contains(".rar")) && raw.contains("-p") {
+        score += 0.6;
+        techniques.push("T1074".to_string());
     }
 
-    // Large data transfer patterns (simulated via log strings)
-    if raw.contains("size=") && (raw.contains("gb") || raw.contains("tb")) {
+    if raw.contains("dns") && raw.contains("txt") && raw.len() > 200 {
         score += 0.7;
         techniques.push("T1048".to_string());
     }
@@ -353,7 +353,7 @@ pub fn detect_exfiltration(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: if score > 0.0 { format!("Exfiltration activity detected (score: {:.2})", score) } else { "No exfiltration detected".to_string() },
+        description: format!("Exfil score: {:.2}", score),
     }
 }
 
@@ -384,14 +384,18 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     let score = get_max_severity(event).score;
     if score >= 0.7 {
-        // Sync threat to decentralized registry
-        if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
-            registry.insert(event.source.clone());
-        }
+        // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
+        register_threat_signature(ThreatSignature {
+            source: event.source.clone(),
+            node_id: "WASM-CORE-ATLATL".to_string(),
+            technique: "TA-DETECTION".to_string(),
+            score,
+            timestamp: chrono::Utc::now().timestamp_millis(),
+        });
         return true;
     }
 
-    // Check if source is already globally blacklisted
+    // Check global blacklist
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
         if registry.contains(&event.source) {
             return true;
