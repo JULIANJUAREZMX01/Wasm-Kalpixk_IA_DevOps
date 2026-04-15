@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write 
   pages: write
   id-token: write
 
@@ -79,10 +79,10 @@ jobs:
           ls -lh web/src/wasm/
           test -f web/src/wasm/kalpixk_core_bg.wasm && echo "✅ WASM presente" || echo "❌ WASM faltante"
 
-      - name: Setup Node 20
+      - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
