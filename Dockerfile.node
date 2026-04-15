@@ -42,6 +42,7 @@ COPY --chown=sacity-node:sacity-node models/ ./models/
 ENV PYTHONUNBUFFERED=1 \
     KALPIXK_MODE=NODE \
     ATLATL_AGGRESSION=MAX \
+    ATLATL_VERSION=3.1 \
     SACITY_OS=ENABLED
 
 # Healthcheck for cluster orchestration
@@ -51,4 +52,4 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=30s \
 EXPOSE 8000
 
 # Start the SACITY defense node
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["sh", "-c", "python3 src/nodes/orchestrator.py & uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --workers 1"]

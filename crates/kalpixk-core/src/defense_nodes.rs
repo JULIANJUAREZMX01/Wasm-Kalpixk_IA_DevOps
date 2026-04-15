@@ -9,7 +9,7 @@
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
 //!
-//! [ATLATL-ORDNANCE] Version 3.0: GuerrillaMode & P2P Orchestration
+//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
 
 #![allow(dead_code)]
 
@@ -34,6 +34,9 @@ lazy_static::lazy_static! {
 
     /// [ATLATL-ORDNANCE] Detailed Threat Signatures for P2P Sync
     static ref THREAT_SIGNATURE_DB: Mutex<HashMap<String, ThreatSignature>> = Mutex::new(HashMap::new());
+
+    /// [ATLATL-ORDNANCE] GuerrillaMesh Node Health
+    static ref MESH_NODES: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
 }
 
 /// Severity score from 0.0 to 1.0
@@ -56,6 +59,26 @@ impl SeverityScore {
             0.50..=0.69 => SeverityLevel::Anomaly,
             _ => SeverityLevel::Critical,
         }
+    }
+}
+
+/// [ATLATL-ORDNANCE] GuerrillaMesh: Register Node Heartbeat
+pub fn register_node_heartbeat(node_id: String) {
+    if let Ok(mut nodes) = MESH_NODES.lock() {
+        nodes.insert(node_id, chrono::Utc::now().timestamp_millis());
+    }
+}
+
+/// [ATLATL-ORDNANCE] GuerrillaMesh: Get Active Nodes
+pub fn get_active_nodes() -> Vec<String> {
+    if let Ok(nodes) = MESH_NODES.lock() {
+        let now = chrono::Utc::now().timestamp_millis();
+        nodes.iter()
+            .filter(|(_, &ts)| now - ts < 60000) // Active if seen in last 60s
+            .map(|(id, _)| id.clone())
+            .collect()
+    } else {
+        Vec::new()
     }
 }
 

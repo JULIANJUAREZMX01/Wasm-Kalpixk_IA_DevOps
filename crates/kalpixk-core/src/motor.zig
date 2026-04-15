@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 3.0-ATLATL (Guerrilla Algorítmica)
+// Versión: 3.1-ATLATL (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -117,6 +117,57 @@ pub export fn recursive_entropy_shredder(target_ptr: [*]u8, target_len: usize, s
     }
 }
 
+/// [ATLATL-ORDNANCE] v4_macuahuitl_chaotic_poisoning
+/// Evolución letal del veneno de punteros. Utiliza secuencias de salto no lineales
+/// y trampas de interrupción para aniquilar el flujo de ejecución del atacante.
+pub export fn v4_macuahuitl_chaotic_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        const chaotic_step = (i *% 1103515245 +% 12345) % 16;
+        switch (chaotic_step) {
+            0...1 => byte.* = 0xEB, // JMP short
+            2 => byte.* = 0xFE,      // loop to self
+            3 => byte.* = 0xCC,      // INT 3 (Breakpoint)
+            4 => byte.* = 0xCD,      // INT imm8
+            5 => byte.* = 0x03,      // (continuation of INT 03)
+            6 => byte.* = 0xF4,      // HLT
+            7 => byte.* = 0x0F,      // Multi-byte NOP or UD2 start
+            8 => byte.* = 0x0B,      // UD2 (Undefined Instruction)
+            9 => byte.* = 0xFF,      // JMP/CALL modrm
+            10 => byte.* = 0x25,     // JMP absolute indirect
+            11...15 => byte.* = rand.int(u8),
+            else => byte.* = 0x90,
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] heap_entropy_trap
+/// Inunda el heap con estructuras de datos malformadas y firmas de archivos
+/// corruptas (ZIP, ELF, PE) para confundir a los motores de análisis forense.
+pub export fn heap_entropy_trap(target_ptr: [*]u8, target_len: usize, key: u64) void {
+    var prng = std.rand.DefaultPrng.init(key);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        if (i % 64 == 0) {
+            // Fake ELF header start
+            byte.* = 0x7F;
+        } else if (i % 64 == 1) {
+            byte.* = 0x45; // 'E'
+        } else if (i % 64 == 2) {
+            byte.* = 0x4C; // 'L'
+        } else if (i % 64 == 3) {
+            byte.* = 0x46; // 'F'
+        } else {
+            byte.* = rand.int(u8) ^ @as(u8, @truncate(i));
+        }
+    }
+}
+
 /// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];
@@ -188,4 +239,20 @@ test "recursive entropy shredder" {
     recursive_entropy_shredder(&buffer, buffer.len, 123);
     const entropy = shannon_entropy(&buffer, buffer.len);
     try std.testing.expect(entropy > 7.0);
+}
+
+test "v4 chaotic poisoning" {
+    var buffer: [512]u8 = undefined;
+    v4_macuahuitl_chaotic_poisoning(&buffer, buffer.len, 0xACE);
+    // Verificar que no sea todo ceros
+    var sum: u64 = 0;
+    for (buffer) |b| sum += b;
+    try std.testing.expect(sum > 0);
+}
+
+test "heap entropy trap" {
+    var buffer: [1024]u8 = undefined;
+    heap_entropy_trap(&buffer, buffer.len, 0xFEED);
+    try std.testing.expect(buffer[0] == 0x7F);
+    try std.testing.expect(buffer[1] == 0x45);
 }

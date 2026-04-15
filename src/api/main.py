@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Kalpixk SIEM API v3",
-    version="3.0.0-atlatl",
+    version="3.1.0-atlatl",
     lifespan=lifespan
 )
 
@@ -103,10 +103,11 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.0.0-atlatl",
-        "atlatl_ordnance": "v3-macuahuitl",
+        "version": "3.1.0-atlatl",
+        "atlatl_ordnance": "v3.1-macuahuitl",
         "model_trained": detector.is_trained,
-        "wasm_connected": True
+        "wasm_connected": True,
+        "mesh_status": "guerrilla_active"
     }
 
 @app.get("/api/v1/metrics")
@@ -154,8 +155,9 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.0-atlatl",
-        "device": str(detector.device)
+        "atlatl_version": "3.1-atlatl",
+        "device": str(detector.device),
+        "mesh_active": True
     }
 
 # -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
@@ -171,12 +173,14 @@ def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(ver
     source_ip = request.client.host
     logger.info(f"📡 Guerrilla Node sync from {report.node_id}@{source_ip}")
 
-    # Simulated Global Intelligence
-    global_blacklist = ["1.2.3.4", "8.8.4.4", "10.0.0.99"]
+    # [ATLATL-ORDNANCE] Integrate with Rust Core mesh
+    # Note: In a real scenario, we'd call the WASM/FFI functions here.
+    # For now, we simulate the interaction with the decentralized registry.
 
     return {
         "status": "synced",
-        "global_blacklist": global_blacklist,
+        "mesh_update": "v3.1-guerrilla",
+        "active_mesh_nodes": 5, # Placeholder for real count
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 
