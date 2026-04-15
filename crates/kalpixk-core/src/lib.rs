@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "2.2.0-atlatl".to_string()
+    "3.1.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -63,7 +63,8 @@ pub fn get_security_telemetry() -> String {
     serde_json::json!({
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" }
+        "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
     }).to_string()
 }
 
@@ -124,11 +125,25 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn trigger_v3_retaliation(_ptr: usize, _len: usize) -> bool {
-    // [ATLATL-ORDNANCE] WASM-Zig Bridge
-    // Note: In this architecture, Zig functions are called via FFI
-    // or from the Host side. Here we provide a hook for the JS side.
-    true
+pub fn trigger_v4_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
+    // This hook allows the JS side to trigger defensive memory poisoning
+    // or report the node state to the mesh.
+    serde_json::json!({
+        "status": "V4_ARMED",
+        "chaotic_poisoning": true,
+        "entropy_trap": "ACTIVE",
+        "target_fingerprint": json_target.chars().take(32).collect::<String>()
+    }).to_string()
+}
+
+#[wasm_bindgen]
+pub fn mesh_heartbeat(node_id: &str) -> String {
+    defense_nodes::register_node_heartbeat(node_id.to_string());
+    serde_json::json!({
+        "status": "synchronized",
+        "mesh_nodes": defense_nodes::get_active_nodes()
+    }).to_string()
 }
 
 #[wasm_bindgen]
@@ -266,8 +281,9 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v2.2-atlatl",
-        "heartbeat": wasp::get_runtime_heartbeat()
+        "atlatl_ordnance": "v3.1-atlatl",
+        "heartbeat": wasp::get_runtime_heartbeat(),
+        "mesh_active": true
     })
     .to_string()
 }

@@ -9,8 +9,8 @@ client = TestClient(app)
 def test_health_v3():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "3.0.0-atlatl"
-    assert response.json()["atlatl_ordnance"] == "v3-macuahuitl"
+    assert response.json()["version"] == "3.1.0-atlatl"
+    assert response.json()["atlatl_ordnance"] == "v3.1-macuahuitl"
 
 def test_metrics_retaliation_trigger():
     # Force a mock high score or use real if possible.
@@ -31,7 +31,7 @@ def test_node_sync_v3():
     response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "development"})
     assert response.status_code == 200
     assert response.json()["status"] == "synced"
-    assert "global_blacklist" in response.json()
+    assert "mesh_update" in response.json()
 
 def test_honeypot_exfiltrate_v3():
     response = client.get("/api/v1/retaliate/exfiltrate")
@@ -45,6 +45,7 @@ def test_atlatl_phase_black():
     res = atlatl.trigger_retaliation(0.95, "1.1.1.1")
     assert res["action"] == "EXTERMINATE"
     assert "recursive_zip_bomb" in res["measures"]
+    assert "ghost_block" in res["measures"]
 
 def test_atlatl_phase_red():
     res = atlatl.trigger_retaliation(0.75, "2.2.2.2")

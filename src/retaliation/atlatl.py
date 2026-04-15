@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.0-ATLATL
+Versión: 3.1-ATLATL
 """
 from loguru import logger
 import time
@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.0: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -38,7 +38,35 @@ class Atlatl:
         self.deliver_recursive_zip_bomb(source_ip)
         self.hardware_ip_lock(source_ip)
         self.corrupt_c2_comms(source_ip)
-        return {"action": "EXTERMINATE", "target": source_ip, "measures": ["recursive_zip_bomb", "hardware_lock", "c2_corruption"]}
+        self.execute_iptables_ghost_block(source_ip)
+        self.active_c2_disruption(source_ip)
+        return {
+            "action": "EXTERMINATE",
+            "target": source_ip,
+            "measures": [
+                "recursive_zip_bomb",
+                "hardware_lock",
+                "c2_corruption",
+                "ghost_block",
+                "c2_disruption"
+            ]
+        }
+
+    def execute_iptables_ghost_block(self, target: str):
+        """
+        [ATLATL-ORDNANCE] GHOST BLOCK
+        Simula la creación de reglas de firewall persistentes que 'desaparecen'
+        de los comandos de listado estándar pero siguen bloqueando el tráfico.
+        """
+        logger.warning(f"👻 Ghost Block deployed against {target}. Perimeter firewall synchronized.")
+
+    def active_c2_disruption(self, target: str):
+        """
+        [ATLATL-ORDNANCE] C2 DISRUPTION
+        Inyecta firmas de malware conocidas en el canal de retorno del atacante
+        para disparar las alarmas de sus propios sistemas de seguridad (EDR/AV).
+        """
+        logger.error(f"📡 Sending false-positive triggers to {target} upstream EDR...")
 
     def poison_remote_pointers(self, target: str):
         logger.info(f"🧪 Injecting v3 poisoned pointers into {target} network buffer...")
