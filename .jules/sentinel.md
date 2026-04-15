@@ -31,3 +31,8 @@
 **Learning:** While the root `main.py` had some API key validation, the specialized standalone API in `src/api/main.py` (likely used for containerized/isolated detection nodes) completely lacked authentication for sensitive endpoints like `/metrics`, `/detect`, and `/simulate`.
 **Prevention:** Ensure consistent security posture across all entry points, especially in microservices architectures where different entry points might serve the same underlying logic but have different exposed interfaces.
 >>>>>>> main
+
+## 2026-04-16 - Insecure CORS Defaults and Unconstrained Pydantic Models
+**Vulnerability:** Permissive CORS configuration ("*") in production and lack of length constraints on P2P sync payloads.
+**Learning:** Defaulting to wildcard CORS in production environments increases the risk of unauthorized cross-origin requests. Additionally, unconstrained Pydantic models in public or authenticated endpoints can be exploited for Denial of Service (DoS) by sending extremely large payloads that exhaust server memory.
+**Prevention:** Always enforce strict CORS origins in production and use Pydantic's `Field` with `max_length`, `max_items`, and other constraints to bound the size of incoming data.

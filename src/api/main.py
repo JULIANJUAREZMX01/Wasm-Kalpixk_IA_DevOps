@@ -5,7 +5,7 @@ import os
 import secrets
 import json
 from contextlib import asynccontextmanager
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Annotated
 
 from fastapi import FastAPI, HTTPException, Depends, Security, status, Request, Response
 from fastapi.responses import StreamingResponse
@@ -70,11 +70,21 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-cors_origins_str = os.getenv("CORS_ORIGINS", '["*"]')
+cors_origins_str = os.getenv("CORS_ORIGINS")
+env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+
 try:
-    cors_origins = json.loads(cors_origins_str)
-except:
-    cors_origins = ["*"]
+    if cors_origins_str:
+        cors_origins = json.loads(cors_origins_str)
+    elif env == "production":
+        # Hardened: No wildcard CORS in production
+        logger.warning("CORS_ORIGINS not set in production. Defaulting to empty list.")
+        cors_origins = []
+    else:
+        cors_origins = ["*"]
+except Exception as e:
+    logger.error(f"Failed to parse CORS_ORIGINS: {e}. Defaulting to empty list.")
+    cors_origins = []
 
 app.add_middleware(
     CORSMiddleware,
@@ -153,8 +163,8 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
 # -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
 
 class ThreatReport(BaseModel):
-    node_id: str
-    threats: List[str]
+    node_id: str = Field(..., max_length=64)
+    threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
 
 @app.post("/api/v1/nodes/sync")
