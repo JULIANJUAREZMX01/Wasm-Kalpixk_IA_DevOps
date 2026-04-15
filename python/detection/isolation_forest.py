@@ -3,9 +3,10 @@ KalpixkIsolationForest — GPU-accelerated anomaly detection
 Wraps cuML IsolationForest (AMD ROCm) with CPU fallback (sklearn).
 """
 import logging
+from pathlib import Path
+
 import numpy as np
 import torch
-from pathlib import Path
 
 logger = logging.getLogger("kalpixk.detection.isolation_forest")
 MODELS_DIR = Path(__file__).parent.parent / "models"
@@ -77,12 +78,12 @@ class KalpixkIsolationForest:
         # Normalize to [0, 1]: more negative = more anomalous
         min_s, max_s = raw_scores.min(), raw_scores.max()
         if max_s == min_s:
-            normalized = [0.3] * len(raw_scores)
+            normalized = np.full(len(raw_scores), 0.3)
         else:
-            normalized = [float(1.0 - (s - min_s) / (max_s - min_s)) for s in raw_scores]
+            normalized = 1.0 - (raw_scores - min_s) / (max_s - min_s)
 
-        confidences = [min(1.0, abs(float(s)) / 0.5) for s in raw_scores]
-        return normalized, confidences
+        confidences = np.clip(np.abs(raw_scores) / 0.5, 0.0, 1.0)
+        return normalized.tolist(), confidences.tolist()
 
     def save(self):
         MODELS_DIR.mkdir(exist_ok=True)
