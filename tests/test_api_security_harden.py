@@ -6,10 +6,10 @@ from main import app, verify_api_key
 
 client = TestClient(app)
 
-def test_metrics_protected():
+def test_metrics_protected(monkeypatch):
     # Set an API key
-    os.environ["KALPIXK_API_KEY"] = "test-secret-key"
-    os.environ["KALPIXK_ENV"] = "production"
+    monkeypatch.setenv("KALPIXK_API_KEY", "test-secret-key")
+    monkeypatch.setenv("KALPIXK_ENV", "production")
 
     # Try without key
     response = client.get("/api/v1/metrics")
