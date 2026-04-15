@@ -21,7 +21,7 @@ async function initWasm() {
         wasmReady = true;
         const v = version();
         const health = JSON.parse(health_check());
-        log(`SACITY Core Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
+        log(`SACITY GuerrillaMesh Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
         document.getElementById('wasm-status').textContent = '● WASP_V3_SECURE';
         document.getElementById('wasm-status').className = 'text-[10px] status-ok font-bold';
 
@@ -120,11 +120,22 @@ function applyGlitchEffect() {
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V3.1';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION V3 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Delivering Recursive Entropy Shredder...', 'error');
+    log(`💀 AGGRESSION V3.1 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION: Delivering v4 Chaotic Poisoning & Entropy Trap...', 'error');
     applyGlitchEffect();
+
+    // Trigger WASM retaliation hook if available
+    try {
+        if (wasmReady) {
+            analyze_and_retaliate(JSON.stringify({
+                source: "DASHBOARD_INJECTION",
+                raw: "T1485_RANSOMWARE_V3.1",
+                timestamp_ms: Date.now()
+            }));
+        }
+    } catch(e) {}
 }
 
 // ── Metrics & Anomaly Logic ─────────────────────────────────
