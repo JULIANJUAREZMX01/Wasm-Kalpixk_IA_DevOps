@@ -62,9 +62,9 @@ def test_health_public():
     assert response.status_code == 200
 
 def test_production_fails_if_no_key(monkeypatch):
-    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("KALPIXK_ENV", "production")
     monkeypatch.delenv("KALPIXK_API_KEY", raising=False)
 
     response = client.get("/api/v1/metrics")
     assert response.status_code == 500
-    assert response.json()["detail"] == "API Key not configured"
+    assert response.json()["detail"] == "Internal Server Error"

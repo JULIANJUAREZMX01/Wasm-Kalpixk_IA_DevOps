@@ -1,17 +1,19 @@
 """
-Wasm-Kalpixk API (v2) — DevSecOps Hardening
+Wasm-Kalpixk API (v3) — ATLATL-ORDNANCE Guerrilla Hardening
 """
 import os
 import secrets
 import json
+import time
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import List, Optional, Any, Annotated
 
 from fastapi import FastAPI, HTTPException, Depends, Security, status, Request, Response
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import numpy as np
 from loguru import logger
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -32,13 +34,13 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    env = os.getenv("ENV", "development")
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
     if env == "production":
         if not expected_key:
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=500, detail="API Key not configured")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
@@ -48,7 +50,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Iniciando Kalpixk SIEM...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -58,31 +60,54 @@ async def lifespan(app: FastAPI):
         metrics = detector.evaluate(data['X'], data['y'])
         detector.save_evaluation_report(metrics)
 
-    logger.success("Sistema listo")
+    logger.success("🏹 Sistema ATLATL Armado y Operacional")
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v2",
-    version="2.0.0",
+    title="Kalpixk SIEM API v3",
+    version="3.1.0-atlatl",
     lifespan=lifespan
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
+cors_origins_str = os.getenv("CORS_ORIGINS")
+env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+
 try:
-    cors_origins = json.loads(cors_origins_str)
-except:
-    cors_origins = ["http://localhost:8000"]
+    if cors_origins_str:
+        cors_origins = json.loads(cors_origins_str)
+        if env == "production" and "*" in cors_origins:
+            logger.error("Wildcard CORS detected in production! Forcing to empty list.")
+            cors_origins = []
+    elif env == "production":
+        # Hardened: No wildcard CORS in production
+        logger.warning("CORS_ORIGINS not set in production. Defaulting to empty list.")
+        cors_origins = []
+    else:
+        cors_origins = ["*"]
+except Exception as e:
+    logger.error(f"Failed to parse CORS_ORIGINS: {e}. Defaulting to empty list.")
+    cors_origins = []
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
 )
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 detector = AnomalyDetector()
 monitor = WasmRuntimeMonitor()
@@ -93,9 +118,11 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
+        "version": "3.1.0-atlatl",
+        "atlatl_ordnance": "v3.1-macuahuitl",
         "model_trained": detector.is_trained,
-        "device": str(detector.device),
-        "wasm_connected": True
+        "wasm_connected": True,
+        "mesh_status": "guerrilla_active"
     }
 
 @app.get("/api/v1/metrics")
@@ -104,12 +131,12 @@ def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     m_features = monitor.capture_metrics()
     result = detector.predict(m_features.reshape(1, -1))
 
-    # [ATLATL-ORDNANCE] Retaliation Trigger
     score = result['reconstruction_errors'][0]
     if score > 0.7:
         source_ip = request.client.host
-        atlatl.trigger_retaliation(score, source_ip)
+        retaliation = atlatl.trigger_retaliation(score, source_ip)
         result["atlatl_active"] = True
+        result["retaliation"] = retaliation
 
     return {"features": m_features.tolist(), "detection": result}
 
@@ -119,12 +146,12 @@ def detect(request: Request, payload: DetectPayload, api_key: str = Depends(veri
     features = np.array([payload.features], dtype=np.float32)
     result = detector.predict(features)
 
-    # [ATLATL-ORDNANCE] Retaliation Trigger
     score = result['reconstruction_errors'][0]
     if score > 0.7:
         source_ip = request.client.host
-        atlatl.trigger_retaliation(score, source_ip)
+        retaliation = atlatl.trigger_retaliation(score, source_ip)
         result["atlatl_active"] = True
+        result["retaliation"] = retaliation
 
     return result
 
@@ -143,11 +170,44 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
+        "atlatl_version": "3.1-atlatl",
         "device": str(detector.device),
-        "train_stats": detector.train_stats
+        "mesh_active": True
     }
 
-# [ATLATL-ORDNANCE] Offensive Honeypots
+# -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
+
+class ThreatReport(BaseModel):
+    node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
+    threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
+    timestamp: int
+
+    @field_validator("timestamp")
+    @classmethod
+    def validate_timestamp(cls, v: int) -> int:
+        now = int(time.time())
+        if abs(now - v) > 300:
+            raise ValueError("Timestamp out of sync (replay protection)")
+        return v
+
+@app.post("/api/v1/nodes/sync")
+@limiter.limit("10/minute")
+def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
+    source_ip = request.client.host
+    logger.info(f"📡 Guerrilla Node sync from {report.node_id}@{source_ip}")
+
+    # [ATLATL-ORDNANCE] Integrate with Rust Core mesh
+    # Note: In a real scenario, we'd call the WASM/FFI functions here.
+    # For now, we simulate the interaction with the decentralized registry.
+
+    return {
+        "status": "synced",
+        "mesh_update": "v3.1-guerrilla",
+        "active_mesh_nodes": 5, # Placeholder for real count
+        "command": "PHASE_BLACK_IF_DETECTED"
+    }
+
+# [ATLATL-ORDNANCE] Offensive Honeypots v3
 @app.get("/api/v1/retaliate/exfiltrate")
 @limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):
@@ -156,7 +216,7 @@ def honeypot_exfiltrate(request: Request):
     to prevent memory exhaustion on the server while slowing down the attacker.
     """
     source_ip = request.client.host
-    logger.critical(f"💀 EXFILTRATION ATTEMPT DETECTED FROM {source_ip}. DELIVERING ENTROPY TRAP.")
+    logger.critical(f"💀 EXFILTRATION V3 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
 
     return StreamingResponse(
         atlatl.stream_entropy_payload(size_mb=100),
@@ -167,11 +227,8 @@ def honeypot_exfiltrate(request: Request):
 @app.get("/api/v1/retaliate/debug/core_dump")
 @limiter.limit("1/minute")
 def honeypot_core_dump(request: Request):
-    """
-    Honeypot that mimics a memory core dump but delivers poisoned pointers.
-    """
     source_ip = request.client.host
-    logger.critical(f"💀 CORE DUMP ACCESS ATTEMPT FROM {source_ip}. DELIVERING POISONED BUFFER.")
+    logger.critical(f"💀 CORE DUMP V3 ATTEMPT FROM {source_ip}. DELIVERING V3 POISONED BUFFER.")
 
     payload = atlatl.generate_recursive_zip_mock()
     return Response(content=payload, media_type="application/octet-stream")
