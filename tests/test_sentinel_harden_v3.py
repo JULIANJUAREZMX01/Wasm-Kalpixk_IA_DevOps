@@ -5,6 +5,7 @@ import os
 import json
 import importlib
 import sys
+import time
 
 # Mocking env before import
 os.environ["KALPIXK_API_KEY"] = "sentinel_test_key"
@@ -55,10 +56,58 @@ def test_threat_report_constraints():
     payload = {
         "node_id": "test_node",
         "threats": ["1.1.1.1"] * 10,
-        "timestamp": 12345
+        "timestamp": int(time.time())
     }
     response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
     assert response.status_code == 200
+
+def test_threat_report_replay_protection():
+    # Expired timestamp (old)
+    payload = {
+        "node_id": "test_node",
+        "threats": ["1.1.1.1"],
+        "timestamp": int(time.time()) - 400
+    }
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    assert response.status_code == 422
+    assert "Timestamp out of sync" in response.text
+
+    # Future timestamp
+    payload = {
+        "node_id": "test_node",
+        "threats": ["1.1.1.1"],
+        "timestamp": int(time.time()) + 400
+    }
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    assert response.status_code == 422
+    assert "Timestamp out of sync" in response.text
+
+def test_threat_report_node_id_regex():
+    # Invalid characters in node_id
+    payload = {
+        "node_id": "node; drop table users",
+        "threats": ["1.1.1.1"],
+        "timestamp": int(time.time())
+    }
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    assert response.status_code == 422
+
+def test_security_headers():
+    response = client.get("/health")
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+
+def test_cors_logic_production_wildcard_rejected(monkeypatch):
+    # Mock environment for production with wildcard in CORS_ORIGINS
+    monkeypatch.setenv("KALPIXK_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", json.dumps(["*", "https://safe.com"]))
+
+    # Reload the module to trigger the logic
+    import src.api.main as api_main
+    importlib.reload(api_main)
+
+    assert api_main.cors_origins == []
 
 def test_cors_logic_production(monkeypatch):
     # Mock environment for production with NO CORS_ORIGINS

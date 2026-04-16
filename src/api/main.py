@@ -4,14 +4,16 @@ Wasm-Kalpixk API (v3) — ATLATL-ORDNANCE Guerrilla Hardening
 import os
 import secrets
 import json
+import time
 from contextlib import asynccontextmanager
 from typing import List, Optional, Any, Annotated
 
 from fastapi import FastAPI, HTTPException, Depends, Security, status, Request, Response
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import numpy as np
 from loguru import logger
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -76,6 +78,9 @@ env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
 try:
     if cors_origins_str:
         cors_origins = json.loads(cors_origins_str)
+        if env == "production" and "*" in cors_origins:
+            logger.error("Wildcard CORS detected in production! Forcing to empty list.")
+            cors_origins = []
     elif env == "production":
         # Hardened: No wildcard CORS in production
         logger.warning("CORS_ORIGINS not set in production. Defaulting to empty list.")
@@ -93,6 +98,16 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=False,
 )
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 detector = AnomalyDetector()
 monitor = WasmRuntimeMonitor()
@@ -163,9 +178,17 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
 # -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
 
 class ThreatReport(BaseModel):
-    node_id: str = Field(..., max_length=64)
+    node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
+
+    @field_validator("timestamp")
+    @classmethod
+    def validate_timestamp(cls, v: int) -> int:
+        now = int(time.time())
+        if abs(now - v) > 300:
+            raise ValueError("Timestamp out of sync (replay protection)")
+        return v
 
 @app.post("/api/v1/nodes/sync")
 @limiter.limit("10/minute")
