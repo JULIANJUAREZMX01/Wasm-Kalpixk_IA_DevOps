@@ -1,8 +1,4 @@
-# =============================================================================
-# Deploy Kalpixk WASM → GitHub Pages
-# URL: https://julianjuarezmx01.github.io/Wasm-Kalpixk_IA_DevOps/
-# =============================================================================
-name: Deploy Kalpixk WASM to GitHub Pages
+name: Deploy Kalpixk Dashboard to GitHub Pages
 
 on:
   push:
@@ -10,114 +6,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write 
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  # ── Job 1: Compilar Rust → WASM ───────────────────────────────────────────
-  build-wasm:
-    name: "Compilar Rust → WASM"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Instalar Rust + wasm32 target
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: crates/kalpixk-core
-
-      - name: Instalar wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Compilar kalpixk-core → WASM
-        run: |
-          cd crates/kalpixk-core
-          wasm-pack build --target web --release
-          echo "WASM: $(du -sh pkg/kalpixk_core_bg.wasm | cut -f1)"
-          ls -lh pkg/
-
-      # CRÍTICO: el nombre del artifact debe ser idéntico al que
-      # usa build-site en el paso download-artifact
-      - name: Upload WASM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kalpixk-wasm-pages
-          path: crates/kalpixk-core/pkg/
-          retention-days: 1
-
-  # ── Job 2: Build Vite + deploy ────────────────────────────────────────────
-  build-site:
-    name: "Construir sitio Vite"
-    runs-on: ubuntu-latest
-    needs: build-wasm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Descargar WASM directamente a web/src/wasm/
-      # donde index.ts lo importa: import init from "./kalpixk_core.js"
-      - name: Descargar WASM artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: kalpixk-wasm-pages
-          path: web/src/wasm/
-
-      - name: Verificar WASM descargado
-        run: |
-          echo "Archivos en web/src/wasm/:"
-          ls -lh web/src/wasm/
-          test -f web/src/wasm/kalpixk_core_bg.wasm && echo "✅ WASM presente" || echo "❌ WASM faltante"
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: npm install
-        run: cd web && npm install
-
-      - name: npm run build
-        run: cd web && npm run build
-        env:
-          VITE_BASE_URL: /Wasm-Kalpixk_IA_DevOps/
-
-      - name: Verificar build output
-        run: |
-          echo "Archivos en web/dist/:"
-          find web/dist -type f
-          echo ""
-          ls -lh web/dist/assets/ 2>/dev/null || true
-
-      - name: Configurar GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: web/dist/
-
-  # ── Job 3: Deploy ──────────────────────────────────────────────────────────
   deploy:
-    name: "Deploy a GitHub Pages"
+    name: "Deploy Dashboard HTML"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build-site
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload dashboard
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
