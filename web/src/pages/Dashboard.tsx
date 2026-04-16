@@ -51,20 +51,14 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  const chartData = useMemo(() => {
-    return events.map((e, i) => ({
-      name: i,
-      severity: e.local_severity * 100
-    })).reverse();
-  }, [events]);
+  const chartData = useMemo(() => events.map((e, i) => ({
+    name: i,
+    severity: e.local_severity * 100
+  })).reverse(), [events]);
 
-  const avgSev = useMemo(() => {
-    return events.length ? events.reduce((acc, e) => acc + e.local_severity, 0) / events.length : 0;
-  }, [events]);
+  const avgSev = useMemo(() => events.length ? events.reduce((acc, e) => acc + e.local_severity, 0) / events.length : 0, [events]);
 
-  const criticalCount = useMemo(() => {
-    return events.filter(e => e.local_severity >= 0.8).length;
-  }, [events]);
+  const criticalCount = useMemo(() => events.filter(e => e.local_severity >= 0.8).length, [events]);
 
   return (
     <div style={{ background: "#080808", minHeight: "100vh", fontFamily: "'Courier New', monospace", color: "#e2e8f0", padding: "20px" }}>
