@@ -1,6 +1,5 @@
 # Sentinel's Journal - Wasm-Kalpixk Security
 
-<<<<<<< sentinel-security-harden-root-api-13671738899734192460
 ## 2026-04-04 - API Security Hardening
 **Vulnerability:** Unauthenticated sensitive endpoints and lack of input validation.
 **Learning:** The application exposed critical control endpoints (`/train`, `/benchmark`, `/simulate`) and a data injection endpoint (`/detect`) without any authentication or strict input schema. This allowed anyone to trigger expensive GPU tasks or potentially crash the service with malformed data.
@@ -16,21 +15,15 @@
 **Learning:** While `src/api/main.py` was hardened, the unified entry point `main.py` was still vulnerable to DoS via large training payloads and unauthenticated access if the environment was not properly configured (fail-open).
 **Prevention:** Enforce strict Pydantic `Field` constraints on all user-controlled numeric parameters and apply rate limiting to all public or authenticated endpoints that trigger heavy computation (e.g., GPU training).
 
-## 2026-04-12 - Offensive Honeypot DoS Risk
-**Vulnerability:** Resource exhaustion (memory and request rate) on offensive honeypot endpoints in `src/api/main.py`.
-**Learning:** Offensive retaliation measures like `atlatl` can be turned against the defender if not properly hardened. The `exfiltrate` honeypot was generating 50MB of random data in memory per request without rate limiting, allowing an attacker to cause an Out-Of-Memory (OOM) crash by making concurrent requests.
-**Prevention:** Use `StreamingResponse` for large dynamic payloads to keep memory usage constant regardless of response size. Always apply rate limiting to defensive/offensive endpoints to prevent them from becoming DoS vectors.
-
-## 2026-04-15 - Endpoint and Environment Inconsistency
-**Vulnerability:** Inconsistent endpoint paths (/metrics vs /api/v1/metrics) and environment variables (ENV vs KALPIXK_ENV) across multiple entry points.
-**Learning:** In microservices or multi-entry-point architectures, security hardening and API versioning must be applied globally. Inconsistency leads to broken tests, bypassable security checks, and configuration drift.
-**Prevention:** Use a centralized security dependency and enforce a standard versioning scheme across all entry points. Ensure all configuration (CORS, Auth, Environment) is loaded from the same set of project-specific environment variables.
+## 2026-04-12 - Missing Rate Limiting on Data and Honeypot Endpoints
+**Vulnerability:** Missing rate limiting decorators on sensitive data endpoints and offensive honeypots in `src/api/main.py`.
+**Learning:** Even when a `Limiter` is globally initialized, it must be explicitly applied to each endpoint. Honeypots that generate large or high-entropy responses (like `atlatl` entropy traps) can be weaponized against the host if not rate-limited, turning a defense mechanism into a DoS vector.
+**Prevention:** Always apply rate limits to endpoints that return large payloads or perform disk/GPU intensive tasks. For `slowapi`, ensure the `Request` object is included in the endpoint signature.
 =======
 ## 2026-04-05 - API Security Fix for Standalone API
 **Vulnerability:** Missing authentication on `src/api/main.py` endpoints.
 **Learning:** While the root `main.py` had some API key validation, the specialized standalone API in `src/api/main.py` (likely used for containerized/isolated detection nodes) completely lacked authentication for sensitive endpoints like `/metrics`, `/detect`, and `/simulate`.
 **Prevention:** Ensure consistent security posture across all entry points, especially in microservices architectures where different entry points might serve the same underlying logic but have different exposed interfaces.
->>>>>>> main
 
 ## 2026-04-16 - Insecure CORS Defaults and Unconstrained Pydantic Models
 **Vulnerability:** Permissive CORS configuration ("*") in production and lack of length constraints on P2P sync payloads.
