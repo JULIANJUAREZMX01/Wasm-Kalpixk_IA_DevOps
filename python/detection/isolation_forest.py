@@ -83,7 +83,7 @@ class KalpixkIsolationForest:
         # Normalize to [0, 1]: more negative = more anomalous
         min_s, max_s = raw_scores.min(), raw_scores.max()
         if max_s == min_s:
-            normalized = [0.3] * len(raw_scores)
+            normalized = np.full(len(raw_scores), 0.3)
         else:
             normalized = (1.0 - (raw_scores - min_s) / (max_s - min_s)).tolist()
 

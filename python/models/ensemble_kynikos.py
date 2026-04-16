@@ -54,7 +54,6 @@ class DetectionEnsemble:
             - methods: método de detección que ganó para cada evento
             - confidences: confianza del modelo en cada predicción
         """
-        n = features.shape[0]
         
         # Inference en GPU
         with torch.no_grad():

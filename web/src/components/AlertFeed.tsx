@@ -7,6 +7,21 @@ const sevColor = (s: number) => {
   return "#32ff32";
 };
 
+// ⚡ Bolt: Optimización de renderizado para no re-renderizar todas las filas cuando se añade un nuevo evento
+const AlertRow = React.memo(({ ev }: { ev: any }) => (
+  <tr style={{ borderBottom: "1px solid #111" }}>
+    <td style={cellStyle}>{new Date(ev.timestamp_ms).toLocaleTimeString("es-MX")}</td>
+    <td style={cellStyle}>{ev.source}</td>
+    <td style={cellStyle}>{ev.event_type}</td>
+    <td style={{ ...cellStyle, color: sevColor(ev.local_severity), fontWeight: "bold" }}>
+      {(ev.local_severity * 100).toFixed(0)}%
+    </td>
+    <td style={{ ...cellStyle, color: "#555", fontSize: "10px" }}>
+      {ev.raw.substring(0, 80)}{ev.raw.length > 80 ? "..." : ""}
+    </td>
+  </tr>
+));
+
 export const AlertFeed: React.FC = () => {
   const events = useAlertStore((state) => state.events);
 
@@ -34,18 +49,8 @@ export const AlertFeed: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              events.map((ev, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #111" }}>
-                  <td style={cellStyle}>{new Date(ev.timestamp_ms).toLocaleTimeString("es-MX")}</td>
-                  <td style={cellStyle}>{ev.source}</td>
-                  <td style={cellStyle}>{ev.event_type}</td>
-                  <td style={{ ...cellStyle, color: sevColor(ev.local_severity), fontWeight: "bold" }}>
-                    {(ev.local_severity * 100).toFixed(0)}%
-                  </td>
-                  <td style={{ ...cellStyle, color: "#555", fontSize: "10px" }}>
-                    {ev.raw.substring(0, 80)}{ev.raw.length > 80 ? "..." : ""}
-                  </td>
-                </tr>
+              events.map((ev) => (
+                <AlertRow key={`${ev.timestamp_ms}-${ev.raw.substring(0, 20)}`} ev={ev} />
               ))
             )}
           </tbody>

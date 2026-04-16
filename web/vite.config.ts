@@ -1,16 +1,44 @@
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
 import wasm from "vite-plugin-wasm"
 import topLevelAwait from "vite-plugin-top-level-await"
 import path from "path"
+import { readFileSync, writeFileSync } from "fs"
+
+const BASE = "/Wasm-Kalpixk_IA_DevOps/"
+
+// Plugin que corrige el base en el index.html después del build
+// (vite-plugin-wasm puede interferir con la transformación del HTML)
+function fixBasePlugin(): Plugin {
+  return {
+    name: "fix-base-in-html",
+    // Hook que se ejecuta DESPUÉS de que Vite escribe el dist/
+    closeBundle() {
+      try {
+        const htmlPath = path.resolve(__dirname, "dist/index.html")
+        let html = readFileSync(htmlPath, "utf-8")
+        // Reemplazar rutas absolutas /assets/ → BASE/assets/
+        const fixed = html
+          .replace(/src="\/assets\//g, )
+          .replace(/href="\/assets\//g, )
+          .replace(/crossorigin src="\/assets\//g, )
+        writeFileSync(htmlPath, fixed)
+        console.log("[fix-base] dist/index.html corregido con base:", BASE)
+      } catch (e) {
+        console.warn("[fix-base] No se pudo leer dist/index.html:", e)
+      }
+    }
+  }
+}
 
 export default defineConfig({
   plugins: [
     react(),
     wasm(),
-    topLevelAwait()
+    topLevelAwait(),
+    fixBasePlugin(),
   ],
-  base: process.env.VITE_BASE_URL ?? "/Wasm-Kalpixk_IA_DevOps/",
+  base: BASE,
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src")
@@ -18,32 +46,19 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-          charts: ["recharts"]
-        }
-      }
-    },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     port: 3000,
     host: "0.0.0.0",
-    fs: {
-      allow: [".", ".."]
-    },
+    fs: { allow: [".", ".."] },
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
       "Cross-Origin-Embedder-Policy": "require-corp"
     },
     proxy: {
       "/api": "http://localhost:8000",
-      "/ws": {
-        target: "ws://localhost:8000",
-        ws: true
-      }
+      "/ws": { target: "ws://localhost:8000", ws: true }
     }
   },
   optimizeDeps: {

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! severity.rs — Niveles de escalación ofensiva y mapeo de RedTeam
 //!
 //! ATLATL-ORDNANCE: Define la respuesta táctica basada en el riesgo.

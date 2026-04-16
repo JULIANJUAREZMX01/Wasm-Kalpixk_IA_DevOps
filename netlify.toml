@@ -1,0 +1,26 @@
+[build]
+  base    = "web"
+  command = "npm run build:prod"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION  = "20"
+  VITE_BASE_URL = "/"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy   = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    X-Content-Type-Options       = "nosniff"
+    X-Frame-Options              = "DENY"
+
+[[headers]]
+  for = "/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
