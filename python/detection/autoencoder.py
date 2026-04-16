@@ -3,6 +3,7 @@ KalpixkAutoencoder — PyTorch anomaly detection via reconstruction error.
 Runs on AMD MI300X via ROCm.
 Architecture: 32 → 16 → 8 → 4 → 8 → 16 → 32 (symmetric encoder-decoder)
 """
+
 import logging
 from pathlib import Path
 
@@ -13,18 +14,29 @@ import torch.nn as nn
 logger = logging.getLogger("kalpixk.detection.autoencoder")
 MODELS_DIR = Path(__file__).parent.parent / "models"
 
+
 class _AutoencoderNet(nn.Module):
     def __init__(self, input_dim: int = 32):
         super().__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 16), nn.ReLU(), nn.BatchNorm1d(16),
-            nn.Linear(16, 8),         nn.ReLU(), nn.BatchNorm1d(8),
-            nn.Linear(8, 4),          nn.ReLU(),
+            nn.Linear(input_dim, 16),
+            nn.ReLU(),
+            nn.BatchNorm1d(16),
+            nn.Linear(16, 8),
+            nn.ReLU(),
+            nn.BatchNorm1d(8),
+            nn.Linear(8, 4),
+            nn.ReLU(),
         )
         self.decoder = nn.Sequential(
-            nn.Linear(4, 8),          nn.ReLU(), nn.BatchNorm1d(8),
-            nn.Linear(8, 16),         nn.ReLU(), nn.BatchNorm1d(16),
-            nn.Linear(16, input_dim), nn.Sigmoid(),
+            nn.Linear(4, 8),
+            nn.ReLU(),
+            nn.BatchNorm1d(8),
+            nn.Linear(8, 16),
+            nn.ReLU(),
+            nn.BatchNorm1d(16),
+            nn.Linear(16, input_dim),
+            nn.Sigmoid(),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -34,6 +46,7 @@ class _AutoencoderNet(nn.Module):
         with torch.no_grad():
             recon = self.forward(x)
             return torch.mean((x - recon) ** 2, dim=1)
+
 
 class KalpixkAutoencoder:
     VERSION = "0.1.0"
@@ -102,6 +115,8 @@ class KalpixkAutoencoder:
 
     def save(self):
         MODELS_DIR.mkdir(exist_ok=True)
-        torch.save({"model": self.net.state_dict(), "threshold": self._threshold},
-                   MODELS_DIR / "autoencoder.pt")
+        torch.save(
+            {"model": self.net.state_dict(), "threshold": self._threshold},
+            MODELS_DIR / "autoencoder.pt",
+        )
         logger.info(f"Autoencoder guardado en {MODELS_DIR / 'autoencoder.pt'}")
