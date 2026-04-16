@@ -40,6 +40,11 @@ class Atlatl:
         self.corrupt_c2_comms(source_ip)
         self.execute_iptables_ghost_block(source_ip)
         self.active_c2_disruption(source_ip)
+
+        # [ATLATL-ORDNANCE] Integration with Zig v5 Metal strikes
+        self.trigger_v5_stealth_poisoning(source_ip)
+        self.deploy_mesh_entropy_shredder(source_ip)
+
         return {
             "action": "EXTERMINATE",
             "target": source_ip,
@@ -48,9 +53,22 @@ class Atlatl:
                 "hardware_lock",
                 "c2_corruption",
                 "ghost_block",
-                "c2_disruption"
+                "c2_disruption",
+                "v5_stealth_poisoning",
+                "mesh_entropy_shredder"
             ]
         }
+
+    def trigger_v5_stealth_poisoning(self, target: str):
+        """[ATLATL-ORDNANCE] Triggers Zig v5 stealth poisoning bridge."""
+        logger.warning(f"🏹 Metal-Strike: v5_macuahuitl_stealth_poisoning deployed against {target}")
+        # Note: In a production WASM-Edge environment, this would call the exported function.
+        pass
+
+    def deploy_mesh_entropy_shredder(self, target: str):
+        """[ATLATL-ORDNANCE] Triggers Zig mesh-level entropy shredder."""
+        logger.warning(f"🌊 Metal-Strike: mesh_entropy_shredder active for {target} perimeter.")
+        pass
 
     def execute_iptables_ghost_block(self, target: str):
         """

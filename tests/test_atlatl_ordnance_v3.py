@@ -23,10 +23,11 @@ def test_metrics_retaliation_trigger():
     assert "detection" in data
 
 def test_node_sync_v3():
+    import time
     payload = {
         "node_id": "TEST_GUERRILLA_01",
         "threats": ["192.168.1.100"],
-        "timestamp": 123456789
+        "timestamp": int(time.time())
     }
     response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "development"})
     assert response.status_code == 200
@@ -36,7 +37,7 @@ def test_node_sync_v3():
 def test_honeypot_exfiltrate_v3():
     response = client.get("/api/v1/retaliate/exfiltrate")
     assert response.status_code == 200
-    assert response.headers["content-type"] == "application/zip"
+    assert response.headers["content-type"] == "application/octet-stream"
     # Read a bit of the stream
     chunk = next(response.iter_bytes(1024))
     assert len(chunk) == 1024

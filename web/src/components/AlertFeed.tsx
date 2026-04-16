@@ -1,17 +1,37 @@
 import React from "react";
 import { useAlertStore, KalpixkAlert } from "../stores/alertStore";
 
-// ⚡ Bolt: Optimización de renderizado para no re-renderizar todas las filas cuando se añade un nuevo evento
-const AlertRow = React.memo(({ ev }: { ev: any }) => (
+const cellStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  fontSize: "11px",
+  fontFamily: "monospace",
+  textAlign: "left",
+};
+
+const headerStyle: React.CSSProperties = {
+  ...cellStyle,
+  color: "#888",
+  fontSize: "9px",
+  borderBottom: "1px solid #222",
+  letterSpacing: "1px",
+};
+
+const sevColor = (s: number) => {
+  if (s >= 0.8) return "#ff1a1a";
+  if (s >= 0.5) return "#ff8c00";
+  return "#32ff32";
+};
+
+const AlertRow = React.memo(({ alert }: { alert: KalpixkAlert }) => (
   <tr style={{ borderBottom: "1px solid #111" }}>
-    <td style={cellStyle}>{new Date(ev.timestamp_ms).toLocaleTimeString("es-MX")}</td>
-    <td style={cellStyle}>{ev.source}</td>
-    <td style={cellStyle}>{ev.event_type}</td>
-    <td style={{ ...cellStyle, color: sevColor(ev.local_severity), fontWeight: "bold" }}>
-      {(ev.local_severity * 100).toFixed(0)}%
+    <td style={cellStyle}>{alert.ts.toLocaleTimeString("es-MX")}</td>
+    <td style={cellStyle}>{alert.src}</td>
+    <td style={cellStyle}>{alert.eventType}</td>
+    <td style={{ ...cellStyle, color: sevColor(alert.score), fontWeight: "bold" }}>
+      {(alert.score * 100).toFixed(0)}%
     </td>
     <td style={{ ...cellStyle, color: "#555", fontSize: "10px" }}>
-      {ev.raw.substring(0, 80)}{ev.raw.length > 80 ? "..." : ""}
+      {alert.msg.substring(0, 80)}{alert.msg.length > 80 ? "..." : ""}
     </td>
   </tr>
 ));
@@ -31,56 +51,7 @@ export const AlertFeed: React.FC = () => {
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {alerts.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-white/20 gap-3 py-10">
-            <div className="text-2xl">📡</div>
-            <p className="text-[10px] tracking-widest">ESPERANDO SEÑALES...</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {alerts.map((alert: KalpixkAlert) => (
-              <div
-                key={alert.id}
-                className="p-4 hover:bg-white/[0.02] transition-colors group"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tighter ${
-                        alert.score >= 0.85
-                          ? "bg-red-500/10 text-red-500 border border-red-500/20"
-                          : alert.score >= 0.5
-                          ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
-                          : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                      }`}
-                    >
-                      SEV {(alert.score * 10).toFixed(1)}
-                    </span>
-                    <span className="text-[10px] text-white/70 font-bold uppercase truncate max-w-[120px]">
-                      {alert.eventType}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-white/20 font-mono">
-                    {alert.ts.toLocaleTimeString()}
-                  </span>
-                </div>
-                <p className="text-[11px] text-white/40 mb-2 line-clamp-2 leading-relaxed">
-                  {alert.msg}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-white/30 font-mono group-hover:text-blue-400 transition-colors">
-                    {alert.ip}
-                  </span>
-                  <span className="text-[9px] text-white/20 uppercase tracking-widest">
-                    {alert.src}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
+      <div className="flex-1 overflow-x-auto overflow-y-auto scrollbar-hide">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ position: "sticky", top: 0, background: "#0d0f14", zIndex: 1 }}>
             <tr>
@@ -91,16 +62,17 @@ export const AlertFeed: React.FC = () => {
               <th style={headerStyle}>LOG ORIGINAL</th>
             </tr>
           </thead>
-          <tbody>
-            {events.length === 0 ? (
+          <tbody className="divide-y divide-white/5">
+            {alerts.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: "32px", textAlign: "center", color: "#444", fontSize: "11px" }}>
-                  Esperando eventos...
+                <td colSpan={5} className="h-full flex flex-col items-center justify-center text-white/20 gap-3 py-10" style={{ textAlign: "center" }}>
+                   <div className="text-2xl">📡</div>
+                   <p className="text-[10px] tracking-widest">ESPERANDO SEÑALES...</p>
                 </td>
               </tr>
             ) : (
-              events.map((ev) => (
-                <AlertRow key={`${ev.timestamp_ms}-${ev.raw.substring(0, 20)}`} ev={ev} />
+              alerts.map((alert: KalpixkAlert) => (
+                <AlertRow key={alert.id} alert={alert} />
               ))
             )}
           </tbody>

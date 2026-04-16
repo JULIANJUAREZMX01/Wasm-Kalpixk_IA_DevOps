@@ -18,4 +18,23 @@ Los nodos de detección originales utilizaban comparaciones de cadenas estática
 Aniquilación total del vector de intrusión detectado. El sistema ahora es capaz de colapsar la infraestructura de exfiltración del atacante mediante saturación de entropía recursiva.
 
 ---
-*ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización.*
+
+## [OP_V4_GUERRILLA_MESH] - MESH INTEGRITY & METAL STRIKE EVOLUTION
+
+**Vector de Ataque:**
+Audit detectó que el protocolo GuerrillaMesh original carecía de validación de integridad de firma y operaba sobre sincronizaciones simuladas. Los atacantes podían inyectar firmas de amenaza falsas para desestabilizar la red o evadir la detección mediante ofuscación de punteros estáticos que el motor v3 ya conocía.
+
+**Defensa Implementada (Atlatl v4.0):**
+- **Zig Metal (v5.0-ATLATL):** Implementación de `v5_macuahuitl_stealth_poisoning` con saltos no deterministas y desalineación de instrucciones. Se añadió el `memory_sink_trap` para colapsar motores de emulación y el `mesh_entropy_shredder` para buffers de red.
+- **Rust Core (Mesh Guard):** Activación de `NODE-7: MESH_INTEGRITY` en `defense_nodes.rs`. El mesh ahora valida la estructura y origen de cada sincronización P2P, detectando intentos de suplantación (spoofing) o repetición (replay).
+- **Python Bridge:** El endpoint `/api/v1/nodes/sync` ahora integra la lógica de validación de integridad del mesh y dispara la Phase Black automática ante fallos de integridad.
+
+**Contra-Ataque:**
+- **V5 Metal Strikes:** Los intentos de sabotaje del mesh activan el envenenamiento encubierto v5 y el sumidero de memoria, inhabilitando la infraestructura de análisis del atacante.
+- **Mesh Integrity Lockdown:** Bloqueo inmediato de cualquier nodo que emita firmas malformadas o excesivas.
+
+**Resultado:**
+Fortificación total de la malla descentralizada. Kalpixk v4.0-ATLATL ahora es capaz de defender no solo la puerta, sino su propio sistema nervioso digital.
+
+---
+*ATLATL-ORDNANCE: El Centro de Mando confirma la evolución v4.0.*

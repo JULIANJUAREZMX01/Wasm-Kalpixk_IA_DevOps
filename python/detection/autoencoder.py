@@ -16,7 +16,6 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import torch
@@ -127,7 +126,7 @@ class KalpixkAutoencoder:
         batch_size: int = DEFAULT_BATCH_SIZE,
         lr: float = DEFAULT_LR,
         val_split: float = 0.1,
-    ) -> "KalpixkAutoencoder":
+    ) -> KalpixkAutoencoder:
         """
         Train on normal traffic baseline.
         X: [N, 32] float32, all values in [0, 1].
@@ -196,7 +195,7 @@ class KalpixkAutoencoder:
         self.save()
         return self
 
-    def fit_synthetic(self, n_samples: int = 5000) -> "KalpixkAutoencoder":
+    def fit_synthetic(self, n_samples: int = 5000) -> KalpixkAutoencoder:
         """Quick-start on synthetic normal data for dev/testing."""
         logger.warning("Training Autoencoder on SYNTHETIC data — replace for production")
         rng = np.random.default_rng(42)

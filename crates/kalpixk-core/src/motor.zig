@@ -168,6 +168,76 @@ pub export fn heap_entropy_trap(target_ptr: [*]u8, target_len: usize, key: u64) 
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_macuahuitl_stealth_poisoning
+/// Evolución táctica: utiliza secuencias de salto no deterministas basadas en el drift del reloj
+/// y trampas de interrupción encubiertas para evadir motores de emulación estática.
+pub export fn v5_macuahuitl_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed ^ @as(u64, @intCast(std.time.timestamp())));
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        const tactical_choice = rand.int(u8) % 20;
+        switch (tactical_choice) {
+            0 => byte.* = 0xEB, // JMP short
+            1 => byte.* = 0xFD, // offset -3 (desalineación de instrucción)
+            2 => byte.* = 0xF4, // HLT (Privileged Instruction Exception)
+            3 => byte.* = 0xCC, // INT 3
+            4 => byte.* = 0xCE, // INTO (Interrupt on Overflow)
+            5 => byte.* = 0x62, // BOUND (Out of Bounds Exception)
+            6 => byte.* = 0x0F, // Exc: UD2 start
+            7 => byte.* = 0x0B, // UD2
+            8 => byte.* = 0xCD, // INT imm8
+            9 => byte.* = 0x80, // Legacy syscall trigger
+            10 => byte.* = 0xFF, // INC/DEC or JMP/CALL modrm
+            11 => byte.* = 0xD2, // modrm for 0xFF
+            12 => byte.* = 0xFA, // CLI (Disable Interrupts)
+            13 => byte.* = 0xFB, // STI (Enable Interrupts)
+            14...19 => {
+                // Garbage data to break pattern recognition
+                byte.* = rand.int(u8) ^ @as(u8, @truncate(i));
+            },
+            else => unreachable,
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] memory_sink_trap
+/// Crea un sumidero de memoria que parece contener datos válidos pero redirige
+/// cualquier acceso a un bucle infinito de consumo de recursos.
+pub export fn memory_sink_trap(target_ptr: [*]u8, target_len: usize, key: u64) void {
+    var prng = std.rand.DefaultPrng.init(key);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        if (i % 32 == 0) {
+            // Fake Pointer Chain start
+            byte.* = 0x41; // INC ECX or REX.B
+        } else if (i % 16 == 0) {
+            // JMP $ logic
+            byte.* = 0xEB;
+        } else if (i % 16 == 1) {
+            byte.* = 0xFE;
+        } else {
+            // High entropy noise
+            byte.* = rand.int(u8);
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] mesh_entropy_shredder
+/// Específicamente diseñado para destruir buffers de red malformados en el mesh.
+pub export fn mesh_entropy_shredder(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        // Pattern: 0x55 (U) 0xAA (ª) alternates to maximize signal switching
+        byte.* = if (i % 2 == 0) 0x55 else 0xAA;
+        // Periodic resets to confuse sliding window compression
+        if (i % 1024 == 0) byte.* = 0x00;
+    }
+}
+
 /// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];
@@ -255,4 +325,19 @@ test "heap entropy trap" {
     heap_entropy_trap(&buffer, buffer.len, 0xFEED);
     try std.testing.expect(buffer[0] == 0x7F);
     try std.testing.expect(buffer[1] == 0x45);
+}
+
+test "v5 stealth poisoning" {
+    var buffer: [512]u8 = undefined;
+    v5_macuahuitl_stealth_poisoning(&buffer, buffer.len, 0xDEADC0DE);
+    var sum: u64 = 0;
+    for (buffer) |b| sum += b;
+    try std.testing.expect(sum > 0);
+}
+
+test "memory sink trap" {
+    var buffer: [256]u8 = undefined;
+    memory_sink_trap(&buffer, buffer.len, 0x1234);
+    try std.testing.expect(buffer[16] == 0xEB);
+    try std.testing.expect(buffer[17] == 0xFE);
 }
