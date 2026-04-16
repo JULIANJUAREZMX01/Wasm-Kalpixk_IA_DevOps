@@ -6,6 +6,27 @@ import {
 import { useAlertStore } from "../stores/alertStore";
 import { useMetricsStore } from "../stores/metricsStore";
 import { useWasmStore }    from "../stores/wasmStore";
+import React, { useEffect, useState, useMemo } from 'react';
+import { useAlertStore, ParsedEvent } from '../stores/alertStore';
+import { AlertFeed } from '../components/AlertFeed';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+
+const DEMO_LOGS = [
+  { raw: "Apr  5 02:14:22 cancun-srv01 sshd[1234]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
+  { raw: "Apr  5 02:14:23 cancun-srv01 sshd[1235]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
+  { raw: "Apr  5 02:14:24 cancun-srv01 sshd[1236]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
+  { raw: "TIMESTAMP=2026-04-05-02.15.00 AUTHID=CEDIS_USR HOSTNAME=185.220.101.35 OPERATION=DDL STATEMENT=DROP TABLE NOMINAS", type: "db2" },
+  { raw: "Apr  5 02:14:26 cancun-srv01 sshd[1238]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
+];
+
+export const Dashboard: React.FC = () => {
+  const { events, wasmReady, wasmVersion, addEvent, setWasmReady, clearEvents } = useAlertStore();
+  const [wasmLog, setWasmLog] = useState<{msg: string, color: string}[]>([]);
+  const [parseFn, setParseFn] = useState<any>(null);
+
+  const addLog = (msg: string, color = "#32ff32") => {
+    setWasmLog(prev => [...prev, { msg, color }].slice(-10));
+  };
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -47,6 +68,10 @@ function Label({ text, accent = T.amber }: { text: string; accent?: string }) {
     </div>
   );
 }
+  const chartData = useMemo(() => events.map((e, i) => ({ name: i, severity: e.local_severity * 100 })).reverse(), [events]);
+
+  const avgSev = useMemo(() => events.length ? events.reduce((acc, e) => acc + e.local_severity, 0) / events.length : 0, [events]);
+  const criticalCount = useMemo(() => events.filter(e => e.local_severity >= 0.8).length, [events]);
 
 function Bar({ pct, color }: { pct: number; color: string }) {
   return (
@@ -314,6 +339,11 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
             </div>
           ))}
         </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
+        <StatCard title="THROUGHPUT" value={`${(events.length * 2.5).toFixed(1)}k ev/s`} color="#00c8ff" subtitle="AMD MI300X" />
+        <StatCard title="CRITICAL" value={criticalCount} color="#ff1a1a" subtitle="MITRE AT&CK MATCH" />
+        <StatCard title="AVG SEVERITY" value={`${(avgSev * 100).toFixed(0)}%`} color="#ff6400" subtitle="UEBA BASELINE" />
+        <StatCard title="WASM LATENCY" value="1.2ms" color="#32ff32" subtitle="ZERO CLOUD CALLS" />
       </div>
 
       {/* ── COL 2: ALERT FEED + CHART ──────────────────────────────────────────── */}

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! payloads.rs — [ATLATL-ORDNANCE] Digital Extermination Payloads
 //!
 //! Generates offensive payloads to be served via honeypots or injected into attacker buffers.

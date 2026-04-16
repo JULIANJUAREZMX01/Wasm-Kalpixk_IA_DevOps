@@ -1,6 +1,21 @@
 import React from "react";
 import { useAlertStore, KalpixkAlert } from "../stores/alertStore";
 
+// ⚡ Bolt: Optimización de renderizado para no re-renderizar todas las filas cuando se añade un nuevo evento
+const AlertRow = React.memo(({ ev }: { ev: any }) => (
+  <tr style={{ borderBottom: "1px solid #111" }}>
+    <td style={cellStyle}>{new Date(ev.timestamp_ms).toLocaleTimeString("es-MX")}</td>
+    <td style={cellStyle}>{ev.source}</td>
+    <td style={cellStyle}>{ev.event_type}</td>
+    <td style={{ ...cellStyle, color: sevColor(ev.local_severity), fontWeight: "bold" }}>
+      {(ev.local_severity * 100).toFixed(0)}%
+    </td>
+    <td style={{ ...cellStyle, color: "#555", fontSize: "10px" }}>
+      {ev.raw.substring(0, 80)}{ev.raw.length > 80 ? "..." : ""}
+    </td>
+  </tr>
+));
+
 export const AlertFeed: React.FC = () => {
   const alerts = useAlertStore((state) => state.alerts);
 
@@ -65,6 +80,31 @@ export const AlertFeed: React.FC = () => {
             ))}
           </div>
         )}
+      <div style={{ overflowX: "auto", maxHeight: "340px", overflowY: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead style={{ position: "sticky", top: 0, background: "#0d0f14", zIndex: 1 }}>
+            <tr>
+              <th style={headerStyle}>HORA</th>
+              <th style={headerStyle}>FUENTE</th>
+              <th style={headerStyle}>TIPO</th>
+              <th style={headerStyle}>SEVERIDAD</th>
+              <th style={headerStyle}>LOG ORIGINAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: "32px", textAlign: "center", color: "#444", fontSize: "11px" }}>
+                  Esperando eventos...
+                </td>
+              </tr>
+            ) : (
+              events.map((ev) => (
+                <AlertRow key={`${ev.timestamp_ms}-${ev.raw.substring(0, 20)}`} ev={ev} />
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

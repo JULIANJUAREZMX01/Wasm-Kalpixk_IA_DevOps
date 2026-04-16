@@ -30,6 +30,7 @@ MODEL_PATH  = MODELS_DIR / "isolation_forest.pkl"
 FEATURE_DIM = 32          # Contract with kalpixk-core/src/features.rs
 
 
+
 class KalpixkIsolationForest:
     """
     Isolation Forest with AMD ROCm GPU acceleration via cuML.

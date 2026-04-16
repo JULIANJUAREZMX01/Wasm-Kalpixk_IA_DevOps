@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! retaliation.rs — Engine de Contra-Defensa y Exterminio
 //!
 //! Orquesta la respuesta ofensiva de Kalpixk contra atacantes confirmados.

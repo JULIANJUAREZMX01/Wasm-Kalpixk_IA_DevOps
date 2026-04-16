@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! WAST — WebAssembly Test Format
 //!
 //! Testing framework for Kalpixk WASM modules:

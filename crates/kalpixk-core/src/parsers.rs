@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Parsers de logs — convierten texto crudo a KalpixkEvent
 //!
 //! Cada parser implementa el trait LogParser y se registra con su source_type.
