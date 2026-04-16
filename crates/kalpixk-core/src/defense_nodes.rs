@@ -390,7 +390,56 @@ pub fn detect_exfiltration(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 6 nodes
+// NODE 7: MESH_INTEGRITY DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_integrity(
+    event: &KalpixkEvent,
+    raw_lower: &str,
+    _user_lower: &str,
+    _source_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = raw_lower;
+
+    // Detect mesh spoofing or signature tampering
+    if raw.contains("mesh_sync") && (raw.contains("spoof") || raw.contains("replay")) {
+        score += 0.8;
+        techniques.push("T1557".to_string()); // Adversary-in-the-Middle
+    }
+
+    if raw.contains("node_id") && raw.len() > 500 && raw.contains("threats") {
+        // Suspiciously large mesh update payload
+        score += 0.5;
+        techniques.push("T1499".to_string()); // Endpoint DoS
+    }
+
+    // Check for unauthorized node registration patterns
+    if raw.contains("register_node") && !raw.contains("WASM-CORE-ATLATL") {
+        score += 0.6;
+        techniques.push("T1204".to_string()); // User Execution
+    }
+
+    // Verify cryptographic fingerprint (simulated)
+    if let Some(fingerprint) = event.metadata.get("fingerprint").and_then(|v| v.as_str()) {
+        if fingerprint.len() < 32 {
+            score += 0.4;
+            techniques.push("T1036".to_string()); // Masquerading
+        }
+    }
+
+    NodeResult {
+        node: "NODE-7: MESH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Mesh integrity score: {:.2}", score),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// COMPLETE ANALYSIS — Run all 7 nodes
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
@@ -405,6 +454,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_integrity(event, &raw_lower, &user_lower, &source_lower),
     ]
 }
 

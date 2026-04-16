@@ -24,8 +24,8 @@ class DetectionEnsemble:
         ae_scores, ae_conf = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
-        if_scores_np = np.array(if_scores, copy=False)
-        ae_scores_np = np.array(ae_scores, copy=False)
+        if_scores_np = np.asarray(if_scores)
+        ae_scores_np = np.asarray(ae_scores)
         ensemble_scores = 0.45 * if_scores_np + 0.55 * ae_scores_np
 
         # Determinar método dominante y confianza

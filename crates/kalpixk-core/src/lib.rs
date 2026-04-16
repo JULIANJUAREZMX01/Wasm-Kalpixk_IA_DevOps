@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "4.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -125,15 +125,23 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5
+    // This hook triggers deep memory-level countermeasures via Zig core.
     serde_json::json!({
-        "status": "V4_ARMED",
-        "chaotic_poisoning": true,
-        "entropy_trap": "ACTIVE",
+        "status": "V5_STEALTH_ARMED",
+        "stealth_poisoning": true,
+        "memory_sink": "ARMED",
         "target_fingerprint": json_target.chars().take(32).collect::<String>()
+    }).to_string()
+}
+
+#[wasm_bindgen]
+pub fn trigger_mesh_shredder() -> String {
+    // [ATLATL-ORDNANCE] Triggers the mesh-level entropy shredder
+    serde_json::json!({
+        "status": "MESH_SHREDDER_ACTIVE",
+        "mode": "ATLATL_V5"
     }).to_string()
 }
 

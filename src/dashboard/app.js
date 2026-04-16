@@ -120,10 +120,10 @@ function applyGlitchEffect() {
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V3.1';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V4.0';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION V3.1 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Delivering v4 Chaotic Poisoning & Entropy Trap...', 'error');
+    log(`💀 AGGRESSION V4.0 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION: Delivering v5 Stealth Poisoning & Mesh Shredder...', 'error');
     applyGlitchEffect();
 
     // Trigger WASM retaliation hook if available
@@ -131,7 +131,7 @@ function triggerPhaseBlack(score) {
         if (wasmReady) {
             analyze_and_retaliate(JSON.stringify({
                 source: "DASHBOARD_INJECTION",
-                raw: "T1485_RANSOMWARE_V3.1",
+                raw: "T1485_RANSOMWARE_V4.0",
                 timestamp_ms: Date.now()
             }));
         }

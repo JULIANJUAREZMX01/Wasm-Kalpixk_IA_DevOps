@@ -119,6 +119,10 @@ pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
     Ok(())
+}
+
+pub struct SecurityGuard;
+
 impl SecurityGuard {
     /// Validates raw log line before parsing.
     /// Rejects null bytes, ANSI escapes, and suspiciously long inputs.
@@ -521,7 +525,7 @@ mod tests {
     #[test]
     fn build_fingerprint_not_empty() {
         assert!(!build_fingerprint().is_empty());
-    // Simple state-less check for demo purposes
+    }
 }
 
 impl SourceRateLimiter {
