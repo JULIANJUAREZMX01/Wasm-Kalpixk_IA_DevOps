@@ -150,13 +150,7 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
-    // [ATLATL-ORDNANCE] FFI Guard check
-    let guard = wasp::validate_ffi_call("parse_log_line", 2);
-    if !guard.passed {
-        return None;
-    }
-
-    if !security::SecurityGuard::validate_raw_log(raw) {
+    if !security::validate_raw_log(raw).is_ok() {
         return None;
     }
 
@@ -200,7 +194,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if !security::SecurityGuard::validate_raw_log(line) { continue; }
+        if !security::validate_raw_log(line).is_ok() { continue; }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
