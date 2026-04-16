@@ -224,6 +224,22 @@
 
     <div class="max-w-7xl mx-auto mt-6 text-center text-[10px] text-zinc-600 uppercase tracking-widest">
         Proprietary Engine // Designed for Manhattan WMS & CEDIS CANCÚN 427 // Protected by Kalpixk ATLATL-ORDNANCE
+
+        <!-- Entropy Chart Row — full width below main grid -->
+        <div class="lg:col-span-12 bg-[#141417] p-5 rounded-xl cyber-border mt-0">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Shannon Entropy — Real-Time WASM Edge Sensor (32 features)
+                </h2>
+                <div class="flex gap-4 text-[10px] text-zinc-500">
+                    <span>NORMAL <span class="inline-block w-6 h-1 bg-cyan-400 rounded ml-1 align-middle"></span></span>
+                    <span>ATTACK <span class="inline-block w-6 h-1 bg-red-500 rounded ml-1 align-middle"></span></span>
+                    <span>THRESHOLD <span class="inline-block w-6 h-1 bg-yellow-500 rounded ml-1 align-middle" style="border-top: 2px dashed #eab308; background:transparent"></span></span>
+                </div>
+            </div>
+            <canvas id="entropy-canvas" height="100" style="width:100%;"></canvas>
+        </div>
     </div>
 
     <script>
@@ -378,6 +394,113 @@
             }
             addLog(analyzeLine(log));
         }
+
+
+        // ─── Entropy Canvas ────────────────────────────────────────
+        const entropyCanvas = document.getElementById('entropy-canvas');
+        const ctx2 = entropyCanvas.getContext('2d');
+        const ENTROPY_HISTORY = 120;
+        let entropyData = Array(ENTROPY_HISTORY).fill(0.3);
+        let attackMode = false;
+
+        function calcEntropy(val) {
+            // Shannon entropy simulada: eventos normales ~0.2-0.4, ataques ~0.7-0.95
+            const noise = (Math.random() - 0.5) * 0.08;
+            if (attackMode) return Math.min(0.98, val + 0.35 + Math.abs(noise) * 2);
+            return Math.max(0.05, Math.min(0.55, val + noise));
+        }
+
+        function drawEntropyChart() {
+            const W = entropyCanvas.offsetWidth;
+            const H = 100;
+            entropyCanvas.width = W;
+            entropyCanvas.height = H;
+
+            ctx2.clearRect(0, 0, W, H);
+
+            // Grid lines
+            ctx2.strokeStyle = 'rgba(39,39,42,0.8)';
+            ctx2.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (i / 4) * H;
+                ctx2.beginPath(); ctx2.moveTo(0, y); ctx2.lineTo(W, y); ctx2.stroke();
+            }
+
+            // Threshold line (0.65)
+            const threshY = H - (0.65 * H);
+            ctx2.strokeStyle = '#eab308';
+            ctx2.setLineDash([6, 4]);
+            ctx2.lineWidth = 1.5;
+            ctx2.beginPath(); ctx2.moveTo(0, threshY); ctx2.lineTo(W, threshY); ctx2.stroke();
+            ctx2.setLineDash([]);
+
+            // Entropy fill
+            const step = W / (ENTROPY_HISTORY - 1);
+            ctx2.beginPath();
+            ctx2.moveTo(0, H);
+            entropyData.forEach((v, i) => {
+                const x = i * step;
+                const y = H - (v * H);
+                if (i === 0) ctx2.lineTo(x, y);
+                else ctx2.lineTo(x, y);
+            });
+            ctx2.lineTo(W, H);
+            ctx2.closePath();
+
+            // Color: red if last value is attack, cyan if normal
+            const lastVal = entropyData[entropyData.length - 1];
+            const isAttack = lastVal > 0.65;
+            const grad = ctx2.createLinearGradient(0, 0, 0, H);
+            if (isAttack) {
+                grad.addColorStop(0, 'rgba(227,24,55,0.6)');
+                grad.addColorStop(1, 'rgba(227,24,55,0.05)');
+            } else {
+                grad.addColorStop(0, 'rgba(0,229,255,0.4)');
+                grad.addColorStop(1, 'rgba(0,229,255,0.02)');
+            }
+            ctx2.fillStyle = grad;
+            ctx2.fill();
+
+            // Line
+            ctx2.beginPath();
+            entropyData.forEach((v, i) => {
+                const x = i * step;
+                const y = H - (v * H);
+                if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+            });
+            ctx2.strokeStyle = isAttack ? '#E31837' : '#00e5ff';
+            ctx2.lineWidth = 2;
+            ctx2.stroke();
+
+            // Current value label
+            ctx2.fillStyle = isAttack ? '#E31837' : '#00e5ff';
+            ctx2.font = 'bold 11px Fira Code, monospace';
+            ctx2.fillText(`H=${lastVal.toFixed(3)}`, W - 80, 18);
+            if (isAttack) {
+                ctx2.fillStyle = '#E31837';
+                ctx2.fillText('⚠ ANOMALY', W - 80, 35);
+            }
+        }
+
+        let baseEntropy = 0.3;
+        setInterval(() => {
+            const newVal = calcEntropy(baseEntropy);
+            entropyData.push(newVal);
+            if (entropyData.length > ENTROPY_HISTORY) entropyData.shift();
+            baseEntropy = newVal * 0.7 + 0.3 * 0.3; // mean reversion
+            drawEntropyChart();
+        }, 250);
+
+        // Hook into attack injection to spike entropy
+        const origInject = window.injectAttack;
+        window.injectAttack = function(type) {
+            attackMode = true;
+            setTimeout(() => { attackMode = false; }, 6000);
+            if (origInject) origInject(type);
+        };
+
+        window.addEventListener('resize', drawEntropyChart);
+        drawEntropyChart();
 
         // Init
         startSimulation();

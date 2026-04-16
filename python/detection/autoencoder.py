@@ -4,10 +4,11 @@ Runs on AMD MI300X via ROCm.
 Architecture: 32 → 16 → 8 → 4 → 8 → 16 → 32 (symmetric encoder-decoder)
 """
 import logging
+from pathlib import Path
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from pathlib import Path
 
 logger = logging.getLogger("kalpixk.detection.autoencoder")
 MODELS_DIR = Path(__file__).parent.parent / "models"
@@ -95,9 +96,9 @@ class KalpixkAutoencoder:
         # Normalize: error / threshold. Cap at 1.0.
         # If error > threshold, score > 1.0, but we want [0, 1] usually.
         # Actually, let's follow the brief's min(1.0, e / threshold)
-        scores = [float(min(1.0, e / (self._threshold + 1e-8))) for e in errors]
-        confidences = [min(1.0, s * 1.2) for s in scores]
-        return scores, confidences
+        scores = np.clip(errors / (self._threshold + 1e-8), 0.0, 1.0)
+        confidences = np.clip(scores * 1.2, 0.0, 1.0)
+        return scores.tolist(), confidences.tolist()
 
     def save(self):
         MODELS_DIR.mkdir(exist_ok=True)

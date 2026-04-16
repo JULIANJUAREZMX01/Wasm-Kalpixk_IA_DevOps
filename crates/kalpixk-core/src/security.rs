@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! [ATLATL-ORDNANCE] Security Guards
 //! Input validation and memory protection for the WASM engine.
 

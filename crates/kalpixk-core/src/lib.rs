@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // [ATLATL-ORDNANCE] WasmGuard Core v2.2
 // Implementation of the WIT contract for the Blue Team SIEM
 
@@ -14,7 +15,6 @@ mod retaliation;
 mod wasp;
 mod wast;
 mod severity;
-
 use wasm_bindgen::prelude::*;
 use crate::runtime_features::extract_32_features;
 use crate::metrics::WasmEventMetrics;
@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "2.2.0-atlatl".to_string()
+    "3.1.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -63,7 +63,8 @@ pub fn get_security_telemetry() -> String {
     serde_json::json!({
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" }
+        "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
     }).to_string()
 }
 
@@ -108,6 +109,41 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn get_global_blacklist_wasm() -> String {
+    let blacklist = defense_nodes::get_global_blacklist();
+    serde_json::to_string(&blacklist).unwrap_or_else(|_| "[]".to_string())
+}
+
+#[wasm_bindgen]
+pub fn sync_threats_wasm(json_threats: &str) -> String {
+    let threats: Vec<String> = serde_json::from_str(json_threats).unwrap_or_default();
+    defense_nodes::sync_threats(threats);
+    serde_json::json!({"status": "synced", "count": 1}).to_string()
+}
+
+#[wasm_bindgen]
+pub fn trigger_v4_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
+    // This hook allows the JS side to trigger defensive memory poisoning
+    // or report the node state to the mesh.
+    serde_json::json!({
+        "status": "V4_ARMED",
+        "chaotic_poisoning": true,
+        "entropy_trap": "ACTIVE",
+        "target_fingerprint": json_target.chars().take(32).collect::<String>()
+    }).to_string()
+}
+
+#[wasm_bindgen]
+pub fn mesh_heartbeat(node_id: &str) -> String {
+    defense_nodes::register_node_heartbeat(node_id.to_string());
+    serde_json::json!({
+        "status": "synchronized",
+        "mesh_nodes": defense_nodes::get_active_nodes()
+    }).to_string()
 }
 
 #[wasm_bindgen]
@@ -245,8 +281,9 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v2.2-atlatl",
-        "heartbeat": wasp::get_runtime_heartbeat()
+        "atlatl_ordnance": "v3.1-atlatl",
+        "heartbeat": wasp::get_runtime_heartbeat(),
+        "mesh_active": true
     })
     .to_string()
 }

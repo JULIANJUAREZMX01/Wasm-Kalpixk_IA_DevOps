@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Tipos canónicos de eventos Kalpixk
 //!
 //! Todos los parsers normalizan sus salidas a KalpixkEvent.

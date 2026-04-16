@@ -6,21 +6,21 @@ from main import app, verify_api_key
 
 client = TestClient(app)
 
-def test_metrics_protected():
+def test_metrics_protected(monkeypatch):
     # Set an API key
-    os.environ["KALPIXK_API_KEY"] = "test-secret-key"
-    os.environ["ENV"] = "production"
+    monkeypatch.setenv("KALPIXK_API_KEY", "test-secret-key")
+    monkeypatch.setenv("KALPIXK_ENV", "production")
 
     # Try without key
-    response = client.get("/metrics")
+    response = client.get("/api/v1/metrics")
     assert response.status_code == 403
 
     # Try with wrong key
-    response = client.get("/metrics", headers={"X-Kalpixk-Key": "wrong-key"})
+    response = client.get("/api/v1/metrics", headers={"X-Kalpixk-Key": "wrong-key"})
     assert response.status_code == 403
 
     # Try with correct key
-    response = client.get("/metrics", headers={"X-Kalpixk-Key": "test-secret-key"})
+    response = client.get("/api/v1/metrics", headers={"X-Kalpixk-Key": "test-secret-key"})
     assert response.status_code == 200
 
 def test_verify_api_key_timing_resistance():
