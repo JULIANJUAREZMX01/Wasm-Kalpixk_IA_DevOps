@@ -46,13 +46,15 @@ def test_detect_invalid_length():
     response = client.post("/api/v1/detect", json=payload, headers={"X-Kalpixk-Key": "testkey"})
     assert response.status_code == 422 # Pydantic validation error
 
-def test_status_unauthenticated():
-    response = client.get("/api/v1/status")
-    assert response.status_code == 403
+def test_simulate_unauthenticated():
+    # Simulate endpoint was removed in v2
+    response = client.get("/api/v1/simulate/cpu_spike")
+    assert response.status_code == 404
 
-def test_status_authenticated():
-    response = client.get("/api/v1/status", headers={"X-Kalpixk-Key": "testkey"})
-    assert response.status_code == 200
+def test_simulate_authenticated():
+    # Simulate endpoint was removed in v2
+    response = client.get("/api/v1/simulate/cpu_spike", headers={"X-Kalpixk-Key": "testkey"})
+    assert response.status_code == 404
 
 def test_health_public():
     # Health should be public

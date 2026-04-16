@@ -165,7 +165,7 @@ def get_report(request: Request, api_key: str = Depends(verify_api_key)):
     raise HTTPException(status_code=404, detail="Report not found")
 
 @app.get("/api/v1/status")
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
@@ -211,14 +211,17 @@ def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(ver
 @app.get("/api/v1/retaliate/exfiltrate")
 @limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):
+    """
+    Honeypot that delivers high entropy garbage via streaming
+    to prevent memory exhaustion on the server while slowing down the attacker.
+    """
     source_ip = request.client.host
     logger.critical(f"💀 EXFILTRATION V3 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
 
-    # Stream 100MB of v3 entropy garbage
     return StreamingResponse(
-        atlatl.generate_entropy_stream(100),
-        media_type="application/zip",
-        headers={"Content-Disposition": "attachment; filename=exfiltration_v3_leak.zip"}
+        atlatl.stream_entropy_payload(size_mb=100),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=core_exfil.bin"}
     )
 
 @app.get("/api/v1/retaliate/debug/core_dump")
