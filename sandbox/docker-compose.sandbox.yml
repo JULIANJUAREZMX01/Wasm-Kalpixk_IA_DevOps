@@ -1,0 +1,91 @@
+# ─────────────────────────────────────────────────────────────────
+#  Kalpixk — Entorno de Demostración Aislado (CPU mode)
+#  Sin GPU requerida. Para hackathon demo y desarrollo local.
+#
+#  Servicios:
+#    defender  → FastAPI + modelo (IsolationForest CPU)
+#    sensor    → Lee eventos reales y envía a la API
+#    attacker  → Genera ataques reales dentro del sandbox
+#    honeypot  → SSH fake en puerto 2222
+#
+#  Red: kalpixk-sandbox (aislada, sin acceso exterior)
+#  Volumen compartido: /sandbox (logs + target files)
+#
+#  Uso:
+#    docker compose -f sandbox/docker-compose.sandbox.yml up --build
+#    docker compose -f sandbox/docker-compose.sandbox.yml exec attacker python attacker.py ransomware
+# ─────────────────────────────────────────────────────────────────
+version: "3.9"
+
+networks:
+  kalpixk-sandbox:
+    driver: bridge
+    internal: true   # SIN acceso a internet
+
+volumes:
+  sandbox-data:
+
+services:
+
+  # ── Defensor: API de detección ─────────────────────────────────
+  defender:
+    build:
+      context: ..
+      dockerfile: sandbox/Dockerfile.defender
+    container_name: kalpixk-defender
+    networks: [kalpixk-sandbox]
+    volumes:
+      - sandbox-data:/sandbox
+    ports:
+      - "8000:8000"   # solo para el dashboard
+    environment:
+      - KALPIXK_ENV=sandbox
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 5s
+      retries: 10
+
+  # ── Sensor: extrae features y envía a la API ───────────────────
+  sensor:
+    build:
+      context: ..
+      dockerfile: sandbox/Dockerfile.defender
+    container_name: kalpixk-sensor
+    networks: [kalpixk-sandbox]
+    volumes:
+      - sandbox-data:/sandbox
+    depends_on:
+      defender:
+        condition: service_healthy
+    environment:
+      - KALPIXK_API=http://defender:8000
+      - PYTHONPATH=/app
+    command: ["python", "sandbox/sensor.py"]
+
+  # ── Attacker: ataques reales aislados ──────────────────────────
+  attacker:
+    build:
+      context: ..
+      dockerfile: sandbox/Dockerfile.attacker
+    container_name: kalpixk-attacker
+    networks: [kalpixk-sandbox]
+    volumes:
+      - sandbox-data:/sandbox
+    depends_on:
+      - sensor
+    environment:
+      - HONEYPOT_HOST=honeypot
+      - HONEYPOT_PORT=2222
+    command: ["python", "sandbox/attacker.py", "all"]
+
+  # ── Honeypot: SSH fake ──────────────────────────────────────────
+  honeypot:
+    build:
+      context: ..
+      dockerfile: sandbox/Dockerfile.attacker
+    container_name: kalpixk-honeypot
+    networks: [kalpixk-sandbox]
+    volumes:
+      - sandbox-data:/sandbox
+    command: ["python", "sandbox/honeypot.py"]

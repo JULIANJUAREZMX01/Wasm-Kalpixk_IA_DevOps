@@ -95,6 +95,7 @@
                 <div class="flex gap-2 text-[10px] font-bold">
                     <span class="amd-gradient px-2 py-0.5 rounded text-white italic">AMD MI300X ACCELERATED</span>
                     <span class="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">v2.1.0-STABLE</span>
+                    <div id="ws-status" class="text-xs text-zinc-500">○ Conectando backend...</div>
                 </div>
             </div>
         </div>
@@ -501,6 +502,94 @@
 
         window.addEventListener('resize', drawEntropyChart);
         drawEntropyChart();
+
+
+        // ─── WebSocket Real ────────────────────────────────────────
+        const WS_URL = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1'
+            ? 'ws://localhost:8000/stream'
+            : null; // En GitHub Pages mostramos datos del simulador hasta que se conecte el backend
+
+        let wsReal = null;
+        let wsConnected = false;
+
+        function connectRealWS() {
+            if (!WS_URL) {
+                document.getElementById('ws-status').textContent = 'DEMO MODE (GitHub Pages)';
+                document.getElementById('ws-status').className = 'text-xs text-yellow-500';
+                return;
+            }
+            try {
+                wsReal = new WebSocket(WS_URL);
+                wsReal.binaryType = 'arraybuffer';
+
+                wsReal.onopen = () => {
+                    wsConnected = true;
+                    document.getElementById('ws-status').textContent = '● LIVE — Backend Conectado';
+                    document.getElementById('ws-status').className = 'text-xs text-green-400';
+                    console.log('[Kalpixk] WebSocket conectado a', WS_URL);
+                };
+
+                wsReal.onmessage = (e) => {
+                    // MessagePack decode (simple fallback a JSON si no hay msgpack)
+                    try {
+                        const view = new Uint8Array(e.data);
+                        // Intentar parse como JSON si empieza con {
+                        const text = new TextDecoder().decode(view);
+                        const data = JSON.parse(text);
+                        handleRealEvent(data);
+                    } catch {
+                        console.warn('MessagePack recibido — instalar msgpack.js para decode completo');
+                    }
+                };
+
+                wsReal.onclose = () => {
+                    wsConnected = false;
+                    document.getElementById('ws-status').textContent = '○ DESCONECTADO — Reintentando...';
+                    document.getElementById('ws-status').className = 'text-xs text-red-500';
+                    setTimeout(connectRealWS, 3000);
+                };
+
+                wsReal.onerror = () => {
+                    document.getElementById('ws-status').textContent = '○ Sin backend local (modo demo)';
+                    document.getElementById('ws-status').className = 'text-xs text-zinc-500';
+                };
+            } catch(e) {
+                console.warn('WebSocket no disponible:', e);
+            }
+        }
+
+        function handleRealEvent(data) {
+            // Datos reales del backend: {score, is_anomaly, severity, source}
+            const score = data.anomaly_score || data.score || 0;
+            const severity = data.severity || (score > 0.8 ? 'CRITICAL' : score > 0.5 ? 'HIGH' : 'LOW');
+            const source = data.source || 'SENSOR';
+            const isAnomaly = data.is_anomaly || score > 0.5;
+
+            // Inyectar en la gráfica de entropía
+            attackMode = score > 0.65;
+            entropyData.push(score);
+            if (entropyData.length > ENTROPY_HISTORY) entropyData.shift();
+            drawEntropyChart();
+
+            // Inyectar en el feed
+            const fakeLog = {
+                type: isAnomaly ? 'critical' : 'info',
+                severity,
+                score,
+                msg: `[REAL] ${source} — score: ${score.toFixed(4)}`,
+                mitre: severity === 'CRITICAL' ? 'T1486' : null,
+                device: data.device || 'cpu',
+            };
+            addLog(fakeLog);
+
+            stats.events++;
+            if (isAnomaly) stats.critical++;
+            updateUI();
+        }
+
+        // Conectar al cargar
+        connectRealWS();
 
         // Init
         startSimulation();
