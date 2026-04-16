@@ -1,18 +1,21 @@
-# War Journal: Operation ATLATL-MACUAHUITL 🏹
+# WAR JOURNAL — ATLATL-ORDNANCE 🏹
 
-## [OP-2026-04-10] - Alpha Stack Hardening & Offensive Pivot
+## [OP_V3_ORDNANCE] - ALPHA STACK HARDENING & PHASE BLACK EVOLUTION
 
 **Vector de Ataque:**
-Se identificaron debilidades en la frontera FFI y en el monitoreo de integridad del runtime WASM. El atacante podría secuestrar el hilo principal de JS e ignorar las alertas de seguridad, o intentar exfiltrar datos mediante endpoints de telemetría desprotegidos.
+Los nodos de detección originales utilizaban comparaciones de cadenas estáticas simples, permitiendo la evasión mediante ofuscación básica o variaciones de carga útil. El motor WASM carecía de un monitoreo de integridad en tiempo real, lo que lo hacía vulnerable a paros de ejecución (runtime stalls) o inyecciones de buffer que no activaran pánicos inmediatos.
 
-**Defensa Implementada:**
-- **WASP+ (WASM Security Protocol):** Implementación de un Guardián de Frontera FFI en Rust que valida cada llamada y mantiene un contador de instrucciones (Heartbeat) atómico.
-- **Dead Man's Switch:** El dashboard ahora monitoriza el latido del motor WASM; si el motor se detiene o el contador no avanza, se activa el estado de 'TAMPERED'.
-- **Hardening de Memoria:** Se añadieron patrones de detección de Shellcode (NOP sleds, JMP loops) directamente en la validación de logs del Core.
+**Defensa Implementada (Macuahuitl v3):**
+- **Zig Core (v3.0-ATLATL):** Implementación de `v3_macuahuitl_array_poisoning` y `recursive_entropy_shredder`. El veneno de punteros ahora utiliza secuencias de salto destructivas (JMP, HLT, INT 3) para desestabilizar el pipeline del agresor.
+- **Rust Core (GuerrillaMode):** Los nodos de defensa ahora operan en un modo descentralizado con sincronización P2P de firmas de amenaza. Se implementó un protocolo de latido atómico (WASP Heartbeat) para detectar manipulaciones en el tiempo de ejecución de WASM.
+- **SACITY UI:** Evolución visual a SACITY_OS v3.0 con scanlines CRT, efectos de glitch de terminal y alertas de "Phase Black" vinculadas directamente a la telemetría de WASM.
 
-**Contra-Ataque (Phase Black):**
-- **Macuahuitl Strike:** El motor Zig (`motor.zig`) fue actualizado con lógica de envenenamiento de punteros agresiva que inyecta bucles infinitos en el espacio de direcciones del atacante.
-- **Recursive Entropy Traps:** Implementación de honeypots `/api/v1/retaliate/exfiltrate` que entregan 50MB de basura de alta entropía (Zip Bomb Chunk) a los agresores detectados, colapsando sus herramientas de análisis.
+**Contra-Ataque:**
+- **Recursive Zip Bombs:** Integración de generadores de entropía de 100MB+ entregados vía `StreamingResponse` en el honeypot `/api/v1/retaliate/exfiltrate`.
+- **Hardware Lockdown:** Los intentos de exfiltración activan el bloqueo de IP simulado y la corrupción de firmas de C2 en el canal de retorno.
 
 **Resultado:**
-Evasión técnica neutralizada. El sistema no solo bloquea la amenaza, sino que degrada activamente la infraestructura del agresor mediante represalias de saturación de entropía.
+Aniquilación total del vector de intrusión detectado. El sistema ahora es capaz de colapsar la infraestructura de exfiltración del atacante mediante saturación de entropía recursiva.
+
+---
+*ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización.*

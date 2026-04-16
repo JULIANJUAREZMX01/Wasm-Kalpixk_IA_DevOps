@@ -1,33 +1,55 @@
-# ATLATL-ORDNANCE: Decentralized Defense Node
-# Optimized for ARM64 (Edge) and x86_64 (Droplet)
+# [ATLATL-ORDNANCE] SACITY-NODE v1.0
+# Optimized for Resource-Constrained Embedded Systems (ARM64/x86_64)
+# Multi-stage build for minimal footprint and maximum security
 
+# --- Stage 1: Build & Calibration ---
+FROM python:3.10-slim AS builder
+
+WORKDIR /build
+
+# Install minimal build deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# --- Stage 2: Runtime Execution ---
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install runtime dependencies (curl for healthchecks)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Non-root user for security hardening
+RUN useradd -m sacity-node && chown -R sacity-node:sacity-node /app
+USER sacity-node
 
-# Copy source code
-COPY src/ ./src/
-COPY main.py .
-COPY models/ ./models/
+# Copy only necessary libraries from builder
+COPY --from=builder /root/.local /home/sacity-node/.local
+ENV PATH=/home/sacity-node/.local/bin:$PATH
 
-# Environment variables
-ENV PYTHONUNBUFFERED=1
-ENV KALPIXK_MODE=NODE
-ENV ATLATL_AGGRESSION=HIGH
+# Copy minimal source tree
+COPY --chown=sacity-node:sacity-node main.py .
+COPY --chown=sacity-node:sacity-node src/ ./src/
+COPY --chown=sacity-node:sacity-node models/ ./models/
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s \
+# Environment hardening
+ENV PYTHONUNBUFFERED=1 \
+    KALPIXK_MODE=NODE \
+    ATLATL_AGGRESSION=MAX \
+    ATLATL_VERSION=3.1 \
+    SACITY_OS=ENABLED
+
+# Healthcheck for cluster orchestration
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s \
   CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the Node API
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 8000
+
+# Start the SACITY defense node
+CMD ["sh", "-c", "python3 src/nodes/orchestrator.py & uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --workers 1"]
