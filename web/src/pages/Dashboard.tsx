@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAlertStore, ParsedEvent } from '../stores/alertStore';
 import { AlertFeed } from '../components/AlertFeed';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -51,12 +51,20 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  const chartData = events.map((e, i) => ({
-    name: i,
-    severity: e.local_severity * 100
-  })).reverse();
+  const chartData = useMemo(() => {
+    return events.map((e, i) => ({
+      name: i,
+      severity: e.local_severity * 100
+    })).reverse();
+  }, [events]);
 
-  const avgSev = events.length ? events.reduce((acc, e) => acc + e.local_severity, 0) / events.length : 0;
+  const avgSev = useMemo(() => {
+    return events.length ? events.reduce((acc, e) => acc + e.local_severity, 0) / events.length : 0;
+  }, [events]);
+
+  const criticalCount = useMemo(() => {
+    return events.filter(e => e.local_severity >= 0.8).length;
+  }, [events]);
 
   return (
     <div style={{ background: "#080808", minHeight: "100vh", fontFamily: "'Courier New', monospace", color: "#e2e8f0", padding: "20px" }}>
@@ -73,7 +81,7 @@ export const Dashboard: React.FC = () => {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
         <StatCard title="THROUGHPUT" value={`${(events.length * 2.5).toFixed(1)}k ev/s`} color="#00c8ff" subtitle="AMD MI300X" />
-        <StatCard title="CRITICAL" value={events.filter(e => e.local_severity >= 0.8).length} color="#ff1a1a" subtitle="MITRE AT&CK MATCH" />
+        <StatCard title="CRITICAL" value={criticalCount} color="#ff1a1a" subtitle="MITRE AT&CK MATCH" />
         <StatCard title="AVG SEVERITY" value={`${(avgSev * 100).toFixed(0)}%`} color="#ff6400" subtitle="UEBA BASELINE" />
         <StatCard title="WASM LATENCY" value="1.2ms" color="#32ff32" subtitle="ZERO CLOUD CALLS" />
       </div>

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! features.rs — Extracción de 32 features para el modelo AMD MI300X
 //!
 //! ATLATL-ORDNANCE: Vincula la extracción con los nodos de defensa ofensiva.
