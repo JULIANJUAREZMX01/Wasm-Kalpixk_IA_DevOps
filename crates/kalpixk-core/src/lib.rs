@@ -131,14 +131,31 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
     serde_json::json!({"status": "synced", "count": count, "node_7_active": true}).to_string()
 }
 
+extern "C" {
+    fn v5_macuahuitl_stealth_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn memory_sink_trap(target_ptr: *mut u8, target_len: usize, key: u64);
+}
+
 #[wasm_bindgen]
 pub fn trigger_v5_retaliation(json_target: &str) -> String {
     // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5
+    // Actually execute the metal-level poisoning logic on a local buffer
+    // to simulate the disruption of local analysis attempts.
+    let mut buffer = [0u8; 1024];
+    let seed = chrono::Utc::now().timestamp() as u64;
+
+    unsafe {
+        v5_macuahuitl_stealth_poisoning(buffer.as_mut_ptr(), buffer.len(), seed);
+        memory_sink_trap(buffer.as_mut_ptr(), buffer.len(), seed ^ 0xDEADBEEF);
+    }
+
     serde_json::json!({
         "status": "V5_ARMED",
         "stealth_poisoning": "ACTIVE",
         "memory_sink": "ARMED",
-        "target_fingerprint": json_target.chars().take(32).collect::<String>()
+        "target_fingerprint": json_target.chars().take(32).collect::<String>(),
+        "entropy_seed": seed,
+        "metal_buffer_len": buffer.len()
     })
     .to_string()
 }
@@ -158,7 +175,7 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
-    if !security::validate_raw_log(raw).is_ok() {
+    if security::validate_raw_log(raw).is_err() {
         return None;
     }
 
@@ -202,7 +219,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() {
+        if security::validate_raw_log(line).is_err() {
             continue;
         }
         if let Ok(event) = parser.parse(line) {
