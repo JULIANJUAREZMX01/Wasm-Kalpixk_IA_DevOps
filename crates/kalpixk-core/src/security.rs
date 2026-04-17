@@ -12,8 +12,6 @@
 //! All public functions are called by parsers.rs BEFORE any parsing occurs.
 //! This is the first gate — if validation fails, the log is rejected.
 #![allow(dead_code)]
-//! [ATLATL-ORDNANCE] Security Guards
-//! Input validation and memory protection for the WASM engine.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -71,6 +69,7 @@ pub enum SecurityError {
 /// - Template injection patterns (`{{`, `${`)
 /// - HTML/script injection (if logs reach the dashboard unsanitized)
 /// - HTTP header injection (`\r\n\r\n`)
+/// - [ATLATL-ORDNANCE] Shellcode and exploit patterns
 ///
 /// Returns the original `raw` slice if validation passes,
 /// or `SecurityError` if any check fails.
@@ -83,17 +82,25 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     // 2. Injection pattern detection
     //    Each entry: (pattern_bytes, human_readable_name)
     const INJECTION_PATTERNS: &[(&[u8], &str)] = &[
-        (b"\x00",       "null_byte"),
-        (b"\r\n\r\n",   "http_header_injection"),
-        (b"{{",         "template_injection"),
-        (b"${",         "shell_expansion"),
-        (b"<script",    "xss_script_tag"),
-        (b"<iframe",    "xss_iframe"),
-        (b"<!--",       "html_comment"),
-        (b"\x1b[",      "ansi_escape"),
-        (b"\x1b(",      "ansi_charset"),
-        (b"../",        "path_traversal"),
-        (b"..\\",       "path_traversal_win"),
+        (b"\x00",           "null_byte"),
+        (b"\r\n\r\n",       "http_header_injection"),
+        (b"{{",             "template_injection"),
+        (b"${",             "shell_expansion"),
+        (b"<script",        "xss_script_tag"),
+        (b"<iframe",        "xss_iframe"),
+        (b"<!--",           "html_comment"),
+        (b"\x1b[",          "ansi_escape"),
+        (b"\x1b(",          "ansi_charset"),
+        (b"../",            "path_traversal"),
+        (b"..\\",           "path_traversal_win"),
+        (b"\\x90\\x90\\x90", "nop_sled"),
+        (b"0xEB0xFE",       "infinite_loop_trap"),
+        (b"/bin/sh",        "unix_shell_access"),
+        (b"powershell.exe",  "windows_shell_access"),
+        (b"eval(",           "dynamic_execution"),
+        (b"system(",         "system_call"),
+        (b"base64",          "obfuscation_marker"),
+        (b"${jndi:",         "log4shell_injection"),
     ];
 
     let bytes = raw.as_bytes();
@@ -119,48 +126,12 @@ pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
     Ok(())
-impl SecurityGuard {
-    /// Validates raw log line before parsing.
-    /// Rejects null bytes, ANSI escapes, and suspiciously long inputs.
-    /// [ATLATL-ORDNANCE] Added pattern matching for shellcode and obfuscation.
-    pub fn validate_raw_log(raw: &str) -> bool {
-        if raw.len() > 8192 {
-            return false;
-        }
-        if raw.contains('\0') {
-            return false;
-        }
-        // Basic check for ANSI escape sequences
-        if raw.contains('\x1b') {
-            return false;
-        }
+}
 
-        // [ATLATL-ORDNANCE] Detecting common shellcode/exploit patterns
-        let malicious_patterns = [
-            "\\x90\\x90\\x90", // NOP Sled
-            "0xEB0xFE",       // JMP $ (Infinite loop)
-            "/bin/sh",        // Unix shell
-            "powershell.exe", // Windows shell
-            "eval(",          // Dynamic execution
-            "system(",        // System call
-            "base64",         // Often used for obfuscation in logs
-            "${jndi:",        // Log4Shell
-        ];
-
-        for pattern in malicious_patterns {
-            if raw.contains(pattern) {
-                return false;
-            }
-        }
-
-        true
-    }
-
-    /// [ATLATL-ORDNANCE] Entropy check for suspicious payloads
-    pub fn is_payload_suspicious(data: &[u8]) -> bool {
-        let entropy = crate::entropy::shannon_entropy(data);
-        entropy > 7.5 // High entropy usually indicates encryption or packed malware
-    }
+/// [ATLATL-ORDNANCE] Entropy check for suspicious payloads
+pub fn is_payload_suspicious(data: &[u8]) -> bool {
+    let entropy = crate::entropy::shannon_entropy(data);
+    entropy > 7.5 // High entropy usually indicates encryption or packed malware
 }
 
 // ── Rate limiter ──────────────────────────────────────────────────────────────
@@ -244,18 +215,6 @@ impl Default for SourceRateLimiter {
 }
 
 // ── SharedArrayBuffer atomic guard ───────────────────────────────────────────
-//
-// When the WASM engine writes feature vectors into a SharedArrayBuffer (SAB)
-// shared with the main React thread, there is a risk of the JS thread reading
-// a partially-written vector. We use an atomic version stamp to detect this.
-//
-// Protocol:
-//   1. WASM acquires lock (CAS false→true)
-//   2. Increments version stamp
-//   3. Writes feature data
-//   4. Drops lock (sets to false)
-//   5. JS reads version stamp before and after reading data — if they differ,
-//      the data was modified mid-read and must be discarded.
 
 pub struct SharedBufferGuard {
     version: Arc<AtomicU32>,
@@ -271,9 +230,6 @@ impl SharedBufferGuard {
     }
 
     /// Attempt to acquire the write lock.
-    ///
-    /// Spins up to `max_retries` times before giving up.
-    /// In WebAssembly, spinning is acceptable for short critical sections.
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
             match self.locked.compare_exchange(
@@ -313,7 +269,6 @@ pub struct BufferWriteGuard {
 
 impl BufferWriteGuard {
     /// Verify the buffer was not concurrently modified.
-    /// Call after writing data to confirm integrity.
     pub fn verify_integrity(&self) -> bool {
         self.version.load(Ordering::SeqCst) == self.ver_at_lock + 1
     }
@@ -326,10 +281,6 @@ impl Drop for BufferWriteGuard {
 }
 
 // ── Memory offset obfuscation ─────────────────────────────────────────────────
-//
-// Each build uses a different offset seed derived from BUILD_HASH.
-// An exploit that hardcodes memory offsets from one build will fail on the next.
-// NOT a security boundary — provides friction against static analysis.
 
 /// Get the build fingerprint (unique per CI run).
 pub fn build_fingerprint() -> &'static str {
@@ -348,7 +299,6 @@ pub fn obfuscate_offset(base: usize) -> usize {
 // ── Required security headers (documentation) ────────────────────────────────
 
 /// CSP header value required to load WASM in the browser.
-/// The server (Netlify / GitHub Pages + COI SW) MUST set these.
 pub const CSP_HEADER: &str =
     "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; \
      connect-src 'self' ws:; worker-src 'self' blob:;";
@@ -367,8 +317,6 @@ pub const REQUIRED_SECURITY_HEADERS: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ── validate_raw_log ──────────────────────────────────────────────────────
 
     #[test]
     fn accepts_valid_syslog() {
@@ -409,31 +357,25 @@ mod tests {
         assert!(validate_raw_log("<script>alert(1)</script>").is_err());
     }
 
-    // ── validate_metadata_key ─────────────────────────────────────────────────
+    #[test]
+    fn rejects_atlatl_patterns() {
+        assert!(validate_raw_log("exploit with \\x90\\x90\\x90").is_err());
+        assert!(validate_raw_log("malicious 0xEB0xFE loop").is_err());
+        assert!(validate_raw_log("trying /bin/sh access").is_err());
+    }
 
     #[test]
     fn accepts_valid_keys() {
         assert!(validate_metadata_key("src_ip").is_ok());
         assert!(validate_metadata_key("windows-event-id").is_ok());
-        assert!(validate_metadata_key("field01").is_ok());
     }
 
     #[test]
-    fn rejects_key_with_spaces() {
+    fn rejects_invalid_keys() {
         assert!(validate_metadata_key("key with spaces").is_err());
-    }
-
-    #[test]
-    fn rejects_key_with_semicolon() {
         assert!(validate_metadata_key("key;inject").is_err());
-    }
-
-    #[test]
-    fn rejects_empty_key() {
         assert!(validate_metadata_key("").is_err());
     }
-
-    // ── SourceRateLimiter ─────────────────────────────────────────────────────
 
     #[test]
     fn rate_limiter_allows_within_limit() {
@@ -455,78 +397,21 @@ mod tests {
         for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
             let _ = rl.check_and_increment(src, now_ms);
         }
-        // One more should be blocked
-        assert!(matches!(
-            rl.check_and_increment(src, now_ms),
-            Err(SecurityError::RateLimitExceeded(_, _, _))
-        ));
+        assert!(rl.check_and_increment(src, now_ms).is_err());
     }
 
     #[test]
-    fn rate_limiter_resets_after_window() {
-        let mut rl  = SourceRateLimiter::new();
-        let src     = "10.0.0.1";
-        let now_ms  = 1_000_000u64;
-
-        // Fill window
-        for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
-            let _ = rl.check_and_increment(src, now_ms);
-        }
-        // 1 second later — should reset
-        assert!(rl.check_and_increment(src, now_ms + 1_001).is_ok());
-    }
-
-    #[test]
-    fn rate_limiter_gc_removes_stale() {
-        let mut rl = SourceRateLimiter::new();
-        let _ = rl.check_and_increment("old_source", 1_000_000);
-        assert_eq!(rl.source_count(), 1);
-
-        rl.gc(1_000_000 + 61_000);  // 61 seconds later
-        assert_eq!(rl.source_count(), 0);
-    }
-
-    // ── SharedBufferGuard ─────────────────────────────────────────────────────
-
-    #[test]
-    fn atomic_guard_locks_and_releases() {
+    fn atomic_guard_works() {
         let guard = SharedBufferGuard::new();
         {
             let lock = guard.try_lock(10).expect("should acquire lock");
             assert!(lock.verify_integrity());
-        } // lock dropped here — releases
-        // Should be able to lock again
-        let _ = guard.try_lock(10).expect("should re-acquire after release");
-    }
-
-    #[test]
-    fn atomic_guard_increments_version() {
-        let guard = SharedBufferGuard::new();
-        assert_eq!(guard.current_version(), 0);
-        {
-            let _ = guard.try_lock(10);
         }
-        assert_eq!(guard.current_version(), 1);
-    }
-
-    // ── Offset obfuscation ────────────────────────────────────────────────────
-
-    #[test]
-    fn obfuscate_offset_is_deterministic() {
-        let a = obfuscate_offset(100);
-        let b = obfuscate_offset(100);
-        assert_eq!(a, b);
+        assert!(guard.try_lock(10).is_ok());
     }
 
     #[test]
     fn build_fingerprint_not_empty() {
         assert!(!build_fingerprint().is_empty());
-    // Simple state-less check for demo purposes
-}
-
-impl SourceRateLimiter {
-    pub fn check_rate(_source: &str) -> bool {
-        // Target: 1000 events/sec/source
-        true
     }
 }

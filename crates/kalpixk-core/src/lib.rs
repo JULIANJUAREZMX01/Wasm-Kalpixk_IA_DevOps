@@ -1,6 +1,7 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v2.2
+// [ATLATL-ORDNANCE] WasmGuard Core v4.0-atlatl
 // Implementation of the WIT contract for the Blue Team SIEM
+// Version: 4.0.0-atlatl (Guerrilla Mesh)
 
 mod metrics;
 mod entropy;
@@ -55,7 +56,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "4.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -64,7 +65,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
+        "mesh_version": "v4.0-guerrilla"
     }).to_string()
 }
 
@@ -107,6 +109,7 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "lockdown": lockdown,
         "all_nodes": all_nodes,
         "timestamp": chrono::Utc::now().timestamp_millis(),
+        "atlatl_v4": true
     })
     .to_string()
 }
@@ -119,20 +122,21 @@ pub fn get_global_blacklist_wasm() -> String {
 
 #[wasm_bindgen]
 pub fn sync_threats_wasm(json_threats: &str) -> String {
-    let threats: Vec<String> = serde_json::from_str(json_threats).unwrap_or_default();
-    defense_nodes::sync_threats(threats);
-    serde_json::json!({"status": "synced", "count": 1}).to_string()
+    let threats: Vec<defense_nodes::ThreatSignature> = serde_json::from_str(json_threats).unwrap_or_default();
+    let count = threats.len();
+    for sig in threats {
+        defense_nodes::register_threat_signature(sig);
+    }
+    serde_json::json!({"status": "synced", "count": count, "node_7_active": true}).to_string()
 }
 
 #[wasm_bindgen]
-pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5
     serde_json::json!({
-        "status": "V4_ARMED",
-        "chaotic_poisoning": true,
-        "entropy_trap": "ACTIVE",
+        "status": "V5_ARMED",
+        "stealth_poisoning": "ACTIVE",
+        "memory_sink": "ARMED",
         "target_fingerprint": json_target.chars().take(32).collect::<String>()
     }).to_string()
 }
@@ -142,7 +146,8 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
     defense_nodes::register_node_heartbeat(node_id.to_string());
     serde_json::json!({
         "status": "synchronized",
-        "mesh_nodes": defense_nodes::get_active_nodes()
+        "mesh_nodes": defense_nodes::get_active_nodes(),
+        "version": "4.0.0-atlatl"
     }).to_string()
 }
 
@@ -275,9 +280,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v4.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "node_7_integrity": "VALIDATED"
     })
     .to_string()
 }

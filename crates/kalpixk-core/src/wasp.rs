@@ -7,7 +7,7 @@
 //! - Security policies enforcement
 //! - [ATLATL-ORDNANCE] Instruction Monitoring & FFI Guards
 //!
-//! Version 3.0: Atomic Heartbeat & Instruction Monitoring
+//! Version 4.0: Atomic Heartbeat & Instruction Monitoring v4
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -43,7 +43,11 @@ pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicy
     INSTRUCTION_HEARTBEAT.fetch_add(1, Ordering::SeqCst);
 
     // Prohibit sensitive functions if security context is not explicitly verified
-    let sensitive_fns = ["system", "exec", "eval", "poison_pointers", "wasm_lockdown", "macuahuitl_strike"];
+    let sensitive_fns = [
+        "system", "exec", "eval", "poison_pointers",
+        "wasm_lockdown", "macuahuitl_strike",
+        "v5_macuahuitl_stealth_poisoning", "memory_sink_trap"
+    ];
     if sensitive_fns.contains(&function_name) {
         violations.push(format!("CRITICAL: Unauthorized call to sensitive FFI function: {}", function_name));
     }
@@ -67,7 +71,6 @@ pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicy
 }
 
 /// [ATLATL-ORDNANCE] Heartbeat Check
-/// Returns the current instruction count for the host to verify runtime activity.
 pub fn get_runtime_heartbeat() -> u64 {
     INSTRUCTION_HEARTBEAT.load(Ordering::SeqCst)
 }

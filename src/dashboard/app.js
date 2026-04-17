@@ -1,12 +1,13 @@
-// ATLATL-ORDNANCE: SACITY Dashboard Logic v3.0
-// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v3
+// ATLATL-ORDNANCE: SACITY Dashboard Logic v4.0 (Guerrilla Mesh)
+// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v4
 
 import initWasmModule, {
     health_check,
     get_security_telemetry,
     get_global_blacklist_wasm,
     analyze_and_retaliate,
-    version
+    version,
+    trigger_v5_retaliation // Updated for v5 Zig core
 } from './pkg/kalpixk_core.js';
 
 const API = window.location.origin;
@@ -21,8 +22,8 @@ async function initWasm() {
         wasmReady = true;
         const v = version();
         const health = JSON.parse(health_check());
-        log(`SACITY GuerrillaMesh Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
-        document.getElementById('wasm-status').textContent = '● WASP_V3_SECURE';
+        log(`GuerrillaMesh v4.0 Operational: ${v} [Metal: v5.0-atlatl]`, 'info');
+        document.getElementById('wasm-status').textContent = '● WASP_V4_SECURE';
         document.getElementById('wasm-status').className = 'text-[10px] status-ok font-bold';
 
         // Start Heartbeat & Sync
@@ -35,7 +36,7 @@ async function initWasm() {
     }
 }
 
-// ── Heartbeat Mechanism (WASP v3) ──────────────────────────
+// ── Heartbeat Mechanism (WASP v4) ──────────────────────────
 function startHeartbeat() {
     heartbeatInterval = setInterval(() => {
         if (!wasmReady) return;
@@ -46,10 +47,10 @@ function startHeartbeat() {
             document.getElementById('hb-val').textContent = hb;
 
             if (hb === lastHeartbeat && hb > 0) {
-                log('🚨 CRITICAL: WASM Runtime Stall Detected! Pointer Poisoning Initiated.', 'error');
-                document.getElementById('anomaly-status').textContent = 'STALLED';
+                log('🚨 CRITICAL: WASM Runtime Stall v4 Detected! Activating Macuahuitl Metal v5.', 'error');
+                document.getElementById('anomaly-status').textContent = 'STALLED_V4';
                 document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-                applyGlitchEffect();
+                applyGlitchEffect(true);
             }
             lastHeartbeat = hb;
         } catch (e) {
@@ -64,11 +65,11 @@ async function syncBlacklist() {
     try {
         const blacklist = JSON.parse(get_global_blacklist_wasm());
         if (blacklist.length > 0) {
-            log(`📡 Guerrilla Mesh: ${blacklist.length} nodes synchronized.`, 'info');
+            log(`📡 Guerrilla Mesh v4: ${blacklist.length} nodes verified via Node-7.`, 'info');
             document.getElementById('nodes-sync').textContent = `${blacklist.length} NODES`;
         }
     } catch (e) {
-        log('P2P_SYNC_ERROR: UNABLE TO CONTACT GUERRILLA_NODES', 'error');
+        log('P2P_SYNC_ERROR: UNABLE TO CONTACT GUERRILLAMESH CLUSTER', 'error');
     }
 }
 
@@ -112,30 +113,45 @@ async function apiFetch(endpoint, opts = {}) {
 }
 
 // ── Visual Effects ──────────────────────────────────────────
-function applyGlitchEffect() {
+function applyGlitchEffect(isSevere = false) {
     const body = document.body;
+    const duration = isSevere ? 1000 : 400;
     body.classList.add('glitch');
-    setTimeout(() => body.classList.remove('glitch'), 400);
+    if (isSevere) {
+        body.style.filter = 'hue-rotate(90deg) contrast(200%)';
+    }
+    setTimeout(() => {
+        body.classList.remove('glitch');
+        body.style.filter = '';
+    }, duration);
 }
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V3.1';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V4.0';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION V3.1 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Delivering v4 Chaotic Poisoning & Entropy Trap...', 'error');
-    applyGlitchEffect();
+    log(`💀 AGGRESSION V4.0 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION_V4: Arming Node-7 Mesh Integrity & Metal Sink Trap...', 'error');
+    applyGlitchEffect(true);
 
     // Trigger WASM retaliation hook if available
     try {
         if (wasmReady) {
+            trigger_v5_retaliation(JSON.stringify({
+                source: "DASHBOARD_V4",
+                vector: "PHASE_BLACK_TRIGGER",
+                timestamp: Date.now()
+            }));
+
             analyze_and_retaliate(JSON.stringify({
-                source: "DASHBOARD_INJECTION",
-                raw: "T1485_RANSOMWARE_V3.1",
+                source: "DASHBOARD_INJECTION_V4",
+                raw: "T1485_RANSOMWARE_v4.0_GUERRILLAMESH",
                 timestamp_ms: Date.now()
             }));
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error("WASM Retaliation Error:", e);
+    }
 }
 
 // ── Metrics & Anomaly Logic ─────────────────────────────────
@@ -157,7 +173,8 @@ async function refreshMetrics() {
     }
 
     if (data.features) {
-        const entropy = 7.5 + (data.features[0] % 0.5);
+        // Mock entropy display from v4 features
+        const entropy = 7.7 + (data.features[0] % 0.3);
         document.getElementById('entropy-val').textContent = entropy.toFixed(2);
     }
 }
@@ -176,18 +193,18 @@ function updateScoreUI(score, threshold) {
 
 // ── UI Actions ──────────────────────────────────────────────
 window.triggerScan = async () => {
-    log('> Neural Aggression Scan Initiated...', 'info');
+    log('> Guerrilla Aggression Scan Initiated (v4.0)...', 'info');
     await refreshMetrics();
 };
 
 window.triggerRetaliationDemo = () => {
-    log('> SIMULATING AGGRESSION VECTOR: Ransomware_T1485_V3', 'warn');
+    log('> SIMULATING v4.0 AGGRESSION VECTOR: Ransomware_T1485_Guerrilla', 'warn');
     triggerPhaseBlack(0.999999);
 };
 
 window.updateThreshold = (val) => {
     document.getElementById('threshold-val').textContent = val;
-    log(`Aggression threshold recalibrated to: ${val}`, 'info');
+    log(`Aggression threshold recalibrated v4: ${val}`, 'info');
 };
 
 // ── System Boot ─────────────────────────────────────────────
@@ -200,7 +217,7 @@ async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v3.0', 'info');
+    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v4.0 (GUERRILLAMESH)', 'info');
     await initWasm();
 
     await refreshMetrics();

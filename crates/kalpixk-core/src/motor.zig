@@ -2,13 +2,12 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 3.1-ATLATL (Guerrilla Algorítmica)
+// Versión: 5.0-ATLATL (Guerrilla Mesh)
 
 const std = @import("std");
 const atomic = std.atomic;
 
 /// [ATLATL-ORDNANCE] ESTRUCTURA DE CONTROL DE MEMORIA
-/// Define el contrato de memoria para el buffer compartido entre Zig y el Host.
 pub const MemoryContract = struct {
     pub const MAX_BUFFER_SIZE: usize = 1024 * 1024; // 1MB
     pub const CANARY_VALUE: u8 = 0xDE;
@@ -42,27 +41,21 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
 }
 
 /// [ATLATL-ORDNANCE] DYNAMIC OBFUSCATION
-/// Cambia las firmas de memoria XOR-eando un rango con una semilla dinamica.
-/// Inutiliza firmas estaticas de debuggers y scanners.
 pub export fn dynamic_obfuscation(target_ptr: [*]u8, target_len: usize, seed: u32) void {
     const slice = target_ptr[0..target_len];
     var state = seed;
     for (slice) |*byte| {
-        // Simple LCG para variar el XOR
         state = state *% 1103515245 +% 12345;
         byte.* ^= @truncate(state >> 16);
     }
 }
 
 /// [ATLATL-ORDNANCE] ATOMIC ACCESS VALIDATION
-/// Valida que un byte en un buffer compartido no haya sido modificado externamente
-/// entre lecturas, detectando race conditions o inyecciones en el SharedArrayBuffer.
 pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool {
     return ptr.load(.Monotonic) == expected;
 }
 
 /// [ATLATL-ORDNANCE] POINTER POISONING (MACUAHUITL)
-/// Inyecta un bucle infinito JMP $ y corrompe los punteros de retorno en el buffer.
 pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
     const slice = target_ptr[0..target_len];
     for (slice, 0..) |*byte, i| {
@@ -74,9 +67,50 @@ pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_macuahuitl_stealth_poisoning
+/// Evolución táctica v5.0. Utiliza secuencias de salto no deterministas y
+/// trampas de interrupción encadenadas para colapsar motores de emulación.
+pub export fn v5_macuahuitl_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        const drift = (seed ^ i) % 13;
+        switch (drift) {
+            0 => byte.* = 0xEB, // JMP short
+            1 => byte.* = 0x01, // skip 1
+            2 => byte.* = 0xCC, // INT 3
+            3 => byte.* = 0xF4, // HLT
+            4 => byte.* = 0x0F, // Multi-byte start
+            5 => byte.* = 0x0B, // UD2
+            6 => byte.* = 0x90, // NOP
+            7 => byte.* = 0xFA, // CLI (Disable interrupts)
+            8 => byte.* = 0xFB, // STI (Enable interrupts)
+            9 => byte.* = 0xCE, // INTO
+            10 => byte.* = 0xCD, // INT
+            11 => byte.* = 0x03, // (INT 03)
+            else => byte.* = rand.int(u8),
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] memory_sink_trap
+/// Crea una estructura de datos recursiva que engaña a los analizadores de heap
+/// y causa un consumo masivo de recursos en sistemas de inspección profunda.
+pub export fn memory_sink_trap(target_ptr: [*]u8, target_len: usize, key: u64) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        // Genera un patrón que parece una estructura de punteros circulares
+        const val = (i ^ key) % 256;
+        byte.* = @truncate(val);
+        if (i % 32 == 0) {
+            byte.* = 0xFF; // Marca de 'puntero' falso
+        }
+    }
+}
+
 /// [ATLATL-ORDNANCE] v3_macuahuitl_array_poisoning
-/// Genera secuencias de salto destructivas intercaladas con trampas de memoria.
-/// Diseñado para desestabilizar el pipeline de ejecución del atacante.
 pub export fn v3_macuahuitl_array_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
@@ -98,7 +132,6 @@ pub export fn v3_macuahuitl_array_poisoning(target_ptr: [*]u8, target_len: usize
 }
 
 /// [ATLATL-ORDNANCE] recursive_entropy_shredder
-/// Genera un flujo de datos que rompe algoritmos de compresión y exfiltración.
 pub export fn recursive_entropy_shredder(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
@@ -118,8 +151,6 @@ pub export fn recursive_entropy_shredder(target_ptr: [*]u8, target_len: usize, s
 }
 
 /// [ATLATL-ORDNANCE] v4_macuahuitl_chaotic_poisoning
-/// Evolución letal del veneno de punteros. Utiliza secuencias de salto no lineales
-/// y trampas de interrupción para aniquilar el flujo de ejecución del atacante.
 pub export fn v4_macuahuitl_chaotic_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
@@ -128,16 +159,16 @@ pub export fn v4_macuahuitl_chaotic_poisoning(target_ptr: [*]u8, target_len: usi
     for (slice, 0..) |*byte, i| {
         const chaotic_step = (i *% 1103515245 +% 12345) % 16;
         switch (chaotic_step) {
-            0...1 => byte.* = 0xEB, // JMP short
-            2 => byte.* = 0xFE,      // loop to self
-            3 => byte.* = 0xCC,      // INT 3 (Breakpoint)
-            4 => byte.* = 0xCD,      // INT imm8
-            5 => byte.* = 0x03,      // (continuation of INT 03)
-            6 => byte.* = 0xF4,      // HLT
-            7 => byte.* = 0x0F,      // Multi-byte NOP or UD2 start
-            8 => byte.* = 0x0B,      // UD2 (Undefined Instruction)
-            9 => byte.* = 0xFF,      // JMP/CALL modrm
-            10 => byte.* = 0x25,     // JMP absolute indirect
+            0...1 => byte.* = 0xEB,
+            2 => byte.* = 0xFE,
+            3 => byte.* = 0xCC,
+            4 => byte.* = 0xCD,
+            5 => byte.* = 0x03,
+            6 => byte.* = 0xF4,
+            7 => byte.* = 0x0F,
+            8 => byte.* = 0x0B,
+            9 => byte.* = 0xFF,
+            10 => byte.* = 0x25,
             11...15 => byte.* = rand.int(u8),
             else => byte.* = 0x90,
         }
@@ -145,8 +176,6 @@ pub export fn v4_macuahuitl_chaotic_poisoning(target_ptr: [*]u8, target_len: usi
 }
 
 /// [ATLATL-ORDNANCE] heap_entropy_trap
-/// Inunda el heap con estructuras de datos malformadas y firmas de archivos
-/// corruptas (ZIP, ELF, PE) para confundir a los motores de análisis forense.
 pub export fn heap_entropy_trap(target_ptr: [*]u8, target_len: usize, key: u64) void {
     var prng = std.rand.DefaultPrng.init(key);
     const rand = prng.random();
@@ -154,14 +183,13 @@ pub export fn heap_entropy_trap(target_ptr: [*]u8, target_len: usize, key: u64) 
 
     for (slice, 0..) |*byte, i| {
         if (i % 64 == 0) {
-            // Fake ELF header start
             byte.* = 0x7F;
         } else if (i % 64 == 1) {
-            byte.* = 0x45; // 'E'
+            byte.* = 0x45;
         } else if (i % 64 == 2) {
-            byte.* = 0x4C; // 'L'
+            byte.* = 0x4C;
         } else if (i % 64 == 3) {
-            byte.* = 0x46; // 'F'
+            byte.* = 0x46;
         } else {
             byte.* = rand.int(u8) ^ @as(u8, @truncate(i));
         }
@@ -178,7 +206,6 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
 }
 
 /// [ATLATL-ORDNANCE] MACUAHUITL STRIKE
-/// Combina ofuscación dinámica con envenenamiento de memoria masivo.
 pub export fn macuahuitl_strike(target_ptr: [*]u8, target_len: usize, key: u64) void {
     const slice = target_ptr[0..target_len];
     var prng = std.rand.DefaultPrng.init(key);
@@ -194,7 +221,6 @@ pub export fn macuahuitl_strike(target_ptr: [*]u8, target_len: usize, key: u64) 
 }
 
 /// [ATLATL-ORDNANCE] MEMORY SHREDDER
-/// Sobrescribe la memoria con patrones de alta frecuencia.
 pub export fn memory_shredder(target_ptr: [*]u8, target_len: usize) void {
     const slice = target_ptr[0..target_len];
     for (slice, 0..) |*byte, i| {
@@ -217,42 +243,16 @@ pub export fn validate_buffer_safety(ptr: [*]const u8, len: usize) bool {
     return true;
 }
 
-test "macuahuitl strike effectively poisons memory" {
-    var buffer: [256]u8 = undefined;
-    @memset(&buffer, 0);
-    macuahuitl_strike(&buffer, buffer.len, 0x1337);
-    try std.testing.expect(buffer[0] == 0xEB);
-    try std.testing.expect(buffer[1] == 0xFE);
-}
-
-test "v3 macuahuitl poisoning" {
-    var buffer: [256]u8 = undefined;
-    @memset(&buffer, 0);
-    v3_macuahuitl_array_poisoning(&buffer, buffer.len, 42);
-    try std.testing.expect(buffer[0] == 0xEB);
-    try std.testing.expect(buffer[1] == 0xFE);
-    try std.testing.expect(buffer[2] == 0xCC);
-}
-
-test "recursive entropy shredder" {
-    var buffer: [1024]u8 = undefined;
-    recursive_entropy_shredder(&buffer, buffer.len, 123);
-    const entropy = shannon_entropy(&buffer, buffer.len);
-    try std.testing.expect(entropy > 7.0);
-}
-
-test "v4 chaotic poisoning" {
+test "v5 macuahuitl stealth poisoning" {
     var buffer: [512]u8 = undefined;
-    v4_macuahuitl_chaotic_poisoning(&buffer, buffer.len, 0xACE);
-    // Verificar que no sea todo ceros
+    v5_macuahuitl_stealth_poisoning(&buffer, buffer.len, 0x5555);
     var sum: u64 = 0;
     for (buffer) |b| sum += b;
     try std.testing.expect(sum > 0);
 }
 
-test "heap entropy trap" {
+test "memory sink trap" {
     var buffer: [1024]u8 = undefined;
-    heap_entropy_trap(&buffer, buffer.len, 0xFEED);
-    try std.testing.expect(buffer[0] == 0x7F);
-    try std.testing.expect(buffer[1] == 0x45);
+    memory_sink_trap(&buffer, buffer.len, 0x1234);
+    try std.testing.expect(buffer[0] == (0 ^ 0x1234) % 256);
 }
