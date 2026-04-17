@@ -45,7 +45,7 @@ _boot_time = time.time()
 
 
 class LogRequest(BaseModel):
-    features: list[float]          # Vector de 32 features del WASM core
+    features: list[float]  # Vector de 32 features del WASM core
     raw_log: str | None = None  # Log original para el LLM explicador
     source: str | None = "unknown"
 
@@ -75,7 +75,7 @@ async def status():
         "status": "ok",
         "module": "kalpixk-api",
         "device": str(_device),
-        "model_trained": _ensemble is not None and getattr(_ensemble, '_trained', False),
+        "model_trained": _ensemble is not None and getattr(_ensemble, "_trained", False),
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
     }
@@ -95,20 +95,19 @@ async def analyze(req: LogRequest):
     latency = (time.time() - t0) * 1000
 
     severity = (
-        "CRITICAL" if score > 0.8
-        else "HIGH" if score > 0.6
-        else "MEDIUM" if score > 0.4
-        else "LOW"
+        "CRITICAL" if score > 0.8 else "HIGH" if score > 0.6 else "MEDIUM" if score > 0.4 else "LOW"
     )
 
     # Broadcast a clientes WebSocket conectados
     if _ws_clients and is_anomaly:
-        alert = msgpack.packb({
-            "type": "anomaly",
-            "score": float(score),
-            "severity": severity,
-            "source": req.source,
-        })
+        alert = msgpack.packb(
+            {
+                "type": "anomaly",
+                "score": float(score),
+                "severity": severity,
+                "source": req.source,
+            }
+        )
         for ws in _ws_clients[:]:
             try:
                 await ws.send_bytes(alert)
@@ -149,11 +148,13 @@ async def ws_stream(ws: WebSocket):
             if len(features) == 32:
                 arr = np.array([features], dtype=np.float32)
                 score, is_anomaly = _ensemble.predict(arr)
-                response = msgpack.packb({
-                    "score": float(score),
-                    "is_anomaly": bool(is_anomaly),
-                    "severity": "HIGH" if score > 0.6 else "LOW",
-                })
+                response = msgpack.packb(
+                    {
+                        "score": float(score),
+                        "is_anomaly": bool(is_anomaly),
+                        "severity": "HIGH" if score > 0.6 else "LOW",
+                    }
+                )
                 await ws.send_bytes(response)
     except WebSocketDisconnect:
         _ws_clients.remove(ws)
@@ -166,15 +167,37 @@ async def get_feature_names():
         "feature_dim": 32,
         "contract_version": "1.0.0",
         "features": [
-            "event_type_encoded", "local_severity", "hour_of_day", "day_of_week",
-            "is_weekend", "is_off_hours", "source_is_internal", "destination_exists",
-            "has_user", "source_entropy", "user_entropy", "metadata_field_count",
-            "is_privileged_port", "dst_port_normalized", "bytes_log10_normalized",
-            "has_db_keyword", "has_destructive_op", "is_sensitive_table",
-            "has_bulk_operation", "has_network_scan_sig", "is_privileged_account",
-            "process_is_known", "has_lateral_movement", "source_is_cloud",
-            "raw_length_normalized", "has_base64_payload", "has_powershell_sig",
-            "windows_event_risk", "db2_operation_risk", "netflow_risk",
-            "composite_risk_1", "composite_risk_2",
-        ]
+            "event_type_encoded",
+            "local_severity",
+            "hour_of_day",
+            "day_of_week",
+            "is_weekend",
+            "is_off_hours",
+            "source_is_internal",
+            "destination_exists",
+            "has_user",
+            "source_entropy",
+            "user_entropy",
+            "metadata_field_count",
+            "is_privileged_port",
+            "dst_port_normalized",
+            "bytes_log10_normalized",
+            "has_db_keyword",
+            "has_destructive_op",
+            "is_sensitive_table",
+            "has_bulk_operation",
+            "has_network_scan_sig",
+            "is_privileged_account",
+            "process_is_known",
+            "has_lateral_movement",
+            "source_is_cloud",
+            "raw_length_normalized",
+            "has_base64_payload",
+            "has_powershell_sig",
+            "windows_event_risk",
+            "db2_operation_risk",
+            "netflow_risk",
+            "composite_risk_1",
+            "composite_risk_2",
+        ],
     }

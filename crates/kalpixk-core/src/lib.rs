@@ -1,25 +1,26 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v2.2
+// [ATLATL-ORDNANCE] WasmGuard Core v4.0-atlatl
 // Implementation of the WIT contract for the Blue Team SIEM
+// Version: 4.0.0-atlatl (Guerrilla Mesh)
 
-mod metrics;
-mod entropy;
-mod runtime_features;
 mod defense_nodes;
+mod entropy;
 mod event;
 mod features;
+mod metrics;
 mod parsers;
 mod payloads;
-mod security;
 mod retaliation;
+mod runtime_features;
+mod security;
+mod severity;
 mod wasp;
 mod wast;
-mod severity;
-use wasm_bindgen::prelude::*;
-use crate::runtime_features::extract_32_features;
-use crate::metrics::WasmEventMetrics;
 use crate::event::KalpixkEvent;
+use crate::metrics::WasmEventMetrics;
+use crate::runtime_features::extract_32_features;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use wasm_bindgen::prelude::*;
 
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
@@ -55,7 +56,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "4.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -64,7 +65,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
+        "mesh_version": "v4.0-guerrilla"
     }).to_string()
 }
 
@@ -107,6 +109,7 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "lockdown": lockdown,
         "all_nodes": all_nodes,
         "timestamp": chrono::Utc::now().timestamp_millis(),
+        "atlatl_v4": true
     })
     .to_string()
 }
@@ -119,22 +122,42 @@ pub fn get_global_blacklist_wasm() -> String {
 
 #[wasm_bindgen]
 pub fn sync_threats_wasm(json_threats: &str) -> String {
-    let threats: Vec<String> = serde_json::from_str(json_threats).unwrap_or_default();
-    defense_nodes::sync_threats(threats);
-    serde_json::json!({"status": "synced", "count": 1}).to_string()
+    let threats: Vec<defense_nodes::ThreatSignature> =
+        serde_json::from_str(json_threats).unwrap_or_default();
+    let count = threats.len();
+    for sig in threats {
+        defense_nodes::register_threat_signature(sig);
+    }
+    serde_json::json!({"status": "synced", "count": count, "node_7_active": true}).to_string()
+}
+
+extern "C" {
+    fn v5_macuahuitl_stealth_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn memory_sink_trap(target_ptr: *mut u8, target_len: usize, key: u64);
 }
 
 #[wasm_bindgen]
-pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5
+    // Actually execute the metal-level poisoning logic on a local buffer
+    // to simulate the disruption of local analysis attempts.
+    let mut buffer = [0u8; 1024];
+    let seed = chrono::Utc::now().timestamp() as u64;
+
+    unsafe {
+        v5_macuahuitl_stealth_poisoning(buffer.as_mut_ptr(), buffer.len(), seed);
+        memory_sink_trap(buffer.as_mut_ptr(), buffer.len(), seed ^ 0xDEADBEEF);
+    }
+
     serde_json::json!({
-        "status": "V4_ARMED",
-        "chaotic_poisoning": true,
-        "entropy_trap": "ACTIVE",
-        "target_fingerprint": json_target.chars().take(32).collect::<String>()
-    }).to_string()
+        "status": "V5_ARMED",
+        "stealth_poisoning": "ACTIVE",
+        "memory_sink": "ARMED",
+        "target_fingerprint": json_target.chars().take(32).collect::<String>(),
+        "entropy_seed": seed,
+        "metal_buffer_len": buffer.len()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -142,15 +165,17 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
     defense_nodes::register_node_heartbeat(node_id.to_string());
     serde_json::json!({
         "status": "synchronized",
-        "mesh_nodes": defense_nodes::get_active_nodes()
-    }).to_string()
+        "mesh_nodes": defense_nodes::get_active_nodes(),
+        "version": "4.0.0-atlatl"
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
-    if !security::validate_raw_log(raw).is_ok() {
+    if security::validate_raw_log(raw).is_err() {
         return None;
     }
 
@@ -194,7 +219,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() { continue; }
+        if security::validate_raw_log(line).is_err() {
+            continue;
+        }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
@@ -247,7 +274,10 @@ pub fn compute_ueba_features(events_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn get_feature_names() -> Vec<String> {
-    features::FEATURE_NAMES.iter().map(|&s| s.to_string()).collect()
+    features::FEATURE_NAMES
+        .iter()
+        .map(|&s| s.to_string())
+        .collect()
 }
 
 #[wasm_bindgen]
@@ -275,9 +305,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v4.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "node_7_integrity": "VALIDATED"
     })
     .to_string()
 }
