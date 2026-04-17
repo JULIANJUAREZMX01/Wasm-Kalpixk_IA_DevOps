@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from loguru import logger
 from fastapi import FastAPI, Depends, Security, HTTPException, status, Request
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from typing import List
@@ -67,6 +68,14 @@ class TrainPayload(BaseModel):
     epochs: int = Field(50, ge=1, le=500)
 
 # -- API Security --
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        return response
+
 limiter = Limiter(key_func=get_remote_address)
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
@@ -106,6 +115,7 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=False,
 )
+app.add_middleware(SecurityHeadersMiddleware)
 
 @app.get("/health")
 def health():
