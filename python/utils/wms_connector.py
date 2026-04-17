@@ -25,23 +25,39 @@ import logging
 import os
 import random
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator, Generator, Optional
+from collections.abc import Generator
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 logger = logging.getLogger("kalpixk.wms_connector")
 
 # ── SAC-monitored tables (22 critical queries in the WMS) ────────────────────
 SAC_TABLES = [
-    "INVENTORY", "SHIPMENT", "ORDER_HEADER", "ORDER_DETAIL",
-    "EMPLOYEE",  "WMS_USER", "VENDOR",       "BILLING",
-    "CARTON",    "TASK_DETAIL", "PICK_DETAIL", "RECEIPT_DETAIL",
-    "LOCATION",  "ITEM_MASTER", "WAVE",        "PUTAWAY_DIRECTIVE",
-    "CONTAINER", "CARRIER",     "CLIENT",      "ZONE",
-    "WORK_QUEUE", "LABOR_ACTIVITY",
+    "INVENTORY",
+    "SHIPMENT",
+    "ORDER_HEADER",
+    "ORDER_DETAIL",
+    "EMPLOYEE",
+    "WMS_USER",
+    "VENDOR",
+    "BILLING",
+    "CARTON",
+    "TASK_DETAIL",
+    "PICK_DETAIL",
+    "RECEIPT_DETAIL",
+    "LOCATION",
+    "ITEM_MASTER",
+    "WAVE",
+    "PUTAWAY_DIRECTIVE",
+    "CONTAINER",
+    "CARRIER",
+    "CLIENT",
+    "ZONE",
+    "WORK_QUEUE",
+    "LABOR_ACTIVITY",
 ]
 
-AUTHIDS_NORMAL  = ["WMS_OPS", "WMS_APP", "CEDIS_ETL", "REPORT_USER", "MONITOR"]
+AUTHIDS_NORMAL = ["WMS_OPS", "WMS_APP", "CEDIS_ETL", "REPORT_USER", "MONITOR"]
 AUTHIDS_SUSPECT = ["ROOT", "UNKNOWN", "TEST_USER", "BACKUP_OP"]
 HOSTNAMES_CEDIS = ["cedis_427", "cedis_428", "cedis_mgt01", "appserver01", "cedis_backup"]
 
@@ -49,15 +65,16 @@ HOSTNAMES_CEDIS = ["cedis_427", "cedis_428", "cedis_mgt01", "appserver01", "cedi
 @dataclass
 class WmsLogEntry:
     """Structured representation of a single DB2 audit log entry."""
-    timestamp:    datetime
-    authid:       str
-    hostname:     str
-    operation:    str          # EXECUTE, CONNECT, DISCONNECT, GRANT, REVOKE, etc.
-    statement:    str
-    return_code:  int          # SQLCODE: 0 = success, negative = error/denial
+
+    timestamp: datetime
+    authid: str
+    hostname: str
+    operation: str  # EXECUTE, CONNECT, DISCONNECT, GRANT, REVOKE, etc.
+    statement: str
+    return_code: int  # SQLCODE: 0 = success, negative = error/denial
     rows_affected: int
-    database:     str = "WMSDB"
-    object_name:  Optional[str] = None   # Table or object involved
+    database: str = "WMSDB"
+    object_name: str | None = None  # Table or object involved
 
     def to_kalpixk_log(self) -> str:
         """
@@ -82,24 +99,44 @@ class WmsLogEntry:
     @property
     def is_suspicious(self) -> bool:
         s = self.statement.upper()
-        return any(kw in s for kw in ["DROP", "TRUNCATE", "GRANT", "REVOKE",
-                                       "EXPORT", "LOAD", "IMPORT", "CREATE USER",
-                                       "ALTER USER", "ALTER TABLE"])
+        return any(
+            kw in s
+            for kw in [
+                "DROP",
+                "TRUNCATE",
+                "GRANT",
+                "REVOKE",
+                "EXPORT",
+                "LOAD",
+                "IMPORT",
+                "CREATE USER",
+                "ALTER USER",
+                "ALTER TABLE",
+            ]
+        )
 
     @property
     def severity_hint(self) -> float:
         """Local severity estimate before WASM parsing."""
-        if self.return_code < 0:        return 0.3   # Denied/error
-        if "DROP"      in self.statement.upper(): return 0.95
-        if "EXPORT"    in self.statement.upper(): return 0.80
-        if "GRANT"     in self.statement.upper(): return 0.75
-        if "IMPORT"    in self.statement.upper(): return 0.70
-        if self.authid in AUTHIDS_SUSPECT:        return 0.65
-        if self.rows_affected > 100_000:          return 0.60
+        if self.return_code < 0:
+            return 0.3  # Denied/error
+        if "DROP" in self.statement.upper():
+            return 0.95
+        if "EXPORT" in self.statement.upper():
+            return 0.80
+        if "GRANT" in self.statement.upper():
+            return 0.75
+        if "IMPORT" in self.statement.upper():
+            return 0.70
+        if self.authid in AUTHIDS_SUSPECT:
+            return 0.65
+        if self.rows_affected > 100_000:
+            return 0.60
         return 0.15
 
 
 # ── Connector ─────────────────────────────────────────────────────────────────
+
 
 class WmsConnector:
     """
@@ -118,10 +155,10 @@ class WmsConnector:
         batch_size: int = 100,
     ):
         assert mode in ("file", "db2", "mock"), f"Invalid mode: {mode}"
-        self.mode           = mode
+        self.mode = mode
         self.audit_log_path = audit_log_path
-        self.batch_size     = batch_size
-        self._connection    = None
+        self.batch_size = batch_size
+        self._connection = None
 
         if mode == "db2":
             self._connect_db2()
@@ -139,6 +176,7 @@ class WmsConnector:
             return
         try:
             import ibm_db  # type: ignore
+
             self._connection = ibm_db.connect(conn_str, "", "")
             logger.info("DB2 connection established")
         except Exception as e:
@@ -155,7 +193,7 @@ class WmsConnector:
         dispatch = {
             "mock": self._stream_mock,
             "file": self._stream_file,
-            "db2":  self._stream_db2_query,
+            "db2": self._stream_db2_query,
         }
         yield from dispatch[self.mode]()
 
@@ -176,7 +214,7 @@ class WmsConnector:
         Suitable for local development and CI testing.
         """
         rng = random.Random(42)
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
         idx = 0
 
         # Anomaly injection schedule (every ~50 events inject 1 anomaly)
@@ -201,73 +239,90 @@ class WmsConnector:
 
         if is_anomaly:
             # Inject anomalous patterns
-            anomaly_type = rng.choice([
-                "drop_table", "bulk_export", "privilege_grant",
-                "off_hours_access", "unknown_user", "mass_select",
-            ])
+            anomaly_type = rng.choice(
+                [
+                    "drop_table",
+                    "bulk_export",
+                    "privilege_grant",
+                    "off_hours_access",
+                    "unknown_user",
+                    "mass_select",
+                ]
+            )
 
             if anomaly_type == "drop_table":
                 return WmsLogEntry(
-                    timestamp=ts, authid="ROOT",
+                    timestamp=ts,
+                    authid="ROOT",
                     hostname="10.0.3.99",
                     operation="EXECUTE",
                     statement=f"DROP TABLE {table}",
-                    return_code=-551, rows_affected=0,
+                    return_code=-551,
+                    rows_affected=0,
                 )
             elif anomaly_type == "bulk_export":
                 return WmsLogEntry(
-                    timestamp=ts, authid=rng.choice(AUTHIDS_SUSPECT),
+                    timestamp=ts,
+                    authid=rng.choice(AUTHIDS_SUSPECT),
                     hostname="cedis_backup",
                     operation="EXPORT",
                     statement=f"EXPORT TO /tmp/dump_{ts.strftime('%H%M')}.csv OF DEL "
-                              f"SELECT * FROM {table}",
-                    return_code=0, rows_affected=rng.randint(10_000, 500_000),
+                    f"SELECT * FROM {table}",
+                    return_code=0,
+                    rows_affected=rng.randint(10_000, 500_000),
                 )
             elif anomaly_type == "privilege_grant":
                 return WmsLogEntry(
-                    timestamp=ts, authid="WMS_OPS",
+                    timestamp=ts,
+                    authid="WMS_OPS",
                     hostname=rng.choice(HOSTNAMES_CEDIS),
                     operation="GRANT",
                     statement=f"GRANT SELECT, INSERT, UPDATE ON {table} TO PUBLIC",
-                    return_code=0, rows_affected=0,
+                    return_code=0,
+                    rows_affected=0,
                 )
             elif anomaly_type == "off_hours_access":
                 off_ts = ts.replace(hour=rng.randint(1, 5))
                 return WmsLogEntry(
-                    timestamp=off_ts, authid=rng.choice(AUTHIDS_SUSPECT),
+                    timestamp=off_ts,
+                    authid=rng.choice(AUTHIDS_SUSPECT),
                     hostname="10.0.99.44",
                     operation="EXECUTE",
                     statement=f"SELECT * FROM {table} FETCH FIRST 1000000 ROWS ONLY",
-                    return_code=0, rows_affected=rng.randint(50_000, 200_000),
+                    return_code=0,
+                    rows_affected=rng.randint(50_000, 200_000),
                 )
             elif anomaly_type == "unknown_user":
                 return WmsLogEntry(
-                    timestamp=ts, authid="UNKNOWN_USER",
+                    timestamp=ts,
+                    authid="UNKNOWN_USER",
                     hostname="external_host",
                     operation="CONNECT",
                     statement="CONNECT TO WMSDB",
-                    return_code=-1060, rows_affected=0,
+                    return_code=-1060,
+                    rows_affected=0,
                 )
             else:  # mass_select
                 return WmsLogEntry(
-                    timestamp=ts, authid=rng.choice(AUTHIDS_NORMAL),
+                    timestamp=ts,
+                    authid=rng.choice(AUTHIDS_NORMAL),
                     hostname=rng.choice(HOSTNAMES_CEDIS),
                     operation="EXECUTE",
                     statement=f"SELECT * FROM {table}",
-                    return_code=0, rows_affected=rng.randint(500_000, 2_000_000),
+                    return_code=0,
+                    rows_affected=rng.randint(500_000, 2_000_000),
                 )
 
         # Normal operation
         loc_id = f"A-{rng.randint(1, 99):02d}"
         op_type = rng.choices(
-            ["SELECT", "UPDATE", "INSERT", "DELETE"],
-            weights=[0.70, 0.15, 0.10, 0.05]
+            ["SELECT", "UPDATE", "INSERT", "DELETE"], weights=[0.70, 0.15, 0.10, 0.05]
         )[0]
 
         stmt_map = {
             "SELECT": f"SELECT LOC_ID, QTY, ITEM_ID FROM {table} WHERE LOC_ID='{loc_id}'",
-            "UPDATE": f"UPDATE {table} SET QTY=QTY-1 WHERE LOC_ID='{loc_id}' AND ITEM_ID='{rng.randint(100,999):03d}'",
-            "INSERT": f"INSERT INTO {table} (LOC_ID, QTY, ITEM_ID, TS) VALUES ('{loc_id}', 1, '{rng.randint(100,999):03d}', CURRENT TIMESTAMP)",
+            "UPDATE": f"UPDATE {table} SET QTY=QTY-1 WHERE LOC_ID='{loc_id}' AND ITEM_ID='{rng.randint(100, 999):03d}'",
+            "INSERT": f"INSERT INTO {table} (LOC_ID, QTY, ITEM_ID, TS) VALUES ('{loc_id}', 1, '{rng.randint(100, 999):03d}', CURRENT TIMESTAMP)",
             "DELETE": f"DELETE FROM {table} WHERE SHIP_ID='{rng.randint(10000, 99999)}'",
         }
 
@@ -287,10 +342,13 @@ class WmsConnector:
     def _stream_file(self) -> Generator[str, None, None]:
         """Tail the DB2 audit log file in real-time."""
         import subprocess
+
         try:
             proc = subprocess.Popen(
                 ["tail", "-F", self.audit_log_path],
-                stdout=subprocess.PIPE, text=True, bufsize=1,
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
             )
             logger.info(f"Tailing {self.audit_log_path}")
             for line in proc.stdout:
@@ -313,7 +371,8 @@ class WmsConnector:
 
         try:
             import ibm_db  # type: ignore
-            last_ts = datetime.now(timezone.utc) - timedelta(minutes=5)
+
+            last_ts = datetime.now(UTC) - timedelta(minutes=5)
 
             while True:
                 sql = f"""
@@ -327,7 +386,7 @@ class WmsConnector:
                 row = ibm_db.fetch_assoc(stmt)
                 while row:
                     entry = WmsLogEntry(
-                        timestamp=row.get("TIMESTAMP", datetime.now(timezone.utc)),
+                        timestamp=row.get("TIMESTAMP", datetime.now(UTC)),
                         authid=row.get("AUTHID", "UNKNOWN"),
                         hostname=row.get("APPID", "unknown"),
                         operation="EXECUTE",
@@ -353,26 +412,3 @@ class WmsConnector:
             "connected": self._connection is not None,
             "monitored_tables": len(SAC_TABLES),
         }
-            logger.warning(f"Audit log not found: {audit_log_path}. Using mock.")
-            yield from self._mock_logs()
-
-    def _mock_logs(self) -> Generator[str, None, None]:
-        """Generate realistic mock logs for development/testing."""
-        import random
-        from datetime import timedelta
-
-        templates = [
-            "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=SELECT * FROM INVENTORY WHERE LOC_ID='{loc}' SQLCODE=0 ROWS={n}",
-            "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=UPDATE SHIPMENT SET STATUS='SHIPPED' WHERE SHIP_ID='{sid}' SQLCODE=0 ROWS=1",
-            "TIMESTAMP={ts} AUTHID=ROOT HOSTNAME=cedis_427 SQL=EXPORT TO /tmp/data.csv OF DEL SELECT * FROM ORDER_HEADER SQLCODE=0 ROWS={n}",
-            "TIMESTAMP={ts} AUTHID=UNKNOWN HOSTNAME=10.0.3.99 SQL=DROP TABLE WMS_USER SQLCODE=-551 ROWS=0",
-            "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=GRANT SELECT ON INVENTORY TO PUBLIC SQLCODE=0 ROWS=0",
-        ]
-        base_time = datetime.now(UTC)
-        for i in range(100): # Limited to 100 for shorter runs
-            ts = (base_time - timedelta(seconds=i * 30)).strftime("%Y-%m-%d %H:%M:%S")
-            tpl = random.choice(templates)
-            yield tpl.format(
-                ts=ts, loc=f"A-{random.randint(1,99):02d}", n=random.randint(1, 5000),
-                sid=f"SHP{random.randint(10000, 99999)}"
-            )

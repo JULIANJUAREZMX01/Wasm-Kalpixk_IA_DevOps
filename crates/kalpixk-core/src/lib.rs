@@ -3,24 +3,24 @@
 // Implementation of the WIT contract for the Blue Team SIEM
 // Version: 4.0.0-atlatl (Guerrilla Mesh)
 
-mod metrics;
-mod entropy;
-mod runtime_features;
 mod defense_nodes;
+mod entropy;
 mod event;
 mod features;
+mod metrics;
 mod parsers;
 mod payloads;
-mod security;
 mod retaliation;
+mod runtime_features;
+mod security;
+mod severity;
 mod wasp;
 mod wast;
-mod severity;
-use wasm_bindgen::prelude::*;
-use crate::runtime_features::extract_32_features;
-use crate::metrics::WasmEventMetrics;
 use crate::event::KalpixkEvent;
+use crate::metrics::WasmEventMetrics;
+use crate::runtime_features::extract_32_features;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use wasm_bindgen::prelude::*;
 
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
@@ -122,7 +122,8 @@ pub fn get_global_blacklist_wasm() -> String {
 
 #[wasm_bindgen]
 pub fn sync_threats_wasm(json_threats: &str) -> String {
-    let threats: Vec<defense_nodes::ThreatSignature> = serde_json::from_str(json_threats).unwrap_or_default();
+    let threats: Vec<defense_nodes::ThreatSignature> =
+        serde_json::from_str(json_threats).unwrap_or_default();
     let count = threats.len();
     for sig in threats {
         defense_nodes::register_threat_signature(sig);
@@ -138,7 +139,8 @@ pub fn trigger_v5_retaliation(json_target: &str) -> String {
         "stealth_poisoning": "ACTIVE",
         "memory_sink": "ARMED",
         "target_fingerprint": json_target.chars().take(32).collect::<String>()
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -148,7 +150,8 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
         "status": "synchronized",
         "mesh_nodes": defense_nodes::get_active_nodes(),
         "version": "4.0.0-atlatl"
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -199,7 +202,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() { continue; }
+        if !security::validate_raw_log(line).is_ok() {
+            continue;
+        }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
@@ -252,7 +257,10 @@ pub fn compute_ueba_features(events_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn get_feature_names() -> Vec<String> {
-    features::FEATURE_NAMES.iter().map(|&s| s.to_string()).collect()
+    features::FEATURE_NAMES
+        .iter()
+        .map(|&s| s.to_string())
+        .collect()
 }
 
 #[wasm_bindgen]
