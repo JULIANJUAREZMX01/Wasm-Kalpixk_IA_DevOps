@@ -353,8 +353,6 @@ class WmsConnector:
             "connected": self._connection is not None,
             "monitored_tables": len(SAC_TABLES),
         }
-            logger.warning(f"Audit log not found: {audit_log_path}. Using mock.")
-            yield from self._mock_logs()
 
     def _mock_logs(self) -> Generator[str, None, None]:
         """Generate realistic mock logs for development/testing."""

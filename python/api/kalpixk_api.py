@@ -9,13 +9,19 @@ Endpoints:
 """
 
 # Importaciones internas
+import os
+import secrets
 import sys
 import time
+import json
+from contextlib import asynccontextmanager
 
 import msgpack
 import numpy as np
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Security, Depends, Request, Response, status as http_status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
 sys.path.insert(0, "/app/wasm_kalpixk")
@@ -23,19 +29,98 @@ sys.path.insert(0, "/app/wasm_kalpixk")
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _ensemble, _device
+    _device = get_rocm_device()
+    log_gpu_info(_device)
+    _ensemble = DetectionEnsemble(device=str(_device))
+    print(f"[Kalpixk] API iniciada en {_device}")
+    yield
+
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
     version="0.1.0",
     docs_url="/docs",
+    lifespan=lifespan,
+    swagger_ui_parameters={"persistAuthorization": True},
+    openapi_components={
+        "securitySchemes": {
+            "APIKeyHeader": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Kalpixk-Key"
+            }
+        }
+    },
+    security=[{"APIKeyHeader": []}]
 )
+
+# -- Security --
+API_KEY_NAME = "X-Kalpixk-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    """
+    Verifica la API Key utilizando secrets.compare_digest para mitigar ataques de tiempo.
+    En producción, falla de forma segura si la clave no está configurada.
+    """
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+    expected_key = os.getenv("KALPIXK_API_KEY")
+
+    if env == "production":
+        if not expected_key:
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error"
+            )
+        if not api_key or not secrets.compare_digest(api_key, expected_key):
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN,
+                detail="Forbidden"
+            )
+    else:
+        if expected_key:
+            if not api_key or not secrets.compare_digest(api_key, expected_key):
+                raise HTTPException(
+                    status_code=http_status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden"
+                )
+    return api_key
+
+cors_origins_str = os.getenv("CORS_ORIGINS")
+env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+
+try:
+    if cors_origins_str:
+        cors_origins = json.loads(cors_origins_str)
+        if env == "production" and "*" in cors_origins:
+            cors_origins = []
+    elif env == "production":
+        cors_origins = []
+    else:
+        cors_origins = ["*"]
+except Exception:
+    cors_origins = []
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Estado global
 _ensemble: DetectionEnsemble | None = None
@@ -59,17 +144,8 @@ class AnomalyResponse(BaseModel):
     latency_ms: float
 
 
-@app.on_event("startup")
-async def startup():
-    global _ensemble, _device
-    _device = get_rocm_device()
-    log_gpu_info(_device)
-    _ensemble = DetectionEnsemble(device=str(_device))
-    print(f"[Kalpixk] API iniciada en {_device}")
-
-
 @app.get("/status")
-async def status():
+async def status(api_key: str = Depends(verify_api_key)):
     uptime = time.time() - _boot_time
     return {
         "status": "ok",
@@ -82,7 +158,7 @@ async def status():
 
 
 @app.post("/analyze", response_model=AnomalyResponse)
-async def analyze(req: LogRequest):
+async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
 
@@ -126,7 +202,7 @@ async def analyze(req: LogRequest):
 
 
 @app.post("/train")
-async def train(n_samples: int = 1000):
+async def train(n_samples: int = 1000, api_key: str = Depends(verify_api_key)):
     """Entrena el modelo con datos normales sintéticos (baseline)."""
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
@@ -138,7 +214,26 @@ async def train(n_samples: int = 1000):
 
 @app.websocket("/stream")
 async def ws_stream(ws: WebSocket):
-    """WebSocket para telemetría en tiempo real con MessagePack."""
+    """
+    WebSocket para telemetría en tiempo real con MessagePack.
+    Implementa autenticación básica vía query parameter 'token' para asegurar el stream.
+    """
+    token = ws.query_params.get("token")
+    expected_key = os.getenv("KALPIXK_API_KEY")
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+
+    authorized = True
+    if env == "production":
+        if not expected_key or not token or not secrets.compare_digest(token, expected_key):
+            authorized = False
+    elif expected_key:
+        if not token or not secrets.compare_digest(token, expected_key):
+            authorized = False
+
+    if not authorized:
+        await ws.close(code=http_status.WS_1008_POLICY_VIOLATION)
+        return
+
     await ws.accept()
     _ws_clients.append(ws)
     try:
@@ -160,7 +255,7 @@ async def ws_stream(ws: WebSocket):
 
 
 @app.get("/features")
-async def get_feature_names():
+async def get_feature_names(api_key: str = Depends(verify_api_key)):
     """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,
