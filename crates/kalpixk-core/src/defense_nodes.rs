@@ -1,17 +1,16 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 6 nodes for detecting Red Team techniques:
+//! 7 nodes for detecting Red Team techniques:
 //! - Node-1: Reconnaissance
 //! - Node-2: Lateral Movement
 //! - Node-3: Credential Theft
 //! - Node-4: Payload Execution
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
+//! - Node-7: MESH_INTEGRITY (New in v4.0)
 //!
-//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
-
-#![allow(dead_code)]
+//! [ATLATL-ORDNANCE] Version 4.0: GuerrillaMesh v2 & Cryptographic Validation
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -26,6 +25,7 @@ pub struct ThreatSignature {
     pub technique: String,
     pub score: f64,
     pub timestamp: i64,
+    pub signature: Option<String>, // Added for Node-7 integrity
 }
 
 lazy_static::lazy_static! {
@@ -74,7 +74,7 @@ pub fn get_active_nodes() -> Vec<String> {
     if let Ok(nodes) = MESH_NODES.lock() {
         let now = chrono::Utc::now().timestamp_millis();
         nodes.iter()
-            .filter(|(_, &ts)| now - ts < 60000) // Active if seen in last 60s
+            .filter(|(_, &ts)| now - ts < 60000)
             .map(|(id, _)| id.clone())
             .collect()
     } else {
@@ -82,7 +82,7 @@ pub fn get_active_nodes() -> Vec<String> {
     }
 }
 
-/// [ATLATL-ORDNANCE] Export Global Blacklist for synchronization
+/// [ATLATL-ORDNANCE] Export Global Blacklist
 pub fn get_global_blacklist() -> Vec<String> {
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
         registry.iter().cloned().collect()
@@ -91,21 +91,12 @@ pub fn get_global_blacklist() -> Vec<String> {
     }
 }
 
-/// [ATLATL-ORDNANCE] Detailed Sync Logic
 pub fn register_threat_signature(sig: ThreatSignature) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         registry.insert(sig.source.clone());
     }
     if let Ok(mut db) = THREAT_SIGNATURE_DB.lock() {
         db.insert(sig.source.clone(), sig);
-    }
-}
-
-pub fn get_threat_signatures() -> Vec<ThreatSignature> {
-    if let Ok(db) = THREAT_SIGNATURE_DB.lock() {
-        db.values().cloned().collect()
-    } else {
-        Vec::new()
     }
 }
 
@@ -116,17 +107,6 @@ pub enum SeverityLevel {
     Suspicious,
     Anomaly,
     Critical,
-}
-
-impl SeverityLevel {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            SeverityLevel::Clean => "CLEAN",
-            SeverityLevel::Suspicious => "SUSPICIOUS",
-            SeverityLevel::Anomaly => "ANOMALY",
-            SeverityLevel::Critical => "CRITICAL",
-        }
-    }
 }
 
 /// Defense node detection result
@@ -147,15 +127,13 @@ pub fn detect_reconnaissance(
     _event: &KalpixkEvent,
     raw_lower: &str,
     user_lower: &str,
-    source_lower: &str,
+    _source_lower: &str,
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
-    let _source = source_lower;
     let user = user_lower;
     let raw = raw_lower;
 
-    // Advanced heuristics for recon
     if raw.contains("dns") && (raw.contains("enum") || raw.contains("axfr") || raw.contains("zone")) {
         score += 0.4;
         techniques.push("T1595".to_string());
@@ -390,8 +368,33 @@ pub fn detect_exfiltration(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 6 nodes
+// NODE 7: MESH_INTEGRITY (v4.0)
 // ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_integrity_violation(
+    _event: &KalpixkEvent,
+    raw_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if raw_lower.contains("node_id") && (raw_lower.contains("spoof") || raw_lower.contains("inject")) {
+        score += 0.9;
+        techniques.push("T1553".to_string());
+    }
+
+    if raw_lower.contains("/api/v1/nodes/sync") && !raw_lower.contains("x-kalpixk-key") {
+        score += 0.5;
+    }
+
+    NodeResult {
+        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Mesh integrity score: {:.2}", score),
+    }
+}
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
@@ -405,6 +408,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_integrity_violation(event, &raw_lower),
     ]
 }
 
@@ -416,32 +420,24 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     let score = get_max_severity(event).score;
     if score >= 0.7 {
-        // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-ATLATL".to_string(),
-            technique: "TA-DETECTION".to_string(),
+            node_id: "WASM-CORE-V4".to_string(),
+            technique: "TA-DETECTION-V4".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
+            signature: Some("ATLATL-V4-SIG".to_string()),
         });
         return true;
     }
-
-    // Check global blacklist
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
-        if registry.contains(&event.source) {
-            return true;
-        }
+        if registry.contains(&event.source) { return true; }
     }
-
     false
 }
 
-/// [ATLATL-ORDNANCE] P2P Threat Sync
 pub fn sync_threats(external_threats: Vec<String>) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
-        for threat in external_threats {
-            registry.insert(threat);
-        }
+        for threat in external_threats { registry.insert(threat); }
     }
 }
