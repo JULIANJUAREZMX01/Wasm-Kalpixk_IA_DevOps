@@ -9,14 +9,19 @@ Endpoints:
 """
 
 # Importaciones internas
+import os
+import secrets
+import json
 import sys
 import time
 
 import msgpack
 import numpy as np
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Security, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.security import APIKeyHeader
+from pydantic import BaseModel, Field
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -30,11 +35,57 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+# -- Security & Rate Limiting --
+API_KEY_NAME = "X-Kalpixk-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+async def verify_api_key(api_key: str = Security(api_key_header)):
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+    expected_key = os.getenv("KALPIXK_API_KEY")
+
+    if env == "production":
+        if not expected_key:
+            from loguru import logger
+            logger.error("KALPIXK_API_KEY not set in production!")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        if not api_key or not secrets.compare_digest(api_key, expected_key):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+    else:
+        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
+             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+    return api_key
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+cors_origins_str = os.getenv("CORS_ORIGINS")
+env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+
+try:
+    if cors_origins_str:
+        cors_origins = json.loads(cors_origins_str)
+        if env == "production" and "*" in cors_origins:
+            cors_origins = []
+    elif env == "production":
+        cors_origins = []
+    else:
+        cors_origins = ["*"]
+except Exception:
+    cors_origins = []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
 
 # Estado global
@@ -45,9 +96,12 @@ _boot_time = time.time()
 
 
 class LogRequest(BaseModel):
-    features: list[float]          # Vector de 32 features del WASM core
-    raw_log: str | None = None  # Log original para el LLM explicador
-    source: str | None = "unknown"
+    features: list[float] = Field(..., min_length=32, max_length=32)
+    raw_log: str | None = Field(None, max_length=1000)
+    source: str | None = Field("unknown", max_length=100)
+
+class TrainPayload(BaseModel):
+    n_samples: int = Field(1000, ge=1, le=10000)
 
 
 class AnomalyResponse(BaseModel):
@@ -69,7 +123,7 @@ async def startup():
 
 
 @app.get("/status")
-async def status():
+async def status(api_key: str = Depends(verify_api_key)):
     uptime = time.time() - _boot_time
     return {
         "status": "ok",
@@ -82,7 +136,7 @@ async def status():
 
 
 @app.post("/analyze", response_model=AnomalyResponse)
-async def analyze(req: LogRequest):
+async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
 
@@ -126,19 +180,28 @@ async def analyze(req: LogRequest):
 
 
 @app.post("/train")
-async def train(n_samples: int = 1000):
+async def train(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     """Entrena el modelo con datos normales sintéticos (baseline)."""
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
-    normal_data = np.random.randn(n_samples, 32).astype(np.float32)
+    normal_data = np.random.randn(payload.n_samples, 32).astype(np.float32)
     normal_data = np.clip(normal_data * 0.1 + 0.5, 0, 1)
     _ensemble.fit(normal_data)
-    return {"status": "trained", "n_samples": n_samples, "device": str(_device)}
+    return {"status": "trained", "n_samples": payload.n_samples, "device": str(_device)}
 
 
 @app.websocket("/stream")
-async def ws_stream(ws: WebSocket):
+async def ws_stream(ws: WebSocket, token: str | None = None):
     """WebSocket para telemetría en tiempo real con MessagePack."""
+    expected_key = os.getenv("KALPIXK_API_KEY")
+    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
+
+    # simple token check for WS
+    if (env == "production" or expected_key) and expected_key:
+        if not token or not secrets.compare_digest(token, expected_key):
+            await ws.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+
     await ws.accept()
     _ws_clients.append(ws)
     try:
@@ -160,7 +223,7 @@ async def ws_stream(ws: WebSocket):
 
 
 @app.get("/features")
-async def get_feature_names():
+async def get_feature_names(api_key: str = Depends(verify_api_key)):
     """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,
