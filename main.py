@@ -10,8 +10,9 @@ import threading
 import time
 from pathlib import Path
 from loguru import logger
-from fastapi import FastAPI, Depends, Security, HTTPException, status, Request
+from fastapi import FastAPI, Depends, Security, HTTPException, status, Request, Response
 from fastapi.security import APIKeyHeader
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 from typing import List
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -71,6 +72,14 @@ limiter = Limiter(key_func=get_remote_address)
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        return response
+
 async def verify_api_key(api_key: str = Security(api_key_header)):
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
@@ -91,6 +100,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 # -- FastAPI App --
 app = FastAPI(title="Kalpixk SIEM", version="1.0.0")
 app.state.limiter = limiter
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
