@@ -1,11 +1,12 @@
-// ATLATL-ORDNANCE: SACITY Dashboard Logic v3.0
-// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v3
+// ATLATL-ORDNANCE: SACITY Dashboard Logic v4.0
+// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v4
 
 import initWasmModule, {
     health_check,
     get_security_telemetry,
     get_global_blacklist_wasm,
     analyze_and_retaliate,
+    trigger_v5_retaliation,
     version
 } from './pkg/kalpixk_core.js';
 
@@ -21,8 +22,8 @@ async function initWasm() {
         wasmReady = true;
         const v = version();
         const health = JSON.parse(health_check());
-        log(`SACITY GuerrillaMesh Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
-        document.getElementById('wasm-status').textContent = '● WASP_V3_SECURE';
+        log(`SACITY GuerrillaMesh v2 Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
+        document.getElementById('wasm-status').textContent = '● WASP_V4_SECURE';
         document.getElementById('wasm-status').className = 'text-[10px] status-ok font-bold';
 
         // Start Heartbeat & Sync
@@ -120,10 +121,10 @@ function applyGlitchEffect() {
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V3.1';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V4.0';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION V3.1 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Delivering v4 Chaotic Poisoning & Entropy Trap...', 'error');
+    log(`💀 AGGRESSION V4.0 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION: Delivering v5 Stealth Poisoning & Mesh Entropy Shredder...', 'error');
     applyGlitchEffect();
 
     // Trigger WASM retaliation hook if available
@@ -131,8 +132,12 @@ function triggerPhaseBlack(score) {
         if (wasmReady) {
             analyze_and_retaliate(JSON.stringify({
                 source: "DASHBOARD_INJECTION",
-                raw: "T1485_RANSOMWARE_V3.1",
+                raw: "T1485_RANSOMWARE_V4.0",
                 timestamp_ms: Date.now()
+            }));
+            trigger_v5_retaliation(JSON.stringify({
+                target: "REMOTE_C2_DETECTED",
+                threat_score: score
             }));
         }
     } catch(e) {}
@@ -181,7 +186,7 @@ window.triggerScan = async () => {
 };
 
 window.triggerRetaliationDemo = () => {
-    log('> SIMULATING AGGRESSION VECTOR: Ransomware_T1485_V3', 'warn');
+    log('> SIMULATING AGGRESSION VECTOR: Ransomware_T1485_V4', 'warn');
     triggerPhaseBlack(0.999999);
 };
 
@@ -200,7 +205,7 @@ async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v3.0', 'info');
+    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v4.0', 'info');
     await initWasm();
 
     await refreshMetrics();

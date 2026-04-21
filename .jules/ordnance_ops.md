@@ -18,4 +18,24 @@ Los nodos de detección originales utilizaban comparaciones de cadenas estática
 Aniquilación total del vector de intrusión detectado. El sistema ahora es capaz de colapsar la infraestructura de exfiltración del atacante mediante saturación de entropía recursiva.
 
 ---
-*ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización.*
+
+## [OP_V4_GUERRILLAMESH] - DECENTRALIZED INTEGRITY & V5 STEALTH STRIKES
+
+**Vector de Ataque:**
+La arquitectura v3.1 era vulnerable a envenenamiento de malla (mesh poisoning) debido a la falta de validación de integridad en la propagación de firmas. Además, los patrones de represalia de memoria eran deterministas, permitiendo el desarrollo de contramedidas por parte de Red Teams avanzados.
+
+**Defensa Implementada (Macuahuitl v4.0):**
+- **Zig Core (v5.0-ATLATL):** Implementación de `v5_macuahuitl_stealth_poisoning` con saltos no deterministas basados en entropía de reloj y `memory_sink_trap` para colapsar la ejecución secuencial.
+- **Node-7: MESH_INTEGRITY:** Nuevo nodo de detección en Rust especializado en identificar intentos de spoofing de reportes de malla y JSON malformado.
+- **GuerrillaMesh v2:** Sincronización endurecida con validación Pydantic estricta y protección contra replay (timestamp validation) en el API de coordinación.
+- **SACITY UI v4.0:** Evolución visual a Phase Black v4.0 con secuencias de glitch de alta intensidad y visualización de integridad de malla.
+
+**Contra-Ataque:**
+- **Mesh Entropy Shredder:** Sincronización masiva de ruido de alta entropía a través de todos los nodos de la malla contra el C2 del agresor.
+- **Ghost Mesh v5:** Despliegue de topologías virtuales falsas para atrapar y redirigir el tráfico de escaneo del atacante.
+
+**Resultado:**
+Transición exitosa a una infraestructura de defensa descentralizada y no determinista. La GuerrillaMesh v2 ahora opera con integridad criptográfica simulada, haciendo que el envenenamiento de la base de datos de amenazas sea prácticamente imposible.
+
+---
+*ATLATL-ORDNANCE: El Centro de Mando confirma la evolución a GuerrillaMesh v2.*

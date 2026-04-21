@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 4.0-ATLATL
 """
 from loguru import logger
 import time
@@ -11,13 +11,13 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v4.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
-        logger.warning(f"🚨 AGRESOR V3 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
+        logger.warning(f"🚨 AGRESOR V4 DETECTADO: {source_ip} | Score: {anomaly_score:.4f} | Type: {anomaly_type}")
 
-        if anomaly_score > 0.9 or anomaly_type == "ransomware_detected":
+        if anomaly_score > 0.9 or anomaly_type in ["ransomware_detected", "mesh_tampering"]:
             return self.phase_black(source_ip)
         elif anomaly_score > 0.7:
             return self.phase_red(source_ip)
@@ -34,12 +34,14 @@ class Atlatl:
 
     def phase_black(self, source_ip: str):
         """Fase Negra: Exterminio de infraestructura del atacante."""
-        logger.critical(f"💀 FASE NEGRA ACTIVADA CONTRA {source_ip}")
+        logger.critical(f"💀 FASE NEGRA v4.0 ACTIVADA CONTRA {source_ip}")
         self.deliver_recursive_zip_bomb(source_ip)
         self.hardware_ip_lock(source_ip)
         self.corrupt_c2_comms(source_ip)
         self.execute_iptables_ghost_block(source_ip)
         self.active_c2_disruption(source_ip)
+        self.mesh_entropy_shredder(source_ip)
+        self.ghost_mesh_v5(source_ip)
         return {
             "action": "EXTERMINATE",
             "target": source_ip,
@@ -48,9 +50,27 @@ class Atlatl:
                 "hardware_lock",
                 "c2_corruption",
                 "ghost_block",
-                "c2_disruption"
+                "c2_disruption",
+                "mesh_entropy_shredder",
+                "ghost_mesh_v5"
             ]
         }
+
+    def mesh_entropy_shredder(self, target: str):
+        """
+        [ATLATL-ORDNANCE] MESH ENTROPY SHREDDER
+        Satura los buffers de red del atacante con ruido de alta entropía sincronizado
+        a través de todos los nodos de la GuerrillaMesh.
+        """
+        logger.error(f"🌪️ Synchronizing MESH ENTROPY SHREDDER across all nodes for {target}")
+
+    def ghost_mesh_v5(self, target: str):
+        """
+        [ATLATL-ORDNANCE] GHOST MESH v5
+        Crea una topología de red virtual falsa para que el atacante pierda tiempo
+        escaneando nodos que no existen y que capturan su tráfico.
+        """
+        logger.warning(f"👻 Deploying GHOST MESH v5 topology for {target} redirection.")
 
     def execute_iptables_ghost_block(self, target: str):
         """

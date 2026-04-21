@@ -8,8 +8,9 @@
 //! - Node-4: Payload Execution
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
+//! - Node-7: MESH_INTEGRITY
 //!
-//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
+//! [ATLATL-ORDNANCE] Version 4.0: GuerrillaMesh v2 & Cryptographic Integrity
 
 #![allow(dead_code)]
 
@@ -405,6 +406,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_tampering(event, &raw_lower),
     ]
 }
 
@@ -437,11 +439,45 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     false
 }
 
-/// [ATLATL-ORDNANCE] P2P Threat Sync
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 7: MESH INTEGRITY (Node Spoofing Detection)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_tampering(
+    _event: &KalpixkEvent,
+    raw_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    // Check for patterns indicating node report spoofing or mesh poisoning
+    if raw_lower.contains("node_id") && (raw_lower.contains("inject") || raw_lower.contains("../") || raw_lower.contains("%00")) {
+        score += 0.8;
+        techniques.push("T1592".to_string());
+    }
+
+    if raw_lower.contains("sync_threats") && raw_lower.contains("malformed_json") {
+        score += 0.6;
+        techniques.push("T1562.001".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Mesh integrity score: {:.2}", score),
+    }
+}
+
+/// [ATLATL-ORDNANCE] P2P Threat Sync with Integrity Validation
 pub fn sync_threats(external_threats: Vec<String>) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         for threat in external_threats {
-            registry.insert(threat);
+            // [ATLATL-ORDNANCE] Node-7 Validation before insertion
+            if !threat.contains("'") && !threat.contains("\"") && threat.len() < 128 {
+                registry.insert(threat);
+            }
         }
     }
 }

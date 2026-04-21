@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 3.1-ATLATL (Guerrilla Algorítmica)
+// Versión: 5.0-ATLATL (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -70,6 +70,51 @@ pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
             byte.* = 0xEB; // JMP short
         } else {
             byte.* = 0xFE; // offset -2
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_macuahuitl_stealth_poisoning
+/// Evolución letal v5. Utiliza secuencias de salto no lineales basadas en entropía
+/// de reloj para aniquilar el flujo de ejecución sin dejar firmas deterministas.
+pub export fn v5_macuahuitl_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed ^ @as(u64, @bitCast(std.time.milliTimestamp())));
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        const stealth_step = rand.int(u8) % 32;
+        switch (stealth_step) {
+            0...1 => byte.* = 0xEB, // JMP short
+            2 => byte.* = rand.int(u8), // random offset
+            3 => byte.* = 0xCC,      // INT 3
+            4 => byte.* = 0xF4,      // HLT
+            5 => byte.* = 0x0F,      // UD2 start
+            6 => byte.* = 0x0B,      // UD2 end
+            7 => byte.* = 0xFF,      // INC/DEC/JMP/CALL
+            8 => byte.* = 0xE0,      // JMP rAX
+            9 => byte.* = 0x90,      // NOP
+            10...31 => byte.* = rand.int(u8) ^ @as(u8, @truncate(i)),
+            else => unreachable,
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] memory_sink_trap
+/// Crea un "agujero negro" de memoria que consume ciclos de CPU e invalida la cache
+/// si se intenta ejecutar o leer secuencialmente.
+pub export fn memory_sink_trap(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        // Intercalado de HLT y JMP $ para colapsar emuladores
+        if (i % 2 == 0) {
+            byte.* = 0xF4; // HLT
+        } else {
+            byte.* = 0xEB; // JMP ...
+            // byte[i+1] would be 0xFE but we are in a loop
+        }
+        if (i > 0 and slice[i-1] == 0xEB) {
+             byte.* = 0xFE; // ... $
         }
     }
 }
@@ -248,6 +293,22 @@ test "v4 chaotic poisoning" {
     var sum: u64 = 0;
     for (buffer) |b| sum += b;
     try std.testing.expect(sum > 0);
+}
+
+test "v5 stealth poisoning" {
+    var buffer: [512]u8 = undefined;
+    v5_macuahuitl_stealth_poisoning(&buffer, buffer.len, 0x555);
+    var sum: u64 = 0;
+    for (buffer) |b| sum += b;
+    try std.testing.expect(sum > 0);
+}
+
+test "memory sink trap" {
+    var buffer: [16]u8 = undefined;
+    memory_sink_trap(&buffer, buffer.len);
+    try std.testing.expect(buffer[0] == 0xF4);
+    try std.testing.expect(buffer[1] == 0xEB);
+    try std.testing.expect(buffer[2] == 0xFE);
 }
 
 test "heap entropy trap" {

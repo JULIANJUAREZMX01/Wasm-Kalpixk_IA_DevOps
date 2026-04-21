@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "4.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -133,6 +133,17 @@ pub fn trigger_v4_retaliation(json_target: &str) -> String {
         "status": "V4_ARMED",
         "chaotic_poisoning": true,
         "entropy_trap": "ACTIVE",
+        "target_fingerprint": json_target.chars().take(32).collect::<String>()
+    }).to_string()
+}
+
+#[wasm_bindgen]
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5 (STEALTH)
+    serde_json::json!({
+        "status": "V5_STEALTH_ARMED",
+        "stealth_poisoning": true,
+        "memory_sink": "ACTIVE",
         "target_fingerprint": json_target.chars().take(32).collect::<String>()
     }).to_string()
 }
@@ -275,9 +286,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v4.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "node_7_integrity": "active"
     })
     .to_string()
 }
