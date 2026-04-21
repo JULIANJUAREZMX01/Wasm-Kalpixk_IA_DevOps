@@ -22,6 +22,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -36,6 +39,10 @@ app = FastAPI(
 )
 
 # -- Security & Rate Limiting --
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
@@ -123,7 +130,8 @@ async def startup():
 
 
 @app.get("/status")
-async def status(api_key: str = Depends(verify_api_key)):
+@limiter.limit("10/minute")
+async def status(request: Request, api_key: str = Depends(verify_api_key)):
     uptime = time.time() - _boot_time
     return {
         "status": "ok",
@@ -136,7 +144,8 @@ async def status(api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/analyze", response_model=AnomalyResponse)
-async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
 
@@ -180,7 +189,8 @@ async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/train")
-async def train(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")
+async def train(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     """Entrena el modelo con datos normales sintéticos (baseline)."""
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
@@ -223,7 +233,8 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
 
 @app.get("/features")
-async def get_feature_names(api_key: str = Depends(verify_api_key)):
+@limiter.limit("10/minute")
+async def get_feature_names(request: Request, api_key: str = Depends(verify_api_key)):
     """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,
