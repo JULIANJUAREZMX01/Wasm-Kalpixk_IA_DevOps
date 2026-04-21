@@ -4,9 +4,7 @@ Portado de SAC/notificaciones_whatsapp.py
 Configurable via .env o API endpoint
 """
 import os
-import logging
 from datetime import datetime
-from typing import Optional, List
 from loguru import logger
 
 try:

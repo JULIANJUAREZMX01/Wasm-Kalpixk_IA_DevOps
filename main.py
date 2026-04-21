@@ -7,14 +7,12 @@ import json
 import secrets
 import socket
 import threading
-import time
 from pathlib import Path
 from loguru import logger
-from fastapi import FastAPI, Depends, Security, HTTPException, status, Request, Response
+from fastapi import FastAPI, Depends, Security, HTTPException, status, Request
 from fastapi.security import APIKeyHeader
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
-from typing import List
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -37,7 +35,7 @@ def get_local_ip():
         ip = s.getsockname()[0]
         s.close()
         return ip
-    except:
+    except Exception:
         return "127.0.0.1"
 
 # -- Boot visual --
@@ -106,7 +104,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 cors_origins_str = os.getenv("CORS_ORIGINS", '["http://localhost:8000", "http://localhost:3000"]')
 try:
     cors_origins = json.loads(cors_origins_str)
-except:
+except Exception:
     cors_origins = ["http://localhost:8000"]
 
 app.add_middleware(
@@ -168,7 +166,7 @@ if __name__ == "__main__":
     port = os.getenv("PORT", "8000")
     print(f"\n{KalpixkTheme.STATUS['info']} KALPIXK SIEM READY")
     print(f"  > BROWSER DASHBOARD: http://{local_ip}:{port}/")
-    print(f"  > SYSTEM TELEMETRY:  Launching Terminal TUI...\n")
+    print("  > SYSTEM TELEMETRY:  Launching Terminal TUI...\n")
 
     # Run API in thread
     api_thread = threading.Thread(target=run_api, daemon=True)

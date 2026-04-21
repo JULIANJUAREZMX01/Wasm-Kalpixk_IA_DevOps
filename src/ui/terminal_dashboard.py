@@ -25,7 +25,7 @@ class KalpixkTUI:
             ip = s.getsockname()[0]
             s.close()
             return ip
-        except:
+        except Exception:
             return "127.0.0.1"
 
     def make_layout(self) -> Layout:
@@ -48,7 +48,7 @@ class KalpixkTUI:
         grid.add_column(justify="right", ratio=1)
 
         title = Text("██ KALPIXK SIEM — DEFENSE GRID", style="bold red")
-        status = Text(f"● SYSTEM ARMOURED", style="bold green blink")
+        status = Text("● SYSTEM ARMOURED", style="bold green blink")
         clock = Text(datetime.now().strftime("%H:%M:%S"), style="cyan")
 
         grid.add_row(title, status, clock)

@@ -4,7 +4,9 @@ Skill: train_model
 Entrena/re-entrena el motor Kalpixk y guarda el modelo
 Uso: python skills/train_model.py [--samples 500] [--epochs 100] [--sigma 2.0]
 """
-import sys, os, argparse, json
+import sys
+import os
+import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run():
@@ -21,7 +23,7 @@ def run():
     from src.runtime import WasmRuntimeMonitor
 
     KalpixkTheme.print_banner()
-    print(f"\n🧠 Entrenando Kalpixk Motor")
+    print("\n🧠 Entrenando Kalpixk Motor")
     print(f"  Samples: {args.samples} | Epochs: {args.epochs} | Sigma: {args.sigma}")
     print(f"  Output:  {args.output}\n")
 
@@ -35,7 +37,7 @@ def run():
     anomalies_test = __import__("numpy").tile([5000.0]*10, (20, 1)).astype("float32")
     eval_res = det.evaluate(data[:50], anomalies_test)
 
-    print(f"\n📊 Resultados:")
+    print("\n📊 Resultados:")
     print(f"  Loss final:  {stats['final_loss']:.6f}")
     print(f"  Threshold:   {stats['threshold']:.4f}")
     print(f"  Precision:   {eval_res['precision']:.1%}")

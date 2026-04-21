@@ -1,5 +1,3 @@
-import pytest
-from src.runtime.wasm_monitor import WasmRuntimeMonitor
 
 def test_pipeline_capture(monitor):
     f = monitor.capture_metrics()

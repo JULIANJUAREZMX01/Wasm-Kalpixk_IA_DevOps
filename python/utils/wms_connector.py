@@ -25,9 +25,9 @@ import logging
 import os
 import random
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator, Generator, Optional
+from collections.abc import Generator
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 logger = logging.getLogger("kalpixk.wms_connector")
 
@@ -57,7 +57,7 @@ class WmsLogEntry:
     return_code:  int          # SQLCODE: 0 = success, negative = error/denial
     rows_affected: int
     database:     str = "WMSDB"
-    object_name:  Optional[str] = None   # Table or object involved
+    object_name:  str | None = None   # Table or object involved
 
     def to_kalpixk_log(self) -> str:
         """
@@ -89,13 +89,20 @@ class WmsLogEntry:
     @property
     def severity_hint(self) -> float:
         """Local severity estimate before WASM parsing."""
-        if self.return_code < 0:        return 0.3   # Denied/error
-        if "DROP"      in self.statement.upper(): return 0.95
-        if "EXPORT"    in self.statement.upper(): return 0.80
-        if "GRANT"     in self.statement.upper(): return 0.75
-        if "IMPORT"    in self.statement.upper(): return 0.70
-        if self.authid in AUTHIDS_SUSPECT:        return 0.65
-        if self.rows_affected > 100_000:          return 0.60
+        if self.return_code < 0:
+            return 0.3   # Denied/error
+        if "DROP" in self.statement.upper():
+            return 0.95
+        if "EXPORT" in self.statement.upper():
+            return 0.80
+        if "GRANT" in self.statement.upper():
+            return 0.75
+        if "IMPORT" in self.statement.upper():
+            return 0.70
+        if self.authid in AUTHIDS_SUSPECT:
+            return 0.65
+        if self.rows_affected > 100_000:
+            return 0.60
         return 0.15
 
 
@@ -176,7 +183,7 @@ class WmsConnector:
         Suitable for local development and CI testing.
         """
         rng = random.Random(42)
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
         idx = 0
 
         # Anomaly injection schedule (every ~50 events inject 1 anomaly)
@@ -293,9 +300,10 @@ class WmsConnector:
                 stdout=subprocess.PIPE, text=True, bufsize=1,
             )
             logger.info(f"Tailing {self.audit_log_path}")
-            for line in proc.stdout:
-                if line.strip():
-                    yield line.strip()
+            if proc.stdout is not None:
+                for line in proc.stdout:
+                    if line.strip():
+                        yield line.strip()
         except FileNotFoundError:
             logger.warning(f"Audit log not found: {self.audit_log_path} — switching to mock")
             self.mode = "mock"
@@ -313,7 +321,7 @@ class WmsConnector:
 
         try:
             import ibm_db  # type: ignore
-            last_ts = datetime.now(timezone.utc) - timedelta(minutes=5)
+            last_ts = datetime.now(UTC) - timedelta(minutes=5)
 
             while True:
                 sql = f"""
@@ -327,7 +335,7 @@ class WmsConnector:
                 row = ibm_db.fetch_assoc(stmt)
                 while row:
                     entry = WmsLogEntry(
-                        timestamp=row.get("TIMESTAMP", datetime.now(timezone.utc)),
+                        timestamp=row.get("TIMESTAMP", datetime.now(UTC)),
                         authid=row.get("AUTHID", "UNKNOWN"),
                         hostname=row.get("APPID", "unknown"),
                         operation="EXECUTE",
@@ -353,26 +361,3 @@ class WmsConnector:
             "connected": self._connection is not None,
             "monitored_tables": len(SAC_TABLES),
         }
-            logger.warning(f"Audit log not found: {audit_log_path}. Using mock.")
-            yield from self._mock_logs()
-
-    def _mock_logs(self) -> Generator[str, None, None]:
-        """Generate realistic mock logs for development/testing."""
-        import random
-        from datetime import timedelta
-
-        templates = [
-            "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=SELECT * FROM INVENTORY WHERE LOC_ID='{loc}' SQLCODE=0 ROWS={n}",
-            "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=UPDATE SHIPMENT SET STATUS='SHIPPED' WHERE SHIP_ID='{sid}' SQLCODE=0 ROWS=1",
-            "TIMESTAMP={ts} AUTHID=ROOT HOSTNAME=cedis_427 SQL=EXPORT TO /tmp/data.csv OF DEL SELECT * FROM ORDER_HEADER SQLCODE=0 ROWS={n}",
-            "TIMESTAMP={ts} AUTHID=UNKNOWN HOSTNAME=10.0.3.99 SQL=DROP TABLE WMS_USER SQLCODE=-551 ROWS=0",
-            "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=GRANT SELECT ON INVENTORY TO PUBLIC SQLCODE=0 ROWS=0",
-        ]
-        base_time = datetime.now(UTC)
-        for i in range(100): # Limited to 100 for shorter runs
-            ts = (base_time - timedelta(seconds=i * 30)).strftime("%Y-%m-%d %H:%M:%S")
-            tpl = random.choice(templates)
-            yield tpl.format(
-                ts=ts, loc=f"A-{random.randint(1,99):02d}", n=random.randint(1, 5000),
-                sid=f"SHP{random.randint(10000, 99999)}"
-            )

@@ -3,7 +3,6 @@ import pytest
 from fastapi.testclient import TestClient
 import os
 import sys
-import time
 
 # Add the root directory to sys.path to allow importing from src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

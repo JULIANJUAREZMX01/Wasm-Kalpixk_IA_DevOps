@@ -4,7 +4,6 @@ This is the technical proof for hackathon judges.
 """
 import torch
 import time
-import numpy as np
 
 def benchmark_device(device, n_samples=10000, n_features=10, n_runs=100):
     model_enc = torch.nn.Sequential(

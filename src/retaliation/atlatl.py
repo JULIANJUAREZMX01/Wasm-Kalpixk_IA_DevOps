@@ -6,7 +6,6 @@ Versión: 4.0-ATLATL
 from loguru import logger
 import time
 import os
-import random
 
 class Atlatl:
     def __init__(self):

@@ -8,7 +8,7 @@ import psutil
 import threading
 from datetime import datetime
 from loguru import logger
-from typing import Optional, Callable
+from typing import Optional
 
 
 class KalpixkSystemMonitor:

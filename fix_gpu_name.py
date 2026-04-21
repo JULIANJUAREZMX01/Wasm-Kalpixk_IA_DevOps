@@ -1,4 +1,5 @@
-import subprocess, torch
+import subprocess
+import torch
 
 # Metodo 1: rocm-smi
 try:
@@ -25,4 +26,4 @@ except: pass
 # Metodo 4: torch props raw
 props = torch.cuda.get_device_properties(0)
 print(f"torch props: name={props.name}, total_memory={props.total_memory//1024**3}GB")
-print(f"gcn_arch:", getattr(props, 'gcnArchName', 'N/A'))
+print("gcn_arch:", getattr(props, 'gcnArchName', 'N/A'))
