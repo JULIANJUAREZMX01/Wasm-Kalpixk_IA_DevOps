@@ -1,7 +1,7 @@
 """LLM Provider management - Groq primary, Anthropic fallback"""
 
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import Settings

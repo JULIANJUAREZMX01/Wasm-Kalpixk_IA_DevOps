@@ -7,7 +7,6 @@ import numpy as np
 import os
 from dataclasses import dataclass
 from loguru import logger
-from typing import Optional
 from src.runtime.feature_extractor import feature_extractor
 
 @dataclass

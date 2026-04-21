@@ -4,8 +4,6 @@ Tests the full pipeline end-to-end without real GPU (KALPIXK_FORCE_CPU=true).
 """
 import pytest
 import httpx
-import asyncio
-import json
 import time
 
 BASE_URL = "http://localhost:8000"

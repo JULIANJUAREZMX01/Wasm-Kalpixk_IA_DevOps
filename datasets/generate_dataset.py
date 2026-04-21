@@ -302,7 +302,6 @@ def generate_dataset(n_samples: int = 5000, attack_ratio: float = 0.15) -> list:
 
 def dataset_to_features(dataset: list) -> tuple:
     """Convertir dataset a matrix de features [N, 32] para el modelo"""
-    import numpy as np
 
     features = []
     labels = []

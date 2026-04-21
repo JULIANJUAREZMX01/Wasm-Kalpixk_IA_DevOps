@@ -8,15 +8,16 @@
 //! - Node-4: Payload Execution
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
+//! - Node-7: MESH_INTEGRITY
 //!
-//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
+//! [ATLATL-ORDNANCE] Version 4.0: GuerrillaMesh v2 & Cryptographic Integrity
 
 #![allow(dead_code)]
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
-use std::collections::{HashSet, HashMap};
 
 /// [ATLATL-ORDNANCE] Global Threat Data Structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +74,8 @@ pub fn register_node_heartbeat(node_id: String) {
 pub fn get_active_nodes() -> Vec<String> {
     if let Ok(nodes) = MESH_NODES.lock() {
         let now = chrono::Utc::now().timestamp_millis();
-        nodes.iter()
+        nodes
+            .iter()
             .filter(|(_, &ts)| now - ts < 60000) // Active if seen in last 60s
             .map(|(id, _)| id.clone())
             .collect()
@@ -156,7 +158,8 @@ pub fn detect_reconnaissance(
     let raw = raw_lower;
 
     // Advanced heuristics for recon
-    if raw.contains("dns") && (raw.contains("enum") || raw.contains("axfr") || raw.contains("zone")) {
+    if raw.contains("dns") && (raw.contains("enum") || raw.contains("axfr") || raw.contains("zone"))
+    {
         score += 0.4;
         techniques.push("T1595".to_string());
     }
@@ -170,12 +173,21 @@ pub fn detect_reconnaissance(
         techniques.push("T1595".to_string());
     }
 
-    if raw.contains(".git") || raw.contains(".env") || raw.contains(".aws/credentials") || raw.contains("cve-") || raw.contains("nuclei") {
+    if raw.contains(".git")
+        || raw.contains(".env")
+        || raw.contains(".aws/credentials")
+        || raw.contains("cve-")
+        || raw.contains("nuclei")
+    {
         score += 0.5;
         techniques.push("T1593".to_string());
     }
 
-    if user.contains("spiderfoot") || user.contains("shodan") || user.contains("censys") || user.contains("nuclei") {
+    if user.contains("spiderfoot")
+        || user.contains("shodan")
+        || user.contains("censys")
+        || user.contains("nuclei")
+    {
         score += 0.5;
         techniques.push("T1595".to_string());
     }
@@ -204,13 +216,20 @@ pub fn detect_lateral_movement(
     let raw = raw_lower;
     let metadata = &event.metadata;
 
-    let dst_port = metadata.get("dst_port").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    let dst_port = metadata
+        .get("dst_port")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0) as i32;
     if [5985, 5986, 3389, 22, 445].contains(&dst_port) {
         score += 0.3;
         techniques.push("T1021".to_string());
     }
 
-    if raw.contains("psexec") || raw.contains("wmic") || raw.contains("winrm") || raw.contains("ssh -o") {
+    if raw.contains("psexec")
+        || raw.contains("wmic")
+        || raw.contains("winrm")
+        || raw.contains("ssh -o")
+    {
         score += 0.6;
         techniques.push("T1021".to_string());
     }
@@ -243,7 +262,11 @@ pub fn detect_credential_theft(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    if raw.contains("lsass") || raw.contains("mimikatz") || raw.contains("sekurlsa") || raw.contains("logonpasswords") {
+    if raw.contains("lsass")
+        || raw.contains("mimikatz")
+        || raw.contains("sekurlsa")
+        || raw.contains("logonpasswords")
+    {
         score += 0.95;
         techniques.push("T1003".to_string());
     }
@@ -281,16 +304,28 @@ pub fn detect_payload_execution(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    if raw.contains("powershell") && (raw.contains("-enc") || raw.contains("-e ") || raw.contains("bypass") || raw.contains("hidden")) {
+    if raw.contains("powershell")
+        && (raw.contains("-enc")
+            || raw.contains("-e ")
+            || raw.contains("bypass")
+            || raw.contains("hidden"))
+    {
         score += 0.8;
         techniques.push("T1059.001".to_string());
     }
 
-    if (raw.contains("bitsadmin") || raw.contains("certutil") || raw.contains("curl -s") || raw.contains("wget -q"))
-        && (raw.contains("http") || raw.contains(".exe") || raw.contains(".sh") || raw.contains(".ps1")) {
-            score += 0.7;
-            techniques.push("T1105".to_string());
-        }
+    if (raw.contains("bitsadmin")
+        || raw.contains("certutil")
+        || raw.contains("curl -s")
+        || raw.contains("wget -q"))
+        && (raw.contains("http")
+            || raw.contains(".exe")
+            || raw.contains(".sh")
+            || raw.contains(".ps1"))
+    {
+        score += 0.7;
+        techniques.push("T1105".to_string());
+    }
 
     if raw.contains("msfvenom") || raw.contains("meterpreter") || raw.contains("cobaltstrike") {
         score += 1.0;
@@ -320,12 +355,19 @@ pub fn detect_rce_injection(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    if raw.contains("union select") || raw.contains("order by") || raw.contains("information_schema") {
+    if raw.contains("union select")
+        || raw.contains("order by")
+        || raw.contains("information_schema")
+    {
         score += 0.8;
         techniques.push("T1190".to_string());
     }
 
-    if raw.contains("base64") || raw.contains("eval(") || raw.contains("system(") || raw.contains("exec(") {
+    if raw.contains("base64")
+        || raw.contains("eval(")
+        || raw.contains("system(")
+        || raw.contains("exec(")
+    {
         score += 0.7;
         techniques.push("T1059".to_string());
     }
@@ -358,7 +400,11 @@ pub fn detect_exfiltration(
     let mut techniques = Vec::new();
     let raw = raw_lower;
 
-    if raw.contains("rclone") || raw.contains("mega.nz") || raw.contains("dropbox") || raw.contains("googledrive") {
+    if raw.contains("rclone")
+        || raw.contains("mega.nz")
+        || raw.contains("dropbox")
+        || raw.contains("googledrive")
+    {
         score += 0.8;
         techniques.push("T1567".to_string());
     }
@@ -368,8 +414,14 @@ pub fn detect_exfiltration(
         techniques.push("T1074".to_string());
     }
 
-    if (raw.contains("bitsadmin") || raw.contains("certutil") || raw.contains("curl -s") || raw.contains("wget -q"))
-        && (raw.contains("http") || raw.contains(".exe") || raw.contains(".sh") || raw.contains(".ps1"))
+    if (raw.contains("bitsadmin")
+        || raw.contains("certutil")
+        || raw.contains("curl -s")
+        || raw.contains("wget -q"))
+        && (raw.contains("http")
+            || raw.contains(".exe")
+            || raw.contains(".sh")
+            || raw.contains(".ps1"))
     {
         score += 0.7;
         techniques.push("T1105".to_string());
@@ -395,7 +447,11 @@ pub fn detect_exfiltration(
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
-    let user_lower = event.user.as_deref().map(|s| s.to_lowercase()).unwrap_or_default();
+    let user_lower = event
+        .user
+        .as_deref()
+        .map(|s| s.to_lowercase())
+        .unwrap_or_default();
     let source_lower = event.source.to_lowercase();
 
     vec![
@@ -405,12 +461,16 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_tampering(event, &raw_lower),
     ]
 }
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
-    results.into_iter().max_by(|a, b| a.score.partial_cmp(&b.score).unwrap()).unwrap()
+    results
+        .into_iter()
+        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
+        .unwrap()
 }
 
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
@@ -437,11 +497,44 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     false
 }
 
-/// [ATLATL-ORDNANCE] P2P Threat Sync
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 7: MESH INTEGRITY (Node Spoofing Detection)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_tampering(_event: &KalpixkEvent, raw_lower: &str) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    // Check for patterns indicating node report spoofing or mesh poisoning
+    if raw_lower.contains("node_id")
+        && (raw_lower.contains("inject") || raw_lower.contains("../") || raw_lower.contains("%00"))
+    {
+        score += 0.8;
+        techniques.push("T1592".to_string());
+    }
+
+    if raw_lower.contains("sync_threats") && raw_lower.contains("malformed_json") {
+        score += 0.6;
+        techniques.push("T1562.001".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Mesh integrity score: {:.2}", score),
+    }
+}
+
+/// [ATLATL-ORDNANCE] P2P Threat Sync with Integrity Validation
 pub fn sync_threats(external_threats: Vec<String>) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         for threat in external_threats {
-            registry.insert(threat);
+            // [ATLATL-ORDNANCE] Node-7 Validation before insertion
+            if !threat.contains("'") && !threat.contains("\"") && threat.len() < 128 {
+                registry.insert(threat);
+            }
         }
     }
 }

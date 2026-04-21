@@ -1,11 +1,9 @@
-from telegram import Update
 """
 Kalpixk Telegram Bot
 Portado y adaptado de SAC/notificaciones_telegram.py + KynicOS
 Controla el motor de detección desde móvil via @SuperAsistenteSacBot
 """
 import os
-import asyncio
 from datetime import datetime
 from typing import Optional
 from loguru import logger

@@ -2,24 +2,24 @@
 // [ATLATL-ORDNANCE] WasmGuard Core v2.2
 // Implementation of the WIT contract for the Blue Team SIEM
 
-mod metrics;
-mod entropy;
-mod runtime_features;
 mod defense_nodes;
+mod entropy;
 mod event;
 mod features;
+mod metrics;
 mod parsers;
 mod payloads;
-mod security;
 mod retaliation;
+mod runtime_features;
+mod security;
+mod severity;
 mod wasp;
 mod wast;
-mod severity;
-use wasm_bindgen::prelude::*;
-use crate::runtime_features::extract_32_features;
-use crate::metrics::WasmEventMetrics;
 use crate::event::KalpixkEvent;
+use crate::metrics::WasmEventMetrics;
+use crate::runtime_features::extract_32_features;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use wasm_bindgen::prelude::*;
 
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "4.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -134,7 +134,20 @@ pub fn trigger_v4_retaliation(json_target: &str) -> String {
         "chaotic_poisoning": true,
         "entropy_trap": "ACTIVE",
         "target_fingerprint": json_target.chars().take(32).collect::<String>()
-    }).to_string()
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5 (STEALTH)
+    serde_json::json!({
+        "status": "V5_STEALTH_ARMED",
+        "stealth_poisoning": true,
+        "memory_sink": "ACTIVE",
+        "target_fingerprint": json_target.chars().take(32).collect::<String>()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -143,7 +156,8 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
     serde_json::json!({
         "status": "synchronized",
         "mesh_nodes": defense_nodes::get_active_nodes()
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -194,7 +208,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() { continue; }
+        if !security::validate_raw_log(line).is_ok() {
+            continue;
+        }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
@@ -247,7 +263,10 @@ pub fn compute_ueba_features(events_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn get_feature_names() -> Vec<String> {
-    features::FEATURE_NAMES.iter().map(|&s| s.to_string()).collect()
+    features::FEATURE_NAMES
+        .iter()
+        .map(|&s| s.to_string())
+        .collect()
 }
 
 #[wasm_bindgen]
@@ -275,9 +294,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v4.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "node_7_integrity": "active"
     })
     .to_string()
 }

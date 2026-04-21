@@ -2,7 +2,10 @@
 Kalpixk — SSH Honeypot
 Escucha en puerto 2222, registra intentos de autenticación reales.
 """
-import socket, threading, logging, json
+import socket
+import threading
+import logging
+import json
 from pathlib import Path
 from datetime import datetime
 

@@ -4,7 +4,10 @@ Skill: detect_now
 Corre detección inmediata y reporta resultado
 Uso: python skills/detect_now.py [--loop 60] [--notify]
 """
-import sys, os, argparse, time, json
+import sys
+import os
+import argparse
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run():
@@ -14,7 +17,7 @@ def run():
     parser.add_argument("--model", default="models/kalpixk_v2.pt")
     args = parser.parse_args()
 
-    from src.ui import KalpixkTheme, ANSI
+    from src.ui import KalpixkTheme
     from src.detector import AnomalyDetector
     from src.runtime import WasmRuntimeMonitor
     from datetime import datetime

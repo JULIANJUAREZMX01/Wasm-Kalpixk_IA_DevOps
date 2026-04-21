@@ -1,6 +1,5 @@
-import json
 import numpy as np
-from wasmtime import Store, Instance, Linker
+from wasmtime import Store, Linker
 from src.runtime.wasm_loader import wasm_loader
 from loguru import logger
 
@@ -13,7 +12,8 @@ class WasmFeatureExtractor:
             self.linker = Linker(wasm_loader.engine)
             self.linker.define_wasi()
             self.store = Store(wasm_loader.engine)
-            from wasmtime import WasiConfig; self.store.set_wasi(WasiConfig()) # Basic WASI config
+            from wasmtime import WasiConfig
+            self.store.set_wasi(WasiConfig())  # Basic WASI config
             self.instance = self.linker.instantiate(self.store, self.module)
             self.extract_fn = self.instance.exports(self.store)["extract_features"]
             # Helper for memory access if needed, but extract_features returns a Vec which wasm-bindgen handles
@@ -30,7 +30,7 @@ class WasmFeatureExtractor:
             return fallback_extractor.extract(metrics_dict)
 
         try:
-            json_str = json.dumps(metrics_dict)
+            # json_str = json.dumps(metrics_dict)
             # wasm-bindgen usually expects a pointer and length for strings.
             # But let's check how it's exported in raw wasm.
             # It might be easier to use a simple C-style interface if wasm-bindgen is too complex for raw wasmtime-py.
