@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use crate::metrics::WasmEventMetrics;
-use std::sync::Mutex;
 use lazy_static::lazy_static;
+use std::sync::Mutex;
 
 pub const FEATURE_DIM: usize = 32;
 
@@ -39,8 +39,15 @@ pub fn extract_32_features(event: &WasmEventMetrics) -> Vec<f32> {
     // f[9]: instruction_variance
     if history.len() >= 2 {
         let n = history.len() as f32;
-        let mean = (history.iter().map(|e| e.instruction_count).sum::<u64>() as f32 + event.instruction_count as f32) / (n + 1.0);
-        let variance = (history.iter().map(|e| (e.instruction_count as f32 - mean).powi(2)).sum::<f32>() + (event.instruction_count as f32 - mean).powi(2)) / (n + 1.0);
+        let mean = (history.iter().map(|e| e.instruction_count).sum::<u64>() as f32
+            + event.instruction_count as f32)
+            / (n + 1.0);
+        let variance = (history
+            .iter()
+            .map(|e| (e.instruction_count as f32 - mean).powi(2))
+            .sum::<f32>()
+            + (event.instruction_count as f32 - mean).powi(2))
+            / (n + 1.0);
         f[9] = (variance.sqrt() / 100_000.0).min(1.0);
     } else {
         f[9] = 0.0;
@@ -69,7 +76,13 @@ pub fn extract_32_features(event: &WasmEventMetrics) -> Vec<f32> {
         // Instr count stats
         let ic_vals: Vec<f32> = history.iter().map(|e| e.instruction_count as f32).collect();
         f[16] = ic_vals.iter().sum::<f32>() / (n * 1_000_000.0); // mean
-        f[17] = (ic_vals.iter().map(|&v| (v - f[16]*1_000_000.0).powi(2)).sum::<f32>() / n).sqrt() / 1_000_000.0; // std
+        f[17] = (ic_vals
+            .iter()
+            .map(|&v| (v - f[16] * 1_000_000.0).powi(2))
+            .sum::<f32>()
+            / n)
+            .sqrt()
+            / 1_000_000.0; // std
         f[18] = ic_vals.iter().cloned().fold(f32::INFINITY, f32::min) / 1_000_000.0; // min
         f[19] = ic_vals.iter().cloned().fold(f32::NEG_INFINITY, f32::max) / 1_000_000.0; // max
 

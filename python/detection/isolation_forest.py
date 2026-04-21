@@ -18,7 +18,6 @@ import logging
 import pickle
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import torch
@@ -110,7 +109,7 @@ class KalpixkIsolationForest:
 
     # ── Training ─────────────────────────────────────────────────────────────
 
-    def fit(self, X: np.ndarray) -> "KalpixkIsolationForest":
+    def fit(self, X: np.ndarray) -> KalpixkIsolationForest:
         """
         Train on baseline (normal) traffic.
         X: [N, 32] float32, normalized [0, 1].
@@ -133,7 +132,7 @@ class KalpixkIsolationForest:
         self.save()
         return self
 
-    def fit_synthetic(self, n_samples: int = 5000) -> "KalpixkIsolationForest":
+    def fit_synthetic(self, n_samples: int = 5000) -> KalpixkIsolationForest:
         """
         Quick-start: train on synthetic normal traffic.
         Used in dev/testing when real logs aren't available.
