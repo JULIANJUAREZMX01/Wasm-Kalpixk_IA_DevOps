@@ -6,12 +6,11 @@ Full pipeline integration tests:
 
 Run: cd python && KALPIXK_FORCE_CPU=true uv run pytest tests/ -v
 """
-import json
 import time
 
+import httpx
 import numpy as np
 import pytest
-import httpx
 
 BASE = "http://localhost:8000"
 
@@ -178,8 +177,9 @@ async def test_metrics_endpoint():
 
 class TestIsolationForest:
     def test_fit_and_predict(self):
-        from detection.isolation_forest import KalpixkIsolationForest
         import torch
+
+        from detection.isolation_forest import KalpixkIsolationForest
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         X = np.random.default_rng(0).normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
         model.fit(X)
@@ -189,15 +189,17 @@ class TestIsolationForest:
         assert all(0.0 <= c <= 1.0 for c in confs)
 
     def test_synthetic_fit(self):
-        from detection.isolation_forest import KalpixkIsolationForest
         import torch
+
+        from detection.isolation_forest import KalpixkIsolationForest
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         model.fit_synthetic(n_samples=500)
         assert model.is_trained
 
     def test_anomaly_scores_higher_for_outliers(self):
-        from detection.isolation_forest import KalpixkIsolationForest
         import torch
+
+        from detection.isolation_forest import KalpixkIsolationForest
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         X_normal = np.random.default_rng(0).normal(0.3, 0.05, (500, 32)).clip(0, 1).astype(np.float32)
         model.fit(X_normal)
@@ -217,8 +219,9 @@ class TestIsolationForest:
 
 class TestAutoencoder:
     def test_fit_and_predict(self):
-        from detection.autoencoder import KalpixkAutoencoder
         import torch
+
+        from detection.autoencoder import KalpixkAutoencoder
         ae = KalpixkAutoencoder(torch.device("cpu"))
         X = np.random.default_rng(1).normal(0.3, 0.1, (300, 32)).clip(0, 1).astype(np.float32)
         ae.fit(X, epochs=5)  # Quick for tests
@@ -227,8 +230,9 @@ class TestAutoencoder:
         assert all(0.0 <= s <= 1.0 for s in scores)
 
     def test_latent_representation_shape(self):
-        from detection.autoencoder import KalpixkAutoencoder
         import torch
+
+        from detection.autoencoder import KalpixkAutoencoder
         ae = KalpixkAutoencoder(torch.device("cpu"))
         ae.fit_synthetic(n_samples=200)
         X = np.random.rand(5, 32).astype(np.float32)
@@ -252,8 +256,8 @@ class TestWmsConnector:
         from utils.wms_connector import WmsConnector
         c = WmsConnector(mode="mock")
         batch = c.stream_batch(n=500)
-        suspicious = [l for l in batch if any(
-            kw in l.upper() for kw in ["DROP", "EXPORT", "GRANT", "UNKNOWN"]
+        suspicious = [line for line in batch if any(
+            kw in line.upper() for kw in ["DROP", "EXPORT", "GRANT", "UNKNOWN"]
         )]
         assert len(suspicious) > 0, "Mock stream should inject anomalies"
 
