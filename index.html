@@ -243,6 +243,16 @@
     </div>
 
     <script>
+        function escapeHTML(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         // --- SIEM Core Logic (JS Re-implementation of Rust WASM Parsers) ---
         const SENSITIVE_TABLES = ["NOMINAS", "VENTAS", "EMPLEADOS", "CLIENTES", "CREDITOS"];
         const DB2_USERS = ["CEDIS_APP", "CEDIS_USR", "WMS_SVC", "DBA_ADMIN"];
@@ -297,8 +307,8 @@
             row.innerHTML = `
                 <div class="flex-shrink-0 text-zinc-500 w-32">${getTimestamp()}</div>
                 <div class="flex-grow">
-                    <div class="font-bold flex items-center gap-2">${badge} ${data.msg}</div>
-                    <div class="text-zinc-600 truncate">${data.raw}</div>
+                    <div class="font-bold flex items-center gap-2">${badge} ${escapeHTML(data.msg)}</div>
+                    <div class="text-zinc-600 truncate">${escapeHTML(data.raw)}</div>
                 </div>
                 <div class="flex-shrink-0 font-mono ${data.score > 0.8 ? 'text-red-500' : 'text-zinc-500'}">S:${data.score.toFixed(4)}</div>
             `;
@@ -355,7 +365,7 @@
             document.getElementById('manual-bar').style.backgroundColor = res.score > 0.7 ? '#E31837' : '#00ff41';
             document.getElementById('manual-desc').textContent = res.msg + (res.mitre ? ` (${res.mitre})` : "");
 
-            addLog(res);
+            addLog({...res, raw: input.value});
         }
 
         function clearLogs() {
