@@ -73,6 +73,16 @@ async function syncBlacklist() {
 }
 
 // ── Log Terminal ───────────────────────────────────────────
+function escapeHTML(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function log(msg, type = 'ok') {
     const el = document.getElementById('log-terminal');
     const line = document.createElement('div');
@@ -86,7 +96,7 @@ function log(msg, type = 'ok') {
     };
 
     line.className = `${classes[type] || 'status-ok'} font-bold`;
-    line.innerHTML = `<span class="text-red-900">[${ts}]</span> [SACITY] ${msg}`;
+    line.innerHTML = `<span class="text-red-900">[${ts}]</span> [SACITY] ${escapeHTML(msg)}`;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
 
