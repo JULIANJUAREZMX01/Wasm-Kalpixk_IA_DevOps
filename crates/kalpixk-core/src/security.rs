@@ -119,7 +119,7 @@ pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
     Ok(())
-///
+}
 /// Uses 1-second windows. When a source exceeds `MAX_EVENTS_PER_SEC_PER_SOURCE`
 /// events within the current window, subsequent events are rejected until the
 /// window resets.
