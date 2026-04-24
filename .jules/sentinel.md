@@ -34,3 +34,8 @@
 **Vulnerability:** The legacy backend API (`python/api/kalpixk_api.py`) lacked all security controls: no authentication, wildcard CORS, and no security headers.
 **Learning:** Security hardening is often applied to the primary or "new" entry points while leaving legacy or internal-only APIs vulnerable, assuming they are protected by network isolation which may not always be the case.
 **Prevention:** Audit all entry points regardless of their perceived usage. Use shared security dependencies across all FastAPI instances to ensure a consistent security posture.
+
+## 2026-04-23 - Internal Component Auth Bypass
+**Vulnerability:** Internal orchestrator components bypassed API authentication when calling local and peer endpoints.
+**Learning:** Hardening an API is insufficient if the internal clients/orchestrators (e.g., `src/nodes/orchestrator.py`) are not updated to include the mandatory authentication headers (`X-Kalpixk-Key`). This led to functional failures and security gaps in P2P threat synchronization.
+**Prevention:** When implementing mandatory authentication at the API layer, audit all internal scripts, sidecars, and orchestrators to ensure they are configured with the necessary credentials to maintain system functionality and security posture.
