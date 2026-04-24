@@ -3,10 +3,10 @@ ATLATL-ORDNANCE — GuerrillaMesh Orchestrator
 Handles P2P heartbeats and threat synchronization between decentralized nodes.
 Versión: 3.1-ATLATL
 """
-import time
-import requests
 import os
-import json
+import time
+
+import requests
 from loguru import logger
 
 class GuerrillaOrchestrator:
@@ -45,7 +45,7 @@ class GuerrillaOrchestrator:
             try:
                 logger.info(f"📡 Propagating threat signatures to mesh peer: {peer}")
                 # En un despliegue real, esto llamaría al endpoint /api/v1/nodes/sync del par
-                response = requests.post(f"{peer}/api/v1/nodes/sync", json=payload, headers=headers, timeout=10)
+                requests.post(f"{peer}/api/v1/nodes/sync", json=payload, headers=headers, timeout=10)
                 time.sleep(0.1)
             except Exception as e:
                 logger.error(f"Failed to sync with peer {peer}: {e}")

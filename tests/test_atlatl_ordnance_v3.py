@@ -1,6 +1,8 @@
+import time
+
 import pytest
-import asyncio
 from fastapi.testclient import TestClient
+
 from src.api.main import app
 from src.retaliation.atlatl import atlatl
 
@@ -25,8 +27,6 @@ def test_metrics_retaliation_trigger():
     data = response.json()
     assert "features" in data
     assert "detection" in data
-
-import time
 
 def test_node_sync_v3():
     payload = {
