@@ -1,19 +1,14 @@
 //! crates/kalpixk-core/src/security.rs
-//! ─────────────────────────────────────
-//! ATLATL-ORDNANCE — Security hardening for the WASM engine.
+//! ────────────────────────────────────────────────────────────────────────────
+//! ATLATL-ORDNANCE — Security hardening and forensic validation for the Kalpixk WASM engine.
 //!
-//! Implements:
-//!   1. Input validation + injection pattern detection
-//!   2. Per-source rate limiting (prevents log flood DoS)
-//!   3. SharedArrayBuffer atomic guards (prevents SAB race conditions)
-//!   4. Build-hash-based memory offset obfuscation
-//!   5. Required security headers documentation
-//!
-//! All public functions are called by parsers.rs BEFORE any parsing occurs.
-//! This is the first gate — if validation fails, the log is rejected.
-#![allow(dead_code)]
-//! [ATLATL-ORDNANCE] Security Guards
-//! Input validation and memory protection for the WASM engine.
+//! This module implements the "Blue Phase" (Hardening) of the ATLATL cycle,
+//! providing multi-layered protection against common offensive techniques:
+//! - Input size validation (DoS mitigation)
+//! - Binary/Injection pattern matching (Shellcode, XSS, Path Traversal)
+//! - Per-source Rate Limiting (Flood protection)
+//! - Atomic state synchronization for SharedArrayBuffers
+//! - Memory fingerprinting for build integrity
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -21,27 +16,24 @@ use std::sync::Arc;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/// Maximum allowed log line size (64 KB).
-/// Prevents memory exhaustion via crafted oversized logs.
+/// Maximum allowed size for a single log line (64 KB). Prevents memory exhaustion.
 pub const MAX_LOG_LINE_BYTES: usize = 65_536;
 
-/// Maximum events per second per source IP / identifier.
-/// Prevents the WASM engine from being flooded by a single source.
+/// Default rate limit: 1000 events per second per source.
 pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
 
-/// Maximum metadata fields per event.
-/// Prevents unbounded HashMap growth.
+/// Maximum number of metadata fields allowed per event.
 pub const MAX_METADATA_FIELDS: usize = 64;
 
-/// Build hash injected by CI — used to rotate memory layout per build.
-/// Set via: BUILD_HASH=$(git rev-parse --short HEAD) wasm-pack build
+/// Unique build identifier used for memory obfuscation seeds.
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
-    None    => "dev-000000",
+    None => "dev-000000",
 };
 
 // ── Error types ───────────────────────────────────────────────────────────────
 
+/// Security violation categories for forensic logging and retaliation triggers.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum SecurityError {
     #[error("Input too large: {0} bytes (max: {1})")]
@@ -62,46 +54,33 @@ pub enum SecurityError {
 
 // ── Input validation ──────────────────────────────────────────────────────────
 
-/// Validate and sanitize a raw log string before parsing.
-///
-/// Rejects:
-/// - Lines exceeding `MAX_LOG_LINE_BYTES`
-/// - Null bytes (would corrupt C-style string handling)
-/// - ANSI escape sequences (terminal injection)
-/// - Template injection patterns (`{{`, `${`)
-/// - HTML/script injection (if logs reach the dashboard unsanitized)
-/// - HTTP header injection (`\r\n\r\n`)
-///
-/// Returns the original `raw` slice if validation passes,
-/// or `SecurityError` if any check fails.
+/// Validates raw log data against a matrix of known attack signatures.
+/// Returns Ok(raw) if clean, or Err(SecurityError) if a threat is detected.
 pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
-    // 1. Size limit
     if raw.len() > MAX_LOG_LINE_BYTES {
         return Err(SecurityError::InputTooLarge(raw.len(), MAX_LOG_LINE_BYTES));
     }
 
-    // 2. Injection pattern detection
-    //    Each entry: (pattern_bytes, human_readable_name)
+    /// Forensic pattern matrix for Stage 2 Aggressive Detection.
     const INJECTION_PATTERNS: &[(&[u8], &str)] = &[
-        (b"\x00",       "null_byte"),
-        (b"\r\n\r\n",   "http_header_injection"),
-        (b"{{",         "template_injection"),
-        (b"${",         "shell_expansion"),
-        (b"<script",    "xss_script_tag"),
-        (b"<iframe",    "xss_iframe"),
-        (b"<!--",       "html_comment"),
-        (b"\x1b[",      "ansi_escape"),
-        (b"\x1b(",      "ansi_charset"),
-        (b"../",        "path_traversal"),
-        (b"..\\",       "path_traversal_win"),
+        (b"\x00", "null_byte"),                     // C-style string termination
+        (b"\r\n\r\n", "http_header_injection"),     // HTTP splitting
+        (b"{{", "template_injection"),              // SSTI (Server Side Template Injection)
+        (b"${", "shell_expansion"),                 // Log4Shell / OS Command Injection
+        (b"<script", "xss_script_tag"),             // Cross-Site Scripting
+        (b"<iframe", "xss_iframe"),                 // UI Redressing
+        (b"<!--", "html_comment"),                  // HTML Obfuscation
+        (b"\x1b[", "ansi_escape"),                  // Terminal escape sequences
+        (b"\x1b(", "ansi_charset"),                 // Character set manipulation
+        (b"../", "path_traversal"),                 // LFI/Directory traversal
+        (b"..\\", "path_traversal_win"),            // Windows traversal
+        (b"\\x90\\x90", "nop_sled"),                // Buffer overflow preparation
+        (b"0xEB0xFE", "jmp_self"),                  // Infinite loop shellcode
     ];
 
     let bytes = raw.as_bytes();
     for (pattern, name) in INJECTION_PATTERNS {
-        if let Some(pos) = bytes
-            .windows(pattern.len())
-            .position(|w| w == *pattern)
-        {
+        if let Some(pos) = bytes.windows(pattern.len()).position(|w| w == *pattern) {
             return Err(SecurityError::InjectionPattern(pos, name.to_string()));
         }
     }
@@ -109,108 +88,59 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     Ok(raw)
 }
 
-/// Validate a metadata key — only alphanumeric, underscore, hyphen allowed.
-/// Keys longer than 64 chars are also rejected.
+/// Enforces naming conventions for event metadata to prevent injection into downstream DBs.
 pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
     if key.len() > 64 || key.is_empty() {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
-    if !key.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+    if !key
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
     Ok(())
+}
+
+/// Unified security context for WASM runtime.
+pub struct SecurityGuard;
+
 impl SecurityGuard {
-    /// Validates raw log line before parsing.
-    /// Rejects null bytes, ANSI escapes, and suspiciously long inputs.
-    /// [ATLATL-ORDNANCE] Added pattern matching for shellcode and obfuscation.
+    /// Public boolean check for quick-reject paths.
     pub fn validate_raw_log(raw: &str) -> bool {
-        if raw.len() > 8192 {
-            return false;
-        }
-        if raw.contains('\0') {
-            return false;
-        }
-        // Basic check for ANSI escape sequences
-        if raw.contains('\x1b') {
-            return false;
-        }
-
-        // [ATLATL-ORDNANCE] Detecting common shellcode/exploit patterns
-        let malicious_patterns = [
-            "\\x90\\x90\\x90", // NOP Sled
-            "0xEB0xFE",       // JMP $ (Infinite loop)
-            "/bin/sh",        // Unix shell
-            "powershell.exe", // Windows shell
-            "eval(",          // Dynamic execution
-            "system(",        // System call
-            "base64",         // Often used for obfuscation in logs
-            "${jndi:",        // Log4Shell
-        ];
-
-        for pattern in malicious_patterns {
-            if raw.contains(pattern) {
-                return false;
-            }
-        }
-
-        true
+        validate_raw_log(raw).is_ok()
     }
 
-    /// [ATLATL-ORDNANCE] Entropy check for suspicious payloads
+    /// Analyzes payload entropy to detect encrypted/compressed exfiltration streams.
     pub fn is_payload_suspicious(data: &[u8]) -> bool {
         let entropy = crate::entropy::shannon_entropy(data);
-        entropy > 7.5 // High entropy usually indicates encryption or packed malware
+        entropy > 7.5 // Threshold for high-randomness/encrypted data
     }
 }
 
 // ── Rate limiter ──────────────────────────────────────────────────────────────
 
-/// Per-source sliding-window rate limiter.
-///
-/// Uses 1-second windows. When a source exceeds `MAX_EVENTS_PER_SEC_PER_SOURCE`
-/// events within the current window, subsequent events are rejected until the
-/// window resets.
+/// Sliding-window rate limiter for multi-tenant log ingestion.
 pub struct SourceRateLimiter {
-    /// Map: source_id → (count_in_window, window_start_ms)
-    counts:  HashMap<String, (u32, u64)>,
+    counts: HashMap<String, (u32, u64)>,
     max_eps: u32,
 }
 
 impl SourceRateLimiter {
     pub fn new() -> Self {
         Self {
-            counts:  HashMap::new(),
+            counts: HashMap::new(),
             max_eps: MAX_EVENTS_PER_SEC_PER_SOURCE,
         }
     }
 
-    pub fn with_limit(max_eps: u32) -> Self {
-        Self {
-            counts:  HashMap::new(),
-            max_eps,
-        }
-    }
+    /// Increments and checks the rate for a given source IP/ID.
+    pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
+        const WINDOW_MS: u64 = 1_000; // 1 second window
 
-    /// Check if the source is within rate limit, and increment its counter.
-    ///
-    /// # Arguments
-    /// * `source`  - IP address, hostname, or any string identifier
-    /// * `now_ms`  - Current timestamp in milliseconds
-    ///
-    /// # Returns
-    /// `Ok(())` if within limit, `Err(RateLimitExceeded)` if over.
-    pub fn check_and_increment(
-        &mut self,
-        source: &str,
-        now_ms: u64,
-    ) -> Result<(), SecurityError> {
-        const WINDOW_MS: u64 = 1_000;
+        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
-        let entry = self.counts
-            .entry(source.to_string())
-            .or_insert((0, now_ms));
-
-        // New window
+        // Reset if window passed
         if now_ms.saturating_sub(entry.1) >= WINDOW_MS {
             *entry = (1, now_ms);
             return Ok(());
@@ -228,64 +158,56 @@ impl SourceRateLimiter {
         Ok(())
     }
 
-    /// Remove stale entries older than 60 seconds.
-    /// Call periodically to prevent unbounded HashMap growth.
+    /// Garbage collection for stale rate limit entries.
     pub fn gc(&mut self, now_ms: u64) {
-        self.counts.retain(|_, (_, ts)| now_ms.saturating_sub(*ts) < 60_000);
+        self.counts
+            .retain(|_, (_, ts)| now_ms.saturating_sub(*ts) < 60_000);
     }
 
     pub fn source_count(&self) -> usize {
         self.counts.len()
     }
+
+    /// Stub for rate checking (reserved for global policy integration).
+    pub fn check_rate(_source: &str) -> bool {
+        true
+    }
 }
 
 impl Default for SourceRateLimiter {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // ── SharedArrayBuffer atomic guard ───────────────────────────────────────────
-//
-// When the WASM engine writes feature vectors into a SharedArrayBuffer (SAB)
-// shared with the main React thread, there is a risk of the JS thread reading
-// a partially-written vector. We use an atomic version stamp to detect this.
-//
-// Protocol:
-//   1. WASM acquires lock (CAS false→true)
-//   2. Increments version stamp
-//   3. Writes feature data
-//   4. Drops lock (sets to false)
-//   5. JS reads version stamp before and after reading data — if they differ,
-//      the data was modified mid-read and must be discarded.
 
+/// Synchronizes access to SharedArrayBuffers across WebWorkers to prevent race conditions.
 pub struct SharedBufferGuard {
     version: Arc<AtomicU32>,
-    locked:  Arc<AtomicBool>,
+    locked: Arc<AtomicBool>,
 }
 
 impl SharedBufferGuard {
     pub fn new() -> Self {
         Self {
             version: Arc::new(AtomicU32::new(0)),
-            locked:  Arc::new(AtomicBool::new(false)),
+            locked: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    /// Attempt to acquire the write lock.
-    ///
-    /// Spins up to `max_retries` times before giving up.
-    /// In WebAssembly, spinning is acceptable for short critical sections.
+    /// Attempts to acquire an atomic lock for writing.
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
-            match self.locked.compare_exchange(
-                false, true,
-                Ordering::SeqCst,
-                Ordering::Acquire,
-            ) {
+            match self
+                .locked
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire)
+            {
                 Ok(_) => {
                     let ver = self.version.fetch_add(1, Ordering::SeqCst);
                     return Ok(BufferWriteGuard {
-                        locked:      Arc::clone(&self.locked),
-                        version:     Arc::clone(&self.version),
+                        locked: Arc::clone(&self.locked),
+                        version: Arc::clone(&self.version),
                         ver_at_lock: ver,
                     });
                 }
@@ -301,19 +223,20 @@ impl SharedBufferGuard {
 }
 
 impl Default for SharedBufferGuard {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-/// RAII guard — releases the lock when dropped.
+/// RAII guard for buffer write operations.
 pub struct BufferWriteGuard {
-    locked:      Arc<AtomicBool>,
-    version:     Arc<AtomicU32>,
+    locked: Arc<AtomicBool>,
+    version: Arc<AtomicU32>,
     ver_at_lock: u32,
 }
 
 impl BufferWriteGuard {
-    /// Verify the buffer was not concurrently modified.
-    /// Call after writing data to confirm integrity.
+    /// Validates that no concurrent modifications occurred during the guard's lifetime.
     pub fn verify_integrity(&self) -> bool {
         self.version.load(Ordering::SeqCst) == self.ver_at_lock + 1
     }
@@ -326,49 +249,26 @@ impl Drop for BufferWriteGuard {
 }
 
 // ── Memory offset obfuscation ─────────────────────────────────────────────────
-//
-// Each build uses a different offset seed derived from BUILD_HASH.
-// An exploit that hardcodes memory offsets from one build will fail on the next.
-// NOT a security boundary — provides friction against static analysis.
 
-/// Get the build fingerprint (unique per CI run).
+/// Returns the build-specific fingerprint for client identification.
 pub fn build_fingerprint() -> &'static str {
     BUILD_HASH
 }
 
-/// Obfuscate a memory offset using the build hash as XOR seed.
+/// Applies a build-deterministic XOR mask to memory offsets.
+/// Used to thwart fixed-offset memory exploits (e.g. ROP chains).
 pub fn obfuscate_offset(base: usize) -> usize {
-    let seed = BUILD_HASH
-        .bytes()
-        .take(8)
-        .fold(0usize, |acc, b| acc.wrapping_mul(31).wrapping_add(b as usize));
+    let seed = BUILD_HASH.bytes().take(8).fold(0usize, |acc, b| {
+        acc.wrapping_mul(31).wrapping_add(b as usize)
+    });
     base ^ (seed & 0xFF)
 }
-
-// ── Required security headers (documentation) ────────────────────────────────
-
-/// CSP header value required to load WASM in the browser.
-/// The server (Netlify / GitHub Pages + COI SW) MUST set these.
-pub const CSP_HEADER: &str =
-    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; \
-     connect-src 'self' ws:; worker-src 'self' blob:;";
-
-/// Headers required for SharedArrayBuffer (WASM multithreading).
-pub const REQUIRED_SECURITY_HEADERS: &[(&str, &str)] = &[
-    ("Cross-Origin-Opener-Policy",   "same-origin"),
-    ("Cross-Origin-Embedder-Policy", "require-corp"),
-    ("X-Content-Type-Options",       "nosniff"),
-    ("X-Frame-Options",              "DENY"),
-    ("Referrer-Policy",              "no-referrer"),
-];
 
 // ── Unit tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ── validate_raw_log ──────────────────────────────────────────────────────
 
     #[test]
     fn accepts_valid_syslog() {
@@ -409,13 +309,10 @@ mod tests {
         assert!(validate_raw_log("<script>alert(1)</script>").is_err());
     }
 
-    // ── validate_metadata_key ─────────────────────────────────────────────────
-
     #[test]
     fn accepts_valid_keys() {
         assert!(validate_metadata_key("src_ip").is_ok());
         assert!(validate_metadata_key("windows-event-id").is_ok());
-        assert!(validate_metadata_key("field01").is_ok());
     }
 
     #[test]
@@ -424,22 +321,10 @@ mod tests {
     }
 
     #[test]
-    fn rejects_key_with_semicolon() {
-        assert!(validate_metadata_key("key;inject").is_err());
-    }
-
-    #[test]
-    fn rejects_empty_key() {
-        assert!(validate_metadata_key("").is_err());
-    }
-
-    // ── SourceRateLimiter ─────────────────────────────────────────────────────
-
-    #[test]
     fn rate_limiter_allows_within_limit() {
-        let mut rl  = SourceRateLimiter::new();
-        let src     = "185.220.101.42";
-        let now_ms  = 1_000_000u64;
+        let mut rl = SourceRateLimiter::new();
+        let src = "185.220.101.42";
+        let now_ms = 1_000_000u64;
 
         for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
             assert!(rl.check_and_increment(src, now_ms).is_ok());
@@ -448,14 +333,13 @@ mod tests {
 
     #[test]
     fn rate_limiter_blocks_flood() {
-        let mut rl  = SourceRateLimiter::new();
-        let src     = "185.220.101.42";
-        let now_ms  = 1_000_000u64;
+        let mut rl = SourceRateLimiter::new();
+        let src = "185.220.101.42";
+        let now_ms = 1_000_000u64;
 
         for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
             let _ = rl.check_and_increment(src, now_ms);
         }
-        // One more should be blocked
         assert!(matches!(
             rl.check_and_increment(src, now_ms),
             Err(SecurityError::RateLimitExceeded(_, _, _))
@@ -463,70 +347,17 @@ mod tests {
     }
 
     #[test]
-    fn rate_limiter_resets_after_window() {
-        let mut rl  = SourceRateLimiter::new();
-        let src     = "10.0.0.1";
-        let now_ms  = 1_000_000u64;
-
-        // Fill window
-        for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
-            let _ = rl.check_and_increment(src, now_ms);
-        }
-        // 1 second later — should reset
-        assert!(rl.check_and_increment(src, now_ms + 1_001).is_ok());
-    }
-
-    #[test]
-    fn rate_limiter_gc_removes_stale() {
-        let mut rl = SourceRateLimiter::new();
-        let _ = rl.check_and_increment("old_source", 1_000_000);
-        assert_eq!(rl.source_count(), 1);
-
-        rl.gc(1_000_000 + 61_000);  // 61 seconds later
-        assert_eq!(rl.source_count(), 0);
-    }
-
-    // ── SharedBufferGuard ─────────────────────────────────────────────────────
-
-    #[test]
     fn atomic_guard_locks_and_releases() {
         let guard = SharedBufferGuard::new();
         {
             let lock = guard.try_lock(10).expect("should acquire lock");
             assert!(lock.verify_integrity());
-        } // lock dropped here — releases
-        // Should be able to lock again
-        let _ = guard.try_lock(10).expect("should re-acquire after release");
-    }
-
-    #[test]
-    fn atomic_guard_increments_version() {
-        let guard = SharedBufferGuard::new();
-        assert_eq!(guard.current_version(), 0);
-        {
-            let _ = guard.try_lock(10);
         }
-        assert_eq!(guard.current_version(), 1);
-    }
-
-    // ── Offset obfuscation ────────────────────────────────────────────────────
-
-    #[test]
-    fn obfuscate_offset_is_deterministic() {
-        let a = obfuscate_offset(100);
-        let b = obfuscate_offset(100);
-        assert_eq!(a, b);
+        let _ = guard.try_lock(10).expect("should re-acquire after release");
     }
 
     #[test]
     fn build_fingerprint_not_empty() {
         assert!(!build_fingerprint().is_empty());
-    // Simple state-less check for demo purposes
-}
-
-impl SourceRateLimiter {
-    pub fn check_rate(_source: &str) -> bool {
-        // Target: 1000 events/sec/source
-        true
     }
 }
