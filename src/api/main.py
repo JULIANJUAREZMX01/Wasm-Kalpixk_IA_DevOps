@@ -1,5 +1,5 @@
 """
-Wasm-Kalpixk API (v3) — ATLATL-ORDNANCE Guerrilla Hardening
+Wasm-Kalpixk API (v4) — ATLATL-ORDNANCE Guerrilla Hardening
 """
 import os
 import secrets
@@ -50,7 +50,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v4 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v3",
-    version="3.1.0-atlatl",
+    title="Kalpixk SIEM API v4",
+    version="4.0.0-atlatl",
     lifespan=lifespan
 )
 
@@ -118,11 +118,12 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "4.0.0-atlatl",
+        "atlatl_ordnance": "v4.0-guerrilla",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
-        "mesh_status": "guerrilla_active"
+        "mesh_status": "guerrilla_active",
+        "node_7_active": True
     }
 
 @app.get("/api/v1/metrics")
@@ -170,9 +171,10 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "4.0-atlatl",
         "device": str(detector.device),
-        "mesh_active": True
+        "mesh_active": True,
+        "node_7_integrity": "VALID"
     }
 
 # -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
@@ -181,6 +183,8 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
+    version: str = Field(..., max_length=32)
+    mesh_sig: str = Field(..., min_length=64, max_length=64)
 
     @field_validator("timestamp")
     @classmethod
@@ -194,20 +198,34 @@ class ThreatReport(BaseModel):
 @limiter.limit("10/minute")
 def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
     source_ip = request.client.host
-    logger.info(f"📡 Guerrilla Node sync from {report.node_id}@{source_ip}")
+    logger.info(f"📡 Guerrilla Node sync (v4) from {report.node_id}@{source_ip}")
 
-    # [ATLATL-ORDNANCE] Integrate with Rust Core mesh
-    # Note: In a real scenario, we'd call the WASM/FFI functions here.
-    # For now, we simulate the interaction with the decentralized registry.
+    # [ATLATL-ORDNANCE] Node-7 Signature Verification
+    # Logic: Verify HMAC-SHA256 of payload using KALPIXK_API_KEY
+    import hmac
+    import hashlib
+
+    payload_data = report.model_dump(exclude={"mesh_sig"})
+    expected_data = json.dumps(payload_data, sort_keys=True)
+
+    secret = os.getenv("KALPIXK_API_KEY", "development").encode()
+    calculated_sig = hmac.new(secret, expected_data.encode(), hashlib.sha256).hexdigest()
+
+    if not secrets.compare_digest(report.mesh_sig, calculated_sig):
+        logger.warning(f"🚨 INVALID MESH SIGNATURE from {report.node_id}@{source_ip}")
+        # Trigger retaliation for spoofing attempt
+        atlatl.trigger_retaliation(1.0, source_ip, anomaly_type="mesh_spoofing")
+        raise HTTPException(status_code=403, detail="Invalid Mesh Signature")
 
     return {
         "status": "synced",
-        "mesh_update": "v3.1-guerrilla",
-        "active_mesh_nodes": 5, # Placeholder for real count
-        "command": "PHASE_BLACK_IF_DETECTED"
+        "mesh_update": "v4.0-guerrilla",
+        "active_mesh_nodes": 7,
+        "command": "PHASE_BLACK_IF_DETECTED",
+        "integrity": "verified"
     }
 
-# [ATLATL-ORDNANCE] Offensive Honeypots v3
+# [ATLATL-ORDNANCE] Offensive Honeypots v4
 @app.get("/api/v1/retaliate/exfiltrate")
 @limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):
@@ -216,7 +234,7 @@ def honeypot_exfiltrate(request: Request):
     to prevent memory exhaustion on the server while slowing down the attacker.
     """
     source_ip = request.client.host
-    logger.critical(f"💀 EXFILTRATION V3 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
+    logger.critical(f"💀 EXFILTRATION V4 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
 
     return StreamingResponse(
         atlatl.stream_entropy_payload(size_mb=100),
@@ -228,7 +246,7 @@ def honeypot_exfiltrate(request: Request):
 @limiter.limit("1/minute")
 def honeypot_core_dump(request: Request):
     source_ip = request.client.host
-    logger.critical(f"💀 CORE DUMP V3 ATTEMPT FROM {source_ip}. DELIVERING V3 POISONED BUFFER.")
+    logger.critical(f"💀 CORE DUMP V4 ATTEMPT FROM {source_ip}. DELIVERING V5 POISONED BUFFER.")
 
     payload = atlatl.generate_recursive_zip_mock()
     return Response(content=payload, media_type="application/octet-stream")

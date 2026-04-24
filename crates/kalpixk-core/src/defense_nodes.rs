@@ -1,15 +1,16 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 6 nodes for detecting Red Team techniques:
+//! 7 nodes for detecting Red Team techniques:
 //! - Node-1: Reconnaissance
 //! - Node-2: Lateral Movement
 //! - Node-3: Credential Theft
 //! - Node-4: Payload Execution
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
+//! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
 //!
-//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
+//! [ATLATL-ORDNANCE] Version 4.0: GuerrillaMesh & Node-7 Integrity Validation
 
 #![allow(dead_code)]
 
@@ -37,6 +38,9 @@ lazy_static::lazy_static! {
 
     /// [ATLATL-ORDNANCE] GuerrillaMesh Node Health
     static ref MESH_NODES: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+
+    /// [ATLATL-ORDNANCE] Node-7 Cryptographic Integrity Registry
+    static ref MESH_SIGNATURES: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
 }
 
 /// Severity score from 0.0 to 1.0
@@ -390,7 +394,49 @@ pub fn detect_exfiltration(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 6 nodes
+// NODE 7: MESH_INTEGRITY DETECTOR (v4.0-ATLATL)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_integrity(
+    event: &KalpixkEvent,
+    _raw_lower: &str,
+    _user_lower: &str,
+    _source_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let metadata = &event.metadata;
+
+    // Detect attempts to spoof node identity or hijack mesh synchronization
+    if let Some(node_id) = metadata.get("node_id").and_then(|v| v.as_str()) {
+        if node_id.contains("..") || node_id.contains("/") {
+            score += 0.9;
+            techniques.push("T1557".to_string()); // Hijack Execution Flow
+        }
+
+        // Validate cryptographic signature presence
+        if !metadata.contains_key("mesh_sig") {
+            score += 0.5;
+            techniques.push("T1584".to_string()); // Compromise Infrastructure
+        }
+    }
+
+    if event.event_type == crate::event::EventType::MeshSync && event.local_severity > 0.9 {
+        score += 0.8;
+        techniques.push("T1078".to_string()); // Valid Accounts (spoofed)
+    }
+
+    NodeResult {
+        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Mesh integrity score: {:.2}", score),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// COMPLETE ANALYSIS — Run all 7 nodes
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
@@ -405,6 +451,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_integrity(event, &raw_lower, &user_lower, &source_lower),
     ]
 }
 

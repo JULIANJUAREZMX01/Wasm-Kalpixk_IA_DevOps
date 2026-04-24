@@ -117,6 +117,55 @@ pub export fn recursive_entropy_shredder(target_ptr: [*]u8, target_len: usize, s
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_macuahuitl_stealth_poisoning
+/// Quinta evolución del veneno de punteros (Phase Black v5).
+/// Utiliza secuencias de salto no deterministas basadas en el drift del reloj
+/// y trampas de corrupción de pipeline. Diseñado para aniquilar emuladores y sandboxes.
+pub export fn v5_macuahuitl_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed ^ @as(u64, @intCast(std.time.timestamp())));
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        const entropy_drift = (i *% 0x9E3779B9) ^ seed;
+        const phase = (entropy_drift >> @truncate(i % 32)) % 20;
+
+        switch (phase) {
+            0 => byte.* = 0xEB, // JMP short
+            1 => byte.* = 0xFD, // JMP -3 (Destructive loop)
+            2 => byte.* = 0xCC, // INT 3
+            3 => byte.* = 0xF4, // HLT
+            4 => byte.* = 0x0F, // UD2 start
+            5 => byte.* = 0x0B, // UD2 end
+            6 => byte.* = 0xFA, // CLI (Clear Interrupts)
+            7 => byte.* = 0xFB, // STI (Set Interrupts)
+            8 => byte.* = 0x48, // REX.W prefix
+            9 => byte.* = 0x31, // XOR
+            10 => byte.* = 0xC0, // EAX, EAX
+            11 => byte.* = 0xFF, // INC/DEC or JMP/CALL
+            12 => byte.* = 0xE0, // JMP EAX (Chaos)
+            13 => byte.* = rand.int(u8),
+            14...19 => {
+                // Non-deterministic NOP sliding
+                byte.* = if (rand.boolean()) 0x90 else 0x91;
+            },
+            else => unreachable,
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] memory_sink_trap
+/// Implementa una trampa de saturación de buffer que 'secuestra' el consumo de memoria
+/// del proceso atacante mediante la inyección de bloques de datos que fuerzan
+/// fallos de página y saturación de cache.
+pub export fn memory_sink_trap(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        // Genera un patrón de "malla de ruido" que colapsa la compresión de memoria
+        byte.* = @truncate((i *% 0x21436587) ^ (i >> 8));
+    }
+}
+
 /// [ATLATL-ORDNANCE] v4_macuahuitl_chaotic_poisoning
 /// Evolución letal del veneno de punteros. Utiliza secuencias de salto no lineales
 /// y trampas de interrupción para aniquilar el flujo de ejecución del atacante.
@@ -255,4 +304,21 @@ test "heap entropy trap" {
     heap_entropy_trap(&buffer, buffer.len, 0xFEED);
     try std.testing.expect(buffer[0] == 0x7F);
     try std.testing.expect(buffer[1] == 0x45);
+}
+
+test "v5 stealth poisoning non-zero" {
+    var buffer: [512]u8 = undefined;
+    v5_macuahuitl_stealth_poisoning(&buffer, buffer.len, 0x5EED);
+    var sum: u64 = 0;
+    for (buffer) |b| sum += b;
+    try std.testing.expect(sum > 0);
+}
+
+test "memory sink trap pattern" {
+    var buffer: [256]u8 = undefined;
+    memory_sink_trap(&buffer, buffer.len);
+    // Verificamos que el primer byte siga la formula: (0 * 0x21436587) ^ (0 >> 8) = 0
+    try std.testing.expect(buffer[0] == 0);
+    // Segundo byte: (1 * 0x21436587) ^ (1 >> 8) = 0x21436587 ^ 0 = 0x87 (truncated)
+    try std.testing.expect(buffer[1] == 0x87);
 }

@@ -64,6 +64,8 @@ pub enum EventType {
     UserCreation,
     UserDeletion,
     PolicyChange,
+    /// Evento de sincronización de malla (v4.0-ATLATL)
+    MeshSync,
     /// Evento que no calza en ninguna categoría conocida
     Unknown,
 }
@@ -78,6 +80,7 @@ impl EventType {
             EventType::FileDeletion => 0.65,
             EventType::UserCreation | EventType::UserDeletion => 0.70,
             EventType::PolicyChange => 0.75,
+            EventType::MeshSync => 0.60,
             EventType::FileModification => 0.40,
             EventType::LoginFailure => 0.35,
             EventType::ProcessExecution => 0.30,

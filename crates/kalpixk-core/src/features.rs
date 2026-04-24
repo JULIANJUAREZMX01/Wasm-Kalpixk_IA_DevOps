@@ -201,6 +201,7 @@ fn encode_event_type(et: &EventType) -> f64 {
         EventType::DbAnomalousQuery => 0.80,
         EventType::UserCreation | EventType::UserDeletion => 0.70,
         EventType::PolicyChange => 0.75,
+        EventType::MeshSync => 0.60,
         EventType::Unknown => 0.50,
     }
 }

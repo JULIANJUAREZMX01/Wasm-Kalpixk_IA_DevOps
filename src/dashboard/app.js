@@ -1,11 +1,12 @@
-// ATLATL-ORDNANCE: SACITY Dashboard Logic v3.0
-// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v3
+// ATLATL-ORDNANCE: SACITY Dashboard Logic v4.0
+// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v4
 
 import initWasmModule, {
     health_check,
     get_security_telemetry,
     get_global_blacklist_wasm,
     analyze_and_retaliate,
+    trigger_v5_retaliation,
     version
 } from './pkg/kalpixk_core.js';
 
@@ -22,7 +23,7 @@ async function initWasm() {
         const v = version();
         const health = JSON.parse(health_check());
         log(`SACITY GuerrillaMesh Armoured: ${v} [${health.atlatl_ordnance}]`, 'info');
-        document.getElementById('wasm-status').textContent = '● WASP_V3_SECURE';
+        document.getElementById('wasm-status').textContent = '● WASP_V4_SECURE';
         document.getElementById('wasm-status').className = 'text-[10px] status-ok font-bold';
 
         // Start Heartbeat & Sync
@@ -35,7 +36,7 @@ async function initWasm() {
     }
 }
 
-// ── Heartbeat Mechanism (WASP v3) ──────────────────────────
+// ── Heartbeat Mechanism (WASP v4) ──────────────────────────
 function startHeartbeat() {
     heartbeatInterval = setInterval(() => {
         if (!wasmReady) return;
@@ -45,11 +46,19 @@ function startHeartbeat() {
 
             document.getElementById('hb-val').textContent = hb;
 
+            if (telemetry.mesh_integrity_v4) {
+                 document.getElementById('mesh-integrity-status').textContent = 'MESH_INTEGRITY: SECURE';
+                 document.getElementById('mesh-integrity-status').className = 'status-ok';
+            }
+
             if (hb === lastHeartbeat && hb > 0) {
-                log('🚨 CRITICAL: WASM Runtime Stall Detected! Pointer Poisoning Initiated.', 'error');
+                log('🚨 CRITICAL: WASM Runtime Stall Detected! Phase Black v5 Strike Initiated.', 'error');
                 document.getElementById('anomaly-status').textContent = 'STALLED';
                 document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
                 applyGlitchEffect();
+                if (trigger_v5_retaliation) {
+                    trigger_v5_retaliation(JSON.stringify({reason: "HEARTBEAT_STALL"}));
+                }
             }
             lastHeartbeat = hb;
         } catch (e) {
@@ -120,20 +129,28 @@ function applyGlitchEffect() {
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V3.1';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V4.0';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION V3.1 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Delivering v4 Chaotic Poisoning & Entropy Trap...', 'error');
+    log(`💀 AGGRESSION V4.0 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
+    log('💀 SACITY_RETALIATION: Delivering v5 Stealth Poisoning & Memory Sink Trap...', 'error');
     applyGlitchEffect();
 
     // Trigger WASM retaliation hook if available
     try {
         if (wasmReady) {
-            analyze_and_retaliate(JSON.stringify({
-                source: "DASHBOARD_INJECTION",
-                raw: "T1485_RANSOMWARE_V3.1",
-                timestamp_ms: Date.now()
-            }));
+            if (trigger_v5_retaliation) {
+                trigger_v5_retaliation(JSON.stringify({
+                    source: "DASHBOARD_INJECTION",
+                    raw: "T1485_RANSOMWARE_V4.0",
+                    timestamp_ms: Date.now()
+                }));
+            } else {
+                analyze_and_retaliate(JSON.stringify({
+                    source: "DASHBOARD_INJECTION",
+                    raw: "T1485_RANSOMWARE_V3.1",
+                    timestamp_ms: Date.now()
+                }));
+            }
         }
     } catch(e) {}
 }
@@ -200,7 +217,7 @@ async function init() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v3.0', 'info');
+    log('SACITY // THE RED TERMINAL // ATLATL-ORDNANCE v4.0', 'info');
     await initWasm();
 
     await refreshMetrics();
