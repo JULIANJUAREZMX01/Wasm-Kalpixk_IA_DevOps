@@ -14,7 +14,7 @@ pub const MAX_METADATA_FIELDS: usize = 64;
 
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
-    None    => "dev-000000",
+    None => "dev-000000",
 };
 
 // ── Error types ───────────────────────────────────────────────────────────────
@@ -45,27 +45,24 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     }
 
     const INJECTION_PATTERNS: &[(&[u8], &str)] = &[
-        (b"\x00",       "null_byte"),
-        (b"\r\n\r\n",   "http_header_injection"),
-        (b"{{",         "template_injection"),
-        (b"${",         "shell_expansion"),
-        (b"<script",    "xss_script_tag"),
-        (b"<iframe",    "xss_iframe"),
-        (b"<!--",       "html_comment"),
-        (b"\x1b[",      "ansi_escape"),
-        (b"\x1b(",      "ansi_charset"),
-        (b"../",        "path_traversal"),
-        (b"..\\",       "path_traversal_win"),
+        (b"\x00", "null_byte"),
+        (b"\r\n\r\n", "http_header_injection"),
+        (b"{{", "template_injection"),
+        (b"${", "shell_expansion"),
+        (b"<script", "xss_script_tag"),
+        (b"<iframe", "xss_iframe"),
+        (b"<!--", "html_comment"),
+        (b"\x1b[", "ansi_escape"),
+        (b"\x1b(", "ansi_charset"),
+        (b"../", "path_traversal"),
+        (b"..\\", "path_traversal_win"),
         (b"\\x90\\x90", "nop_sled"),
-        (b"0xEB0xFE",   "jmp_self"),
+        (b"0xEB0xFE", "jmp_self"),
     ];
 
     let bytes = raw.as_bytes();
     for (pattern, name) in INJECTION_PATTERNS {
-        if let Some(pos) = bytes
-            .windows(pattern.len())
-            .position(|w| w == *pattern)
-        {
+        if let Some(pos) = bytes.windows(pattern.len()).position(|w| w == *pattern) {
             return Err(SecurityError::InjectionPattern(pos, name.to_string()));
         }
     }
@@ -77,7 +74,10 @@ pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
     if key.len() > 64 || key.is_empty() {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
-    if !key.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+    if !key
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
     }
     Ok(())
@@ -99,28 +99,22 @@ impl SecurityGuard {
 // ── Rate limiter ──────────────────────────────────────────────────────────────
 
 pub struct SourceRateLimiter {
-    counts:  HashMap<String, (u32, u64)>,
+    counts: HashMap<String, (u32, u64)>,
     max_eps: u32,
 }
 
 impl SourceRateLimiter {
     pub fn new() -> Self {
         Self {
-            counts:  HashMap::new(),
+            counts: HashMap::new(),
             max_eps: MAX_EVENTS_PER_SEC_PER_SOURCE,
         }
     }
 
-    pub fn check_and_increment(
-        &mut self,
-        source: &str,
-        now_ms: u64,
-    ) -> Result<(), SecurityError> {
+    pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
         const WINDOW_MS: u64 = 1_000;
 
-        let entry = self.counts
-            .entry(source.to_string())
-            .or_insert((0, now_ms));
+        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
         if now_ms.saturating_sub(entry.1) >= WINDOW_MS {
             *entry = (1, now_ms);
@@ -140,7 +134,8 @@ impl SourceRateLimiter {
     }
 
     pub fn gc(&mut self, now_ms: u64) {
-        self.counts.retain(|_, (_, ts)| now_ms.saturating_sub(*ts) < 60_000);
+        self.counts
+            .retain(|_, (_, ts)| now_ms.saturating_sub(*ts) < 60_000);
     }
 
     pub fn source_count(&self) -> usize {
@@ -153,36 +148,37 @@ impl SourceRateLimiter {
 }
 
 impl Default for SourceRateLimiter {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // ── SharedArrayBuffer atomic guard ───────────────────────────────────────────
 
 pub struct SharedBufferGuard {
     version: Arc<AtomicU32>,
-    locked:  Arc<AtomicBool>,
+    locked: Arc<AtomicBool>,
 }
 
 impl SharedBufferGuard {
     pub fn new() -> Self {
         Self {
             version: Arc::new(AtomicU32::new(0)),
-            locked:  Arc::new(AtomicBool::new(false)),
+            locked: Arc::new(AtomicBool::new(false)),
         }
     }
 
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
-            match self.locked.compare_exchange(
-                false, true,
-                Ordering::SeqCst,
-                Ordering::Acquire,
-            ) {
+            match self
+                .locked
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire)
+            {
                 Ok(_) => {
                     let ver = self.version.fetch_add(1, Ordering::SeqCst);
                     return Ok(BufferWriteGuard {
-                        locked:      Arc::clone(&self.locked),
-                        version:     Arc::clone(&self.version),
+                        locked: Arc::clone(&self.locked),
+                        version: Arc::clone(&self.version),
                         ver_at_lock: ver,
                     });
                 }
@@ -198,12 +194,14 @@ impl SharedBufferGuard {
 }
 
 impl Default for SharedBufferGuard {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct BufferWriteGuard {
-    locked:      Arc<AtomicBool>,
-    version:     Arc<AtomicU32>,
+    locked: Arc<AtomicBool>,
+    version: Arc<AtomicU32>,
     ver_at_lock: u32,
 }
 
@@ -226,10 +224,9 @@ pub fn build_fingerprint() -> &'static str {
 }
 
 pub fn obfuscate_offset(base: usize) -> usize {
-    let seed = BUILD_HASH
-        .bytes()
-        .take(8)
-        .fold(0usize, |acc, b| acc.wrapping_mul(31).wrapping_add(b as usize));
+    let seed = BUILD_HASH.bytes().take(8).fold(0usize, |acc, b| {
+        acc.wrapping_mul(31).wrapping_add(b as usize)
+    });
     base ^ (seed & 0xFF)
 }
 
@@ -291,9 +288,9 @@ mod tests {
 
     #[test]
     fn rate_limiter_allows_within_limit() {
-        let mut rl  = SourceRateLimiter::new();
-        let src     = "185.220.101.42";
-        let now_ms  = 1_000_000u64;
+        let mut rl = SourceRateLimiter::new();
+        let src = "185.220.101.42";
+        let now_ms = 1_000_000u64;
 
         for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
             assert!(rl.check_and_increment(src, now_ms).is_ok());
@@ -302,9 +299,9 @@ mod tests {
 
     #[test]
     fn rate_limiter_blocks_flood() {
-        let mut rl  = SourceRateLimiter::new();
-        let src     = "185.220.101.42";
-        let now_ms  = 1_000_000u64;
+        let mut rl = SourceRateLimiter::new();
+        let src = "185.220.101.42";
+        let now_ms = 1_000_000u64;
 
         for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
             let _ = rl.check_and_increment(src, now_ms);
