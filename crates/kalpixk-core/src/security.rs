@@ -1,6 +1,14 @@
 //! crates/kalpixk-core/src/security.rs
-//! ─────────────────────────────────────
-//! ATLATL-ORDNANCE — Security hardening for the WASM engine.
+//! ────────────────────────────────────────────────────────────────────────────
+//! ATLATL-ORDNANCE — Security hardening and forensic validation for the Kalpixk WASM engine.
+//!
+//! This module implements the "Blue Phase" (Hardening) of the ATLATL cycle,
+//! providing multi-layered protection against common offensive techniques:
+//! - Input size validation (DoS mitigation)
+//! - Binary/Injection pattern matching (Shellcode, XSS, Path Traversal)
+//! - Per-source Rate Limiting (Flood protection)
+//! - Atomic state synchronization for SharedArrayBuffers
+//! - Memory fingerprinting for build integrity
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -8,10 +16,16 @@ use std::sync::Arc;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+/// Maximum allowed size for a single log line (64 KB). Prevents memory exhaustion.
 pub const MAX_LOG_LINE_BYTES: usize = 65_536;
+
+/// Default rate limit: 1000 events per second per source.
 pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
+
+/// Maximum number of metadata fields allowed per event.
 pub const MAX_METADATA_FIELDS: usize = 64;
 
+/// Unique build identifier used for memory obfuscation seeds.
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
     None => "dev-000000",
@@ -19,6 +33,7 @@ const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
 
 // ── Error types ───────────────────────────────────────────────────────────────
 
+/// Security violation categories for forensic logging and retaliation triggers.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum SecurityError {
     #[error("Input too large: {0} bytes (max: {1})")]
@@ -39,25 +54,28 @@ pub enum SecurityError {
 
 // ── Input validation ──────────────────────────────────────────────────────────
 
+/// Validates raw log data against a matrix of known attack signatures.
+/// Returns Ok(raw) if clean, or Err(SecurityError) if a threat is detected.
 pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     if raw.len() > MAX_LOG_LINE_BYTES {
         return Err(SecurityError::InputTooLarge(raw.len(), MAX_LOG_LINE_BYTES));
     }
 
+    /// Forensic pattern matrix for Stage 2 Aggressive Detection.
     const INJECTION_PATTERNS: &[(&[u8], &str)] = &[
-        (b"\x00", "null_byte"),
-        (b"\r\n\r\n", "http_header_injection"),
-        (b"{{", "template_injection"),
-        (b"${", "shell_expansion"),
-        (b"<script", "xss_script_tag"),
-        (b"<iframe", "xss_iframe"),
-        (b"<!--", "html_comment"),
-        (b"\x1b[", "ansi_escape"),
-        (b"\x1b(", "ansi_charset"),
-        (b"../", "path_traversal"),
-        (b"..\\", "path_traversal_win"),
-        (b"\\x90\\x90", "nop_sled"),
-        (b"0xEB0xFE", "jmp_self"),
+        (b"\x00", "null_byte"),                     // C-style string termination
+        (b"\r\n\r\n", "http_header_injection"),     // HTTP splitting
+        (b"{{", "template_injection"),              // SSTI (Server Side Template Injection)
+        (b"${", "shell_expansion"),                 // Log4Shell / OS Command Injection
+        (b"<script", "xss_script_tag"),             // Cross-Site Scripting
+        (b"<iframe", "xss_iframe"),                 // UI Redressing
+        (b"<!--", "html_comment"),                  // HTML Obfuscation
+        (b"\x1b[", "ansi_escape"),                  // Terminal escape sequences
+        (b"\x1b(", "ansi_charset"),                 // Character set manipulation
+        (b"../", "path_traversal"),                 // LFI/Directory traversal
+        (b"..\\", "path_traversal_win"),            // Windows traversal
+        (b"\\x90\\x90", "nop_sled"),                // Buffer overflow preparation
+        (b"0xEB0xFE", "jmp_self"),                  // Infinite loop shellcode
     ];
 
     let bytes = raw.as_bytes();
@@ -70,6 +88,7 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     Ok(raw)
 }
 
+/// Enforces naming conventions for event metadata to prevent injection into downstream DBs.
 pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
     if key.len() > 64 || key.is_empty() {
         return Err(SecurityError::InvalidMetadataKey(key.to_string()));
@@ -83,21 +102,25 @@ pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
     Ok(())
 }
 
+/// Unified security context for WASM runtime.
 pub struct SecurityGuard;
 
 impl SecurityGuard {
+    /// Public boolean check for quick-reject paths.
     pub fn validate_raw_log(raw: &str) -> bool {
         validate_raw_log(raw).is_ok()
     }
 
+    /// Analyzes payload entropy to detect encrypted/compressed exfiltration streams.
     pub fn is_payload_suspicious(data: &[u8]) -> bool {
         let entropy = crate::entropy::shannon_entropy(data);
-        entropy > 7.5
+        entropy > 7.5 // Threshold for high-randomness/encrypted data
     }
 }
 
 // ── Rate limiter ──────────────────────────────────────────────────────────────
 
+/// Sliding-window rate limiter for multi-tenant log ingestion.
 pub struct SourceRateLimiter {
     counts: HashMap<String, (u32, u64)>,
     max_eps: u32,
@@ -111,11 +134,13 @@ impl SourceRateLimiter {
         }
     }
 
+    /// Increments and checks the rate for a given source IP/ID.
     pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
-        const WINDOW_MS: u64 = 1_000;
+        const WINDOW_MS: u64 = 1_000; // 1 second window
 
         let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
+        // Reset if window passed
         if now_ms.saturating_sub(entry.1) >= WINDOW_MS {
             *entry = (1, now_ms);
             return Ok(());
@@ -133,6 +158,7 @@ impl SourceRateLimiter {
         Ok(())
     }
 
+    /// Garbage collection for stale rate limit entries.
     pub fn gc(&mut self, now_ms: u64) {
         self.counts
             .retain(|_, (_, ts)| now_ms.saturating_sub(*ts) < 60_000);
@@ -142,6 +168,7 @@ impl SourceRateLimiter {
         self.counts.len()
     }
 
+    /// Stub for rate checking (reserved for global policy integration).
     pub fn check_rate(_source: &str) -> bool {
         true
     }
@@ -155,6 +182,7 @@ impl Default for SourceRateLimiter {
 
 // ── SharedArrayBuffer atomic guard ───────────────────────────────────────────
 
+/// Synchronizes access to SharedArrayBuffers across WebWorkers to prevent race conditions.
 pub struct SharedBufferGuard {
     version: Arc<AtomicU32>,
     locked: Arc<AtomicBool>,
@@ -168,6 +196,7 @@ impl SharedBufferGuard {
         }
     }
 
+    /// Attempts to acquire an atomic lock for writing.
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
             match self
@@ -199,6 +228,7 @@ impl Default for SharedBufferGuard {
     }
 }
 
+/// RAII guard for buffer write operations.
 pub struct BufferWriteGuard {
     locked: Arc<AtomicBool>,
     version: Arc<AtomicU32>,
@@ -206,6 +236,7 @@ pub struct BufferWriteGuard {
 }
 
 impl BufferWriteGuard {
+    /// Validates that no concurrent modifications occurred during the guard's lifetime.
     pub fn verify_integrity(&self) -> bool {
         self.version.load(Ordering::SeqCst) == self.ver_at_lock + 1
     }
@@ -219,10 +250,13 @@ impl Drop for BufferWriteGuard {
 
 // ── Memory offset obfuscation ─────────────────────────────────────────────────
 
+/// Returns the build-specific fingerprint for client identification.
 pub fn build_fingerprint() -> &'static str {
     BUILD_HASH
 }
 
+/// Applies a build-deterministic XOR mask to memory offsets.
+/// Used to thwart fixed-offset memory exploits (e.g. ROP chains).
 pub fn obfuscate_offset(base: usize) -> usize {
     let seed = BUILD_HASH.bytes().take(8).fold(0usize, |acc, b| {
         acc.wrapping_mul(31).wrapping_add(b as usize)

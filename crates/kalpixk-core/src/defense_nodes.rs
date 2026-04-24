@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
 //! 7 nodes for detecting Red Team techniques:

@@ -156,7 +156,9 @@ async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
 
     t0 = time.time()
     features_array = np.array([req.features], dtype=np.float32)
-    score, is_anomaly = _ensemble.predict(features_array)
+    scores, _, _ = _ensemble.predict(features_array)
+    score = scores[0]
+    is_anomaly = score > 0.5  # Consistent with ensemble logic
     latency = (time.time() - t0) * 1000
 
     severity = (
