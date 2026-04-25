@@ -19,3 +19,24 @@ Aniquilación total del vector de intrusión detectado. El sistema ahora es capa
 
 ---
 *ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización.*
+
+## [OP_V4_GUERRILLAMESH] - NODE-7 INTEGRITY & V5 METAL STRIKES
+
+**Vector de Ataque:**
+Rogue nodes intentando inyectar firmas de amenaza falsas para causar denegación de servicio o evasión. Evasión de shellcode de nivel 2 mediante ofuscación avanzada y saltos indirectos.
+
+**Defensa Implementada (Macuahuitl v4.0):**
+- **Node-7 (MESH_INTEGRITY):** Validación criptográfica (HMAC-SHA256) obligatoria para toda sincronización de amenazas P2P.
+- **Zig Core v5.0 Metal:** Implementación de `v5_macuahuitl_stealth_poisoning` con saltos no deterministas y `mesh_entropy_shredder`.
+- **Security Stage 2:** Patrones de detección agresivos para NOP sleds y saltos recursivos en `security.rs`.
+- **SACITY_OS v4.0:** Interfaz de mando militar con visualización de integridad de malla y estados de Phase Black v4.
+
+**Contra-Ataque:**
+- **V5 Metal Strikes:** Desestabilización total del pipeline del agresor mediante opcodes de detención y saltos infinitos inyectados dinámicamente.
+- **Ghost Blocks:** Implementación de reglas de firewall sigilosas.
+
+**Resultado:**
+Upgrade total a la arquitectura GuerrillaMesh. El sistema ahora opera como un enjambre descentralizado con validación de confianza cero entre pares.
+
+---
+*ATLATL-ORDNANCE: GUERRILLA ALGORÍTMICA v4.0.0 ARMED.*

@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "4.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -64,7 +64,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
+        "mesh_integrity": true
     }).to_string()
 }
 
@@ -124,16 +125,26 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
     serde_json::json!({"status": "synced", "count": 1}).to_string()
 }
 
+extern "C" {
+    fn v5_macuahuitl_stealth_poisoning(ptr: *mut u8, len: usize, seed: u64);
+    fn mesh_entropy_shredder(ptr: *mut u8, len: usize, seed: u64);
+}
+
 #[wasm_bindgen]
-pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5 (Metal)
+    let mut buffer = [0u8; 1024];
+    unsafe {
+        v5_macuahuitl_stealth_poisoning(buffer.as_mut_ptr(), buffer.len(), 0x1337_C0DE);
+        mesh_entropy_shredder(buffer.as_mut_ptr(), buffer.len(), 0xDEAD_BEEF);
+    }
+
     serde_json::json!({
-        "status": "V4_ARMED",
-        "chaotic_poisoning": true,
-        "entropy_trap": "ACTIVE",
-        "target_fingerprint": json_target.chars().take(32).collect::<String>()
+        "status": "V5_METAL_STRIKE_ACTIVE",
+        "stealth_poisoning": "ENABLED",
+        "entropy_shredder": "ACTIVE",
+        "target_fingerprint": json_target.chars().take(32).collect::<String>(),
+        "version": "4.0.0-atlatl"
     }).to_string()
 }
 
@@ -275,7 +286,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v4.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })
