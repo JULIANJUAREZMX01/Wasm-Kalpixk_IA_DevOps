@@ -34,3 +34,8 @@
 **Vulnerability:** The legacy backend API (`python/api/kalpixk_api.py`) lacked all security controls: no authentication, wildcard CORS, and no security headers.
 **Learning:** Security hardening is often applied to the primary or "new" entry points while leaving legacy or internal-only APIs vulnerable, assuming they are protected by network isolation which may not always be the case.
 **Prevention:** Audit all entry points regardless of their perceived usage. Use shared security dependencies across all FastAPI instances to ensure a consistent security posture.
+
+## 2026-05-15 - DOM-based XSS in Log Dashboards
+**Vulnerability:** Multiple dashboards used `.innerHTML` to render log messages directly, allowing for DOM-based XSS.
+**Learning:** Security-focused dashboards that visualize external data (like logs) are high-value targets for XSS. Even when the backend is secure, the presentation layer can "execute" the very threats it's supposed to monitor if data is not properly escaped before insertion into the DOM.
+**Prevention:** Always use `.textContent` for dynamic text or implement a robust `escapeHTML` utility for cases where some HTML (like controlled status badges) must coexist with user-controllable strings.

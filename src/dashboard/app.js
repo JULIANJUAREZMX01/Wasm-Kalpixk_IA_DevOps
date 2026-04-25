@@ -14,6 +14,20 @@ let wasmReady = false;
 let heartbeatInterval = null;
 let lastHeartbeat = 0;
 
+// Security: Escape HTML to prevent DOM-based XSS
+function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>"']/g, function(m) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m];
+    });
+}
+
 // ── WASM Initialization ─────────────────────────────────────
 async function initWasm() {
     try {
@@ -86,7 +100,7 @@ function log(msg, type = 'ok') {
     };
 
     line.className = `${classes[type] || 'status-ok'} font-bold`;
-    line.innerHTML = `<span class="text-red-900">[${ts}]</span> [SACITY] ${msg}`;
+    line.innerHTML = `<span class="text-red-900">[${escapeHTML(ts)}]</span> [SACITY] ${escapeHTML(msg)}`;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
 
