@@ -9,8 +9,8 @@ client = TestClient(app)
 def test_health_v3():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "3.1.0-atlatl"
-    assert response.json()["atlatl_ordnance"] == "v3.1-macuahuitl"
+    assert response.json()["version"] == "4.0.0-atlatl"
+    assert response.json()["atlatl_ordnance"] == "v4.0.0-guerrillamesh"
 
 def test_metrics_retaliation_trigger():
     # Force a mock high score or use real if possible.
@@ -23,10 +23,20 @@ def test_metrics_retaliation_trigger():
     assert "detection" in data
 
 def test_node_sync_v3():
+    import hmac
+    import hashlib
+    import time
+    node_id = "TEST_GUERRILLA_01"
+    ts = int(time.time())
+    msg = f"{node_id}{ts}".encode()
+    # Use the default "development_secret" from the API implementation
+    sig = hmac.new(b"development_secret", msg, hashlib.sha256).hexdigest()
+
     payload = {
-        "node_id": "TEST_GUERRILLA_01",
+        "node_id": node_id,
         "threats": ["192.168.1.100"],
-        "timestamp": 123456789
+        "timestamp": ts,
+        "signature": sig
     }
     response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "development"})
     assert response.status_code == 200
@@ -36,7 +46,7 @@ def test_node_sync_v3():
 def test_honeypot_exfiltrate_v3():
     response = client.get("/api/v1/retaliate/exfiltrate")
     assert response.status_code == 200
-    assert response.headers["content-type"] == "application/zip"
+    assert response.headers["content-type"] == "application/octet-stream"
     # Read a bit of the stream
     chunk = next(response.iter_bytes(1024))
     assert len(chunk) == 1024

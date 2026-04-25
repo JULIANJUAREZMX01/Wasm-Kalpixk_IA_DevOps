@@ -117,30 +117,63 @@ pub export fn recursive_entropy_shredder(target_ptr: [*]u8, target_len: usize, s
     }
 }
 
-/// [ATLATL-ORDNANCE] v4_macuahuitl_chaotic_poisoning
-/// Evolución letal del veneno de punteros. Utiliza secuencias de salto no lineales
-/// y trampas de interrupción para aniquilar el flujo de ejecución del atacante.
-pub export fn v4_macuahuitl_chaotic_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+/// [ATLATL-ORDNANCE] v5_macuahuitl_stealth_poisoning
+/// Non-deterministic jump sequences leveraging clock-drift entropy.
+/// Designed to collapse the execution pipelines of malicious emulators and debuggers.
+pub export fn v5_macuahuitl_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed ^ @as(u64, @bitCast(std.time.timestamp())));
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice, 0..) |*byte, i| {
+        const step = rand.int(u8) % 32;
+        switch (step) {
+            0 => byte.* = 0xF4,      // HLT: Halt the processor
+            1 => byte.* = 0xCC,      // INT 3: Software breakpoint
+            2 => byte.* = 0xEB,      // JMP short
+            3 => byte.* = 0xFE,      // ... to current IP
+            4 => byte.* = 0x0F,      // UD2 start
+            5 => byte.* = 0x0B,      // UD2 (Undefined Instruction)
+            6 => byte.* = 0xCD,      // INT imm8
+            7 => byte.* = 0x80,      // (System call in Linux x86)
+            8 => byte.* = 0xFF,      // JMP/CALL Group
+            9 => byte.* = 0x25,      // JMP absolute indirect
+            10 => byte.* = 0x90,     // NOP
+            11 => byte.* = 0x55,     // PUSH RBP
+            12 => byte.* = 0x48,     // REX.W prefix
+            13 => byte.* = 0x31,     // XOR
+            14 => byte.* = 0xC0,     // EAX, EAX
+            15 => byte.* = 0xC3,     // RET
+            16...31 => byte.* = rand.int(u8),
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] mesh_entropy_shredder
+/// High-intensity entropy saturation designed to shatter buffer-based exfiltration.
+pub export fn mesh_entropy_shredder(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
     for (slice, 0..) |*byte, i| {
-        const chaotic_step = (i *% 1103515245 +% 12345) % 16;
-        switch (chaotic_step) {
-            0...1 => byte.* = 0xEB, // JMP short
-            2 => byte.* = 0xFE,      // loop to self
-            3 => byte.* = 0xCC,      // INT 3 (Breakpoint)
-            4 => byte.* = 0xCD,      // INT imm8
-            5 => byte.* = 0x03,      // (continuation of INT 03)
-            6 => byte.* = 0xF4,      // HLT
-            7 => byte.* = 0x0F,      // Multi-byte NOP or UD2 start
-            8 => byte.* = 0x0B,      // UD2 (Undefined Instruction)
-            9 => byte.* = 0xFF,      // JMP/CALL modrm
-            10 => byte.* = 0x25,     // JMP absolute indirect
-            11...15 => byte.* = rand.int(u8),
-            else => byte.* = 0x90,
+        // Interleave random data with destructive x86 opcodes
+        if (i % 7 == 0) {
+            byte.* = 0xCC; // Breakpoint
+        } else if (i % 13 == 0) {
+            byte.* = 0xF4; // Halt
+        } else {
+            byte.* = rand.int(u8) ^ @as(u8, @truncate(i));
         }
+    }
+}
+
+/// [ATLATL-ORDNANCE] memory_sink_trap
+/// Creates a memory region that, if read, triggers recursive processing overhead.
+pub export fn memory_sink_trap(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    for (slice, 0..) |*byte, i| {
+        byte.* = @truncate(i % 255);
     }
 }
 

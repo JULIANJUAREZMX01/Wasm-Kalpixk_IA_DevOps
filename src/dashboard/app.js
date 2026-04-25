@@ -1,11 +1,12 @@
-// ATLATL-ORDNANCE: SACITY Dashboard Logic v3.0
-// Implementation of SACITY aesthetic, CRT Effects, and WASM Heartbeat v3
+// ATLATL-ORDNANCE: SACITY Dashboard Logic v4.0 (GuerrillaMesh)
+// Implementation of SACITY v4 aesthetic, Node-7 Mesh Integrity, and V5 Metal Strikes
 
 import initWasmModule, {
     health_check,
     get_security_telemetry,
     get_global_blacklist_wasm,
     analyze_and_retaliate,
+    trigger_v5_retaliation,
     version
 } from './pkg/kalpixk_core.js';
 
@@ -120,22 +121,24 @@ function applyGlitchEffect() {
 
 function triggerPhaseBlack(score) {
     document.getElementById('black-overlay').style.display = 'block';
-    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V3.1';
+    document.getElementById('anomaly-status').textContent = 'PHASE_BLACK_V4.0';
     document.getElementById('anomaly-status').className = 'text-2xl font-black status-error glitch';
-    log(`💀 AGGRESSION V3.1 DETECTED: Reconstruction Error ${score.toFixed(6)}`, 'error');
-    log('💀 SACITY_RETALIATION: Delivering v4 Chaotic Poisoning & Entropy Trap...', 'error');
+    log(`💀 AGGRESSION V4.0 DETECTED: Node-7 Mesh Integrity Violation (${score.toFixed(6)})`, 'error');
+    log('💀 SACITY_RETALIATION: Executing v5 Macuahuitl Stealth Poisoning...', 'error');
     applyGlitchEffect();
 
-    // Trigger WASM retaliation hook if available
+    // Trigger WASM retaliation hook (V5 Metal)
     try {
         if (wasmReady) {
-            analyze_and_retaliate(JSON.stringify({
+            trigger_v5_retaliation(JSON.stringify({
                 source: "DASHBOARD_INJECTION",
-                raw: "T1485_RANSOMWARE_V3.1",
+                raw: "NODE_7_INTEGRITY_VIOLATION_V4",
                 timestamp_ms: Date.now()
             }));
         }
-    } catch(e) {}
+    } catch(e) {
+        log(`RETALIATION_HOOK_FAILURE: ${e.message}`, 'error');
+    }
 }
 
 // ── Metrics & Anomaly Logic ─────────────────────────────────

@@ -1,12 +1,14 @@
 """
 ATLATL-ORDNANCE — GuerrillaMesh Orchestrator
 Handles P2P heartbeats and threat synchronization between decentralized nodes.
-Versión: 3.1-ATLATL
+Versión: 4.0.0-atlatl
 """
 import time
 import requests
 import os
 import json
+import hmac
+import hashlib
 from loguru import logger
 
 class GuerrillaOrchestrator:
@@ -16,13 +18,14 @@ class GuerrillaOrchestrator:
         self.peer_nodes = [p for p in os.getenv("PEER_NODES", "").split(",") if p]
         self.sync_interval = 30
         self.local_api = os.getenv("LOCAL_API", "http://localhost:8000")
+        self.api_key = os.getenv("KALPIXK_API_KEY", "development_secret")
         logger.info(f"🏹 Orchestrator initialized for {self.node_id} with {len(self.peer_nodes)} peers.")
 
     def get_local_threats(self):
         """Fetch detected threats from local API to propagate them."""
         try:
-            # En v3.1, esto consultaría el registro local de Rust vía el API de Python
-            response = requests.get(f"{self.local_api}/api/v1/status", timeout=5)
+            headers = {"X-Kalpixk-Key": self.api_key}
+            response = requests.get(f"{self.local_api}/api/v1/status", headers=headers, timeout=5)
             if response.status_code == 200:
                 return response.json().get("threats", [])
         except Exception as e:
@@ -30,20 +33,29 @@ class GuerrillaOrchestrator:
         return []
 
     def sync_with_peers(self):
-        """Broadcasts presence and local threats to peer nodes."""
+        """Broadcasts presence and local threats to peer nodes with HMAC signature."""
         threats = self.get_local_threats()
+        timestamp = int(time.time())
+
+        # [ATLATL-ORDNANCE] Node-7 Signature Generation
+        msg = f"{self.node_id}{timestamp}".encode()
+        signature = hmac.new(self.api_key.encode(), msg, hashlib.sha256).hexdigest()
+
         payload = {
             "node_id": self.node_id,
             "threats": threats,
-            "timestamp": int(time.time())
+            "timestamp": timestamp,
+            "signature": signature,
+            "version": "4.0.0-atlatl"
         }
 
         for peer in self.peer_nodes:
             try:
-                logger.info(f"📡 Propagating threat signatures to mesh peer: {peer}")
-                # En un despliegue real, esto llamaría al endpoint /api/v1/nodes/sync del par
-                # response = requests.post(f"{peer}/api/v1/nodes/sync", json=payload, timeout=10)
-                time.sleep(0.1)
+                logger.info(f"📡 Propagating SIGNED threat signatures to mesh peer: {peer}")
+                headers = {"X-Kalpixk-Key": self.api_key}
+                response = requests.post(f"{peer}/api/v1/nodes/sync", json=payload, headers=headers, timeout=10)
+                if response.status_code != 200:
+                    logger.error(f"Sync failed for {peer}: {response.status_code} {response.text}")
             except Exception as e:
                 logger.error(f"Failed to sync with peer {peer}: {e}")
 

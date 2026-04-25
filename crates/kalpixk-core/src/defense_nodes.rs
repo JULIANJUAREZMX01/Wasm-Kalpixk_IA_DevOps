@@ -1,15 +1,16 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 6 nodes for detecting Red Team techniques:
+//! 7 nodes for detecting Red Team techniques:
 //! - Node-1: Reconnaissance
 //! - Node-2: Lateral Movement
 //! - Node-3: Credential Theft
 //! - Node-4: Payload Execution
 //! - Node-5: RCE / Injection
 //! - Node-6: Exfiltration
+//! - Node-7: MESH_INTEGRITY (New in v4.0)
 //!
-//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
+//! [ATLATL-ORDNANCE] Version 4.0: GuerrillaMesh & Cryptographic Retaliation
 
 #![allow(dead_code)]
 
@@ -393,6 +394,37 @@ pub fn detect_exfiltration(
 // COMPLETE ANALYSIS — Run all 6 nodes
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 7: MESH INTEGRITY / SIGNATURE VALIDATION
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_integrity_violation(
+    _event: &KalpixkEvent,
+    raw_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = raw_lower;
+
+    if raw.contains("malformed_signature") || raw.contains("replay_detected") {
+        score += 0.9;
+        techniques.push("T1553".to_string());
+    }
+
+    if raw.contains("node_unauthorized") || raw.contains("rogue_peer") {
+        score += 1.0;
+        techniques.push("T1553.004".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Mesh integrity score: {:.2}", score),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().map(|s| s.to_lowercase()).unwrap_or_default();
@@ -405,6 +437,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_integrity_violation(event, &raw_lower),
     ]
 }
 
