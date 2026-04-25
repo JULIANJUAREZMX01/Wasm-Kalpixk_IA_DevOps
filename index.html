@@ -243,6 +243,20 @@
     </div>
 
     <script>
+        // Security: Escape HTML to prevent DOM-based XSS
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[m];
+            });
+        }
+
         // --- SIEM Core Logic (JS Re-implementation of Rust WASM Parsers) ---
         const SENSITIVE_TABLES = ["NOMINAS", "VENTAS", "EMPLEADOS", "CLIENTES", "CREDITOS"];
         const DB2_USERS = ["CEDIS_APP", "CEDIS_USR", "WMS_SVC", "DBA_ADMIN"];
@@ -297,8 +311,8 @@
             row.innerHTML = `
                 <div class="flex-shrink-0 text-zinc-500 w-32">${getTimestamp()}</div>
                 <div class="flex-grow">
-                    <div class="font-bold flex items-center gap-2">${badge} ${data.msg}</div>
-                    <div class="text-zinc-600 truncate">${data.raw}</div>
+                    <div class="font-bold flex items-center gap-2">${badge} ${escapeHTML(data.msg)}</div>
+                    <div class="text-zinc-600 truncate">${escapeHTML(data.raw)}</div>
                 </div>
                 <div class="flex-shrink-0 font-mono ${data.score > 0.8 ? 'text-red-500' : 'text-zinc-500'}">S:${data.score.toFixed(4)}</div>
             `;
@@ -506,9 +520,9 @@
         startSimulation();
         setInterval(() => {
             const throughput = (4.2 + (Math.random() * 0.1)).toFixed(2);
-            document.getElementById('stat-throughput').innerHTML = `${throughput}M <span class="text-[10px]">ev/s</span>`;
+            document.getElementById('stat-throughput').innerHTML = `${escapeHTML(throughput)}M <span class="text-[10px]">ev/s</span>`;
             const lat = (0.8 + (Math.random() * 0.05)).toFixed(2);
-            document.getElementById('stat-latency').innerHTML = `${lat} <span class="text-[10px]">μs</span>`;
+            document.getElementById('stat-latency').innerHTML = `${escapeHTML(lat)} <span class="text-[10px]">μs</span>`;
         }, 1000);
 
     </script>
