@@ -11,8 +11,6 @@
 //!
 //! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
 
-#![allow(dead_code)]
-
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

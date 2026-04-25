@@ -523,10 +523,3 @@ mod tests {
         assert!(!build_fingerprint().is_empty());
     }
 }
-
-impl SourceRateLimiter {
-    pub fn check_rate(_source: &str) -> bool {
-        // Target: 1000 events/sec/source
-        true
-    }
-}
