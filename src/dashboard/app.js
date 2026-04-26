@@ -11,6 +11,19 @@ import initWasmModule, {
 
 const API = window.location.origin;
 let wasmReady = false;
+
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, function(m) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m];
+    });
+}
 let heartbeatInterval = null;
 let lastHeartbeat = 0;
 
@@ -86,7 +99,7 @@ function log(msg, type = 'ok') {
     };
 
     line.className = `${classes[type] || 'status-ok'} font-bold`;
-    line.innerHTML = `<span class="text-red-900">[${ts}]</span> [SACITY] ${msg}`;
+    line.innerHTML = `<span class="text-red-900">[${ts}]</span> [SACITY] ${escapeHTML(msg)}`;
     el.appendChild(line);
     el.scrollTop = el.scrollHeight;
 
