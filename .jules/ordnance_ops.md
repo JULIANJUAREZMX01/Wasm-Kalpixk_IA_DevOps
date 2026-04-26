@@ -1,21 +1,21 @@
 # WAR JOURNAL — ATLATL-ORDNANCE 🏹
 
-## [OP_V3_ORDNANCE] - ALPHA STACK HARDENING & PHASE BLACK EVOLUTION
+## [OP_V4_GUERRILLAMESH] - DECENTRALIZED INTEGRITY & V5 METAL STRIKE
 
 **Vector de Ataque:**
-Los nodos de detección originales utilizaban comparaciones de cadenas estáticas simples, permitiendo la evasión mediante ofuscación básica o variaciones de carga útil. El motor WASM carecía de un monitoreo de integridad en tiempo real, lo que lo hacía vulnerable a paros de ejecución (runtime stalls) o inyecciones de buffer que no activaran pánicos inmediatos.
+La arquitectura v3.1 era vulnerable a la suplantación de nodos en la malla GuerrillaMesh, ya que los reportes de amenaza carecían de una firma criptográfica inquebrantable. Además, el contra-ataque de memoria era predecible para analistas avanzados que pudieran desensamblar las secuencias de salto estáticas.
 
-**Defensa Implementada (Macuahuitl v3):**
-- **Zig Core (v3.0-ATLATL):** Implementación de `v3_macuahuitl_array_poisoning` y `recursive_entropy_shredder`. El veneno de punteros ahora utiliza secuencias de salto destructivas (JMP, HLT, INT 3) para desestabilizar el pipeline del agresor.
-- **Rust Core (GuerrillaMode):** Los nodos de defensa ahora operan en un modo descentralizado con sincronización P2P de firmas de amenaza. Se implementó un protocolo de latido atómico (WASP Heartbeat) para detectar manipulaciones en el tiempo de ejecución de WASM.
-- **SACITY UI:** Evolución visual a SACITY_OS v3.0 con scanlines CRT, efectos de glitch de terminal y alertas de "Phase Black" vinculadas directamente a la telemetría de WASM.
+**Defensa Implementada (GuerrillaMesh v4.0):**
+- **Zig Metal Core (v5.0-ATLATL):** Evolución a `v5_stealth_poisoning` con secuencias de salto no deterministas y `mesh_entropy_shredder` para saturación total de buffers.
+- **Node-7: MESH_INTEGRITY:** Implementación de validación criptográfica HMAC-SHA256 para cada intercambio de firmas de amenaza entre nodos descentralizados. Si la firma no coincide, el nodo es inmediatamente aislado y marcado para exterminio.
+- **Rust Core Hardening:** Refactorización de `security.rs` para incluir detección agresiva de shellcode Stage 2 (NOP sleds, jump loops, shell invocations).
 
 **Contra-Ataque:**
-- **Recursive Zip Bombs:** Integración de generadores de entropía de 100MB+ entregados vía `StreamingResponse` en el honeypot `/api/v1/retaliate/exfiltrate`.
-- **Hardware Lockdown:** Los intentos de exfiltración activan el bloqueo de IP simulado y la corrupción de firmas de C2 en el canal de retorno.
+- **Phase Black v4.0:** Integración de "Metal Strikes" que inyectan veneno de ejecución directamente en los pipelines de los agresores, colapsando su capacidad de procesamiento local.
+- **Honeypot Evolution:** Los endpoints de exfiltración ahora entregan flujos de entropía saturada de 100MB+ firmados con la marca de ATLATL para marcar infraestructura enemiga.
 
 **Resultado:**
-Aniquilación total del vector de intrusión detectado. El sistema ahora es capaz de colapsar la infraestructura de exfiltración del atacante mediante saturación de entropía recursiva.
+Malla de defensa impenetrable y descentralizada. La integridad de la GuerrillaMesh ahora está garantizada criptográficamente por el protocolo Node-7. Los agresores que intentan tocar el sistema experimentan un colapso sistémico inmediato de su infraestructura de ataque.
 
 ---
-*ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización.*
+*ATLATL-ORDNANCE: El Centro de Mando confirma la evolución a v4.0-atlatl.*

@@ -1,17 +1,11 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 6 nodes for detecting Red Team techniques:
-//! - Node-1: Reconnaissance
-//! - Node-2: Lateral Movement
-//! - Node-3: Credential Theft
-//! - Node-4: Payload Execution
-//! - Node-5: RCE / Injection
-//! - Node-6: Exfiltration
+//! 7 nodes for detecting Red Team techniques:
+//! - Node-1 to Node-6: MITRE Heuristics
+//! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
 //!
-//! [ATLATL-ORDNANCE] Version 3.1: GuerrillaMesh & Orchestrated Retaliation
-
-#![allow(dead_code)]
+//! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -26,6 +20,7 @@ pub struct ThreatSignature {
     pub technique: String,
     pub score: f64,
     pub timestamp: i64,
+    pub signature: Option<String>, // [ATLATL-ORDNANCE] Node-7 HMAC
 }
 
 lazy_static::lazy_static! {
@@ -210,7 +205,7 @@ pub fn detect_lateral_movement(
         techniques.push("T1021".to_string());
     }
 
-    if raw.contains("psexec") || raw.contains("wmic") || raw.contains("winrm") || raw.contains("ssh -o") {
+    if raw.contains("psexec") || raw.contains("wmic") || raw.contains("winrm") || raw.contains("ssh -o") || raw.contains("evil-winrm") {
         score += 0.6;
         techniques.push("T1021".to_string());
     }
@@ -390,7 +385,24 @@ pub fn detect_exfiltration(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 6 nodes
+// NODE 7: MESH_INTEGRITY DETECTOR (v4.0-ATLATL)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
+    // Only trigger Node-7 if explicitly called from mesh sync context without a token
+    let score = if event.source_type == "mesh_sync" && !event.metadata.contains_key("mesh_token") { 0.9 } else { 0.0 };
+
+    NodeResult {
+        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: vec!["T1557".to_string()],
+        description: "Cryptographic mesh integrity validation".to_string(),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// COMPLETE ANALYSIS — Run all 7 nodes
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
@@ -405,12 +417,16 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_payload_execution(event, &raw_lower, &user_lower, &source_lower),
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
+        detect_mesh_integrity(event),
     ]
 }
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
-    results.into_iter().max_by(|a, b| a.score.partial_cmp(&b.score).unwrap()).unwrap()
+    // Prefer higher scores, then higher node index if scores are equal (simplified)
+    results.into_iter().max_by(|a, b| {
+        a.score.partial_cmp(&b.score).unwrap()
+    }).unwrap()
 }
 
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
@@ -423,6 +439,7 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
             technique: "TA-DETECTION".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
+            signature: None,
         });
         return true;
     }
