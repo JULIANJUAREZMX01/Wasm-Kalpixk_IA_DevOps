@@ -48,7 +48,10 @@ fn generate_poisoned_buffer(size: usize) -> Vec<u8> {
 
 fn generate_garbage(size: usize) -> Vec<u8> {
     use std::time::{SystemTime, UNIX_EPOCH};
-    let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64;
     let mut buffer = vec![0u8; size];
     let mut state = seed;
     for byte in buffer.iter_mut() {
@@ -60,7 +63,7 @@ fn generate_garbage(size: usize) -> Vec<u8> {
 
 fn generate_shellcode_trap(size: usize) -> Vec<u8> {
     let mut buffer = vec![0x90u8; size]; // NOP sled
-    // Inyectar "píldora venenosa" al final
+                                         // Inyectar "píldora venenosa" al final
     if size > 10 {
         let len = buffer.len();
         buffer[len - 2] = 0xEB;
