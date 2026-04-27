@@ -16,7 +16,6 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import torch
@@ -25,12 +24,13 @@ from torch.utils.data import DataLoader, TensorDataset
 
 logger = logging.getLogger("kalpixk.detection.autoencoder")
 
-MODELS_DIR   = Path(__file__).parent.parent / "models"
-MODEL_PATH   = MODELS_DIR / "autoencoder.pt"
-FEATURE_DIM  = 32   # Contract with kalpixk-core/src/features.rs
+MODELS_DIR = Path(__file__).parent.parent / "models"
+MODEL_PATH = MODELS_DIR / "autoencoder.pt"
+FEATURE_DIM = 32  # Contract with kalpixk-core/src/features.rs
 
 
 # ── Neural network architecture ───────────────────────────────────────────────
+
 
 class _AENet(nn.Module):
     """
@@ -80,6 +80,7 @@ class _AENet(nn.Module):
 
 # ── Main class ────────────────────────────────────────────────────────────────
 
+
 class KalpixkAutoencoder:
     """
     PyTorch autoencoder for unsupervised anomaly detection.
@@ -91,18 +92,18 @@ class KalpixkAutoencoder:
         scores, confidences = ae.predict(X_new)
     """
 
-    VERSION             = "0.1.0"
-    DEFAULT_EPOCHS      = 100
-    DEFAULT_BATCH_SIZE  = 512
-    DEFAULT_LR          = 1e-3
-    THRESHOLD_PERCENTILE = 95   # Top 5% error → anomaly
+    VERSION = "0.1.0"
+    DEFAULT_EPOCHS = 100
+    DEFAULT_BATCH_SIZE = 512
+    DEFAULT_LR = 1e-3
+    THRESHOLD_PERCENTILE = 95  # Top 5% error → anomaly
 
     # ── Init ──────────────────────────────────────────────────────────────────
 
     def __init__(self, device: torch.device):
-        self.device      = device
-        self.net         = _AENet().to(device)
-        self._threshold  = 0.05   # Calibrated after fit
+        self.device = device
+        self.net = _AENet().to(device)
+        self._threshold = 0.05  # Calibrated after fit
         self._is_trained = False
         self._try_load()
 
@@ -112,7 +113,7 @@ class KalpixkAutoencoder:
         try:
             state = torch.load(MODEL_PATH, map_location=self.device, weights_only=False)
             self.net.load_state_dict(state["model_state"])
-            self._threshold  = float(state.get("threshold", 0.05))
+            self._threshold = float(state.get("threshold", 0.05))
             self._is_trained = True
             logger.info(f"Autoencoder loaded from {MODEL_PATH} (threshold={self._threshold:.4f})")
         except Exception as e:
@@ -127,28 +128,30 @@ class KalpixkAutoencoder:
         batch_size: int = DEFAULT_BATCH_SIZE,
         lr: float = DEFAULT_LR,
         val_split: float = 0.1,
-    ) -> "KalpixkAutoencoder":
+    ) -> KalpixkAutoencoder:
         """
         Train on normal traffic baseline.
         X: [N, 32] float32, all values in [0, 1].
         """
         assert X.shape[1] == FEATURE_DIM
-        logger.info(f"Training Autoencoder: {len(X)} samples, {epochs} epochs, device={self.device}")
+        logger.info(
+            f"Training Autoencoder: {len(X)} samples, {epochs} epochs, device={self.device}"
+        )
 
         # Train / validation split
-        n_val   = max(1, int(len(X) * val_split))
-        X_val   = torch.tensor(X[:n_val],  dtype=torch.float32).to(self.device)
-        X_train = torch.tensor(X[n_val:],  dtype=torch.float32).to(self.device)
+        n_val = max(1, int(len(X) * val_split))
+        X_val = torch.tensor(X[:n_val], dtype=torch.float32).to(self.device)
+        X_train = torch.tensor(X[n_val:], dtype=torch.float32).to(self.device)
 
         dataset = TensorDataset(X_train, X_train)
-        loader  = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
         optimizer = torch.optim.Adam(self.net.parameters(), lr=lr, weight_decay=1e-5)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
         criterion = nn.MSELoss()
 
-        t0         = time.perf_counter()
-        best_val   = float("inf")
+        t0 = time.perf_counter()
+        best_val = float("inf")
         best_state = None
 
         self.net.train()
@@ -171,11 +174,13 @@ class KalpixkAutoencoder:
             self.net.train()
 
             if val_loss < best_val:
-                best_val   = val_loss
+                best_val = val_loss
                 best_state = {k: v.clone() for k, v in self.net.state_dict().items()}
 
             if (epoch + 1) % 10 == 0:
-                logger.debug(f"Epoch {epoch+1}/{epochs} — train={total_loss/len(loader):.5f} val={val_loss:.5f}")
+                logger.debug(
+                    f"Epoch {epoch + 1}/{epochs} — train={total_loss / len(loader):.5f} val={val_loss:.5f}"
+                )
 
         # Restore best model
         if best_state:
@@ -185,7 +190,7 @@ class KalpixkAutoencoder:
         self.net.eval()
         with torch.no_grad():
             errors = self.net.reconstruction_error(X_train).cpu().numpy()
-        self._threshold  = float(np.percentile(errors, self.THRESHOLD_PERCENTILE))
+        self._threshold = float(np.percentile(errors, self.THRESHOLD_PERCENTILE))
         self._is_trained = True
 
         elapsed = time.perf_counter() - t0
@@ -196,7 +201,7 @@ class KalpixkAutoencoder:
         self.save()
         return self
 
-    def fit_synthetic(self, n_samples: int = 5000) -> "KalpixkAutoencoder":
+    def fit_synthetic(self, n_samples: int = 5000) -> KalpixkAutoencoder:
         """Quick-start on synthetic normal data for dev/testing."""
         logger.warning("Training Autoencoder on SYNTHETIC data — replace for production")
         rng = np.random.default_rng(42)
@@ -205,9 +210,7 @@ class KalpixkAutoencoder:
 
     # ── Inference ────────────────────────────────────────────────────────────
 
-    def predict(
-        self, X: np.ndarray
-    ) -> tuple[list[float], list[float]]:
+    def predict(self, X: np.ndarray) -> tuple[list[float], list[float]]:
         """
         Score anomaly via reconstruction error.
 
@@ -226,8 +229,8 @@ class KalpixkAutoencoder:
             errors = self.net.reconstruction_error(tensor).cpu().numpy()
 
         # Normalize: error / threshold → [0, 1]
-        t    = max(self._threshold, 1e-8)
-        norm = np.clip(errors / t, 0.0, 2.0) / 2.0   # Cap at 2× threshold
+        t = max(self._threshold, 1e-8)
+        norm = np.clip(errors / t, 0.0, 2.0) / 2.0  # Cap at 2× threshold
 
         # Confidence: certainty scales with distance from 0.5
         conf = np.clip(np.abs(norm - 0.5) * 2, 0.3, 1.0)
@@ -244,11 +247,14 @@ class KalpixkAutoencoder:
 
     def save(self):
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
-        torch.save({
-            "model_state": self.net.state_dict(),
-            "threshold":   self._threshold,
-            "version":     self.VERSION,
-        }, MODEL_PATH)
+        torch.save(
+            {
+                "model_state": self.net.state_dict(),
+                "threshold": self._threshold,
+                "version": self.VERSION,
+            },
+            MODEL_PATH,
+        )
         logger.info(f"Autoencoder saved to {MODEL_PATH}")
 
     @property

@@ -53,12 +53,21 @@ def test_threat_report_constraints():
     assert "threats" in response.text
 
     # Valid payload
+    import hmac
+    import hashlib
     payload = {
         "node_id": "test_node",
         "threats": ["1.1.1.1"] * 10,
-        "timestamp": int(time.time())
+        "timestamp": int(time.time()),
+        "version": "4.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    signature = hmac.new(b"sentinel_test_key", data, hashlib.sha256).hexdigest()
+
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={
+        "X-Kalpixk-Key": "sentinel_test_key",
+        "X-Kalpixk-Signature": signature
+    })
     assert response.status_code == 200
 
 def test_threat_report_replay_protection():
