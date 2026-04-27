@@ -152,7 +152,7 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
-    if !security::validate_raw_log(raw).is_ok() {
+    if security::validate_raw_log(raw).is_err() {
         return None;
     }
 
@@ -196,7 +196,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() {
+        if security::validate_raw_log(line).is_err() {
             continue;
         }
         if let Ok(event) = parser.parse(line) {

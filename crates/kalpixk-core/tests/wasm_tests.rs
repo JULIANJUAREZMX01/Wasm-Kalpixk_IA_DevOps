@@ -16,10 +16,9 @@ wasm_bindgen_test_configure!(run_in_browser);
 // ── Helper: parse JSON result from parse_log_line ─────────────────────────────
 
 fn parse_event(raw: &str, source: &str) -> serde_json::Value {
-    let result = kalpixk_core::parse_log_line(raw, source).expect(&format!(
-        "parse_log_line should succeed for source={}",
-        source
-    ));
+    let result = kalpixk_core::parse_log_line(raw, source).unwrap_or_else(|| {
+        panic!("parse_log_line should succeed for source={}", source)
+    });
     serde_json::from_str(&result).expect("result should be valid JSON")
 }
 
@@ -233,7 +232,7 @@ fn all_features_in_unit_interval() {
         for (i, f) in features.iter().enumerate() {
             let v = f.as_f64().expect("feature must be f64");
             assert!(
-                v >= 0.0 && v <= 1.0,
+                (0.0..=1.0).contains(&v),
                 "Feature[{}]={} out of [0,1] for log '{}' (source={})",
                 i,
                 v,
@@ -252,7 +251,11 @@ fn anomaly_hints_in_unit_interval() {
     let hints = batch["anomaly_hints"].as_array().unwrap();
     for h in hints {
         let v = h.as_f64().unwrap();
-        assert!(v >= 0.0 && v <= 1.0, "anomaly_hint={} must be in [0, 1]", v);
+        assert!(
+            (0.0..=1.0).contains(&v),
+            "anomaly_hint={} must be in [0, 1]",
+            v
+        );
     }
 }
 
@@ -290,7 +293,7 @@ fn batch_counts_match() {
 
     assert_eq!(batch["total_count"].as_u64().unwrap(), 3);
     let parsed = batch["parsed_count"].as_u64().unwrap();
-    assert!(parsed <= 3 && parsed >= 1);
+    assert!((1..=3).contains(&parsed));
 }
 
 // ── SECURITY VALIDATION ───────────────────────────────────────────────────────
