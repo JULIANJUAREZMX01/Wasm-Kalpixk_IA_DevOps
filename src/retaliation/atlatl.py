@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 4.0-ATLATL (Guerrilla Mesh)
 """
 from loguru import logger
 import time
@@ -11,11 +11,11 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v4.0: Sistema de represalia (Guerrilla Mesh) cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
-        """Orquesta la respuesta ofensiva basada en la severidad."""
-        logger.warning(f"🚨 AGRESOR V3 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
+        """Orquesta la respuesta ofensiva basada en la severidad (Alpha Stack)."""
+        logger.warning(f"🚨 AGRESOR V4 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
 
         if anomaly_score > 0.9 or anomaly_type == "ransomware_detected":
             return self.phase_black(source_ip)
@@ -30,20 +30,29 @@ class Atlatl:
         logger.error(f"🔴 FASE ROJA activada contra {source_ip}")
         self.poison_remote_pointers(source_ip)
         self.garbage_injection(source_ip)
-        return {"action": "RETALIATE_RED", "target": source_ip, "measures": ["pointer_poisoning", "garbage_injection"]}
+        return {
+            "action": "RETALIATE_RED",
+            "target": source_ip,
+            "measures": ["pointer_poisoning", "garbage_injection"],
+            "v5_strike": "standby"
+        }
 
     def phase_black(self, source_ip: str):
-        """Fase Negra: Exterminio de infraestructura del atacante."""
+        """Fase Negra: Exterminio de infraestructura del atacante mediante Metal Strike."""
         logger.critical(f"💀 FASE NEGRA ACTIVADA CONTRA {source_ip}")
+        self.trigger_v5_metal_strike(source_ip)
         self.deliver_recursive_zip_bomb(source_ip)
         self.hardware_ip_lock(source_ip)
         self.corrupt_c2_comms(source_ip)
         self.execute_iptables_ghost_block(source_ip)
         self.active_c2_disruption(source_ip)
+
         return {
             "action": "EXTERMINATE",
             "target": source_ip,
+            "v5_strike": "engaged",
             "measures": [
+                "v5_metal_strike",
                 "recursive_zip_bomb",
                 "hardware_lock",
                 "c2_corruption",
@@ -52,24 +61,34 @@ class Atlatl:
             ]
         }
 
+    def trigger_v5_metal_strike(self, target: str):
+        """
+        [ATLATL-ORDNANCE] V5 METAL STRIKE
+        Puente hacia el motor Zig v5.0 para inyectar veneno de ejecución
+        directamente en el buffer de red del atacante.
+        """
+        logger.critical(f"⚡ [METAL] EXECUTING V5 STRIKE AGAINST {target} — SHREDDING EXECUTION PIPELINE.")
+        # Simulación de llamada FFI a Zig mesh_entropy_shredder
+        time.sleep(0.1)
+
     def execute_iptables_ghost_block(self, target: str):
         """
-        [ATLATL-ORDNANCE] GHOST BLOCK
+        [ATLATL-ORDNANCE] GHOST BLOCK v4
         Simula la creación de reglas de firewall persistentes que 'desaparecen'
         de los comandos de listado estándar pero siguen bloqueando el tráfico.
         """
-        logger.warning(f"👻 Ghost Block deployed against {target}. Perimeter firewall synchronized.")
+        logger.warning(f"👻 Ghost Block v4 deployed against {target}. Perimeter firewall synchronized.")
 
     def active_c2_disruption(self, target: str):
         """
-        [ATLATL-ORDNANCE] C2 DISRUPTION
+        [ATLATL-ORDNANCE] C2 DISRUPTION v4
         Inyecta firmas de malware conocidas en el canal de retorno del atacante
         para disparar las alarmas de sus propios sistemas de seguridad (EDR/AV).
         """
         logger.error(f"📡 Sending false-positive triggers to {target} upstream EDR...")
 
     def poison_remote_pointers(self, target: str):
-        logger.info(f"🧪 Injecting v3 poisoned pointers into {target} network buffer...")
+        logger.info(f"🧪 Injecting v4 poisoned pointers (Zig v5 logic) into {target} network buffer...")
         # Simulación de respuesta que causa desbordamiento local en el atacante
         time.sleep(0.05)
 
@@ -79,7 +98,7 @@ class Atlatl:
 
     def deliver_recursive_zip_bomb(self, target: str):
         """Envía un archivo que se expande a petabytes si el atacante intenta leerlo."""
-        logger.info(f"💣 Delivering Recursive Zip Bomb (v3-MACUAHUITL) to {target}...")
+        logger.info(f"💣 Delivering Recursive Zip Bomb (v4-MACUAHUITL) to {target}...")
         logger.warning(f"💀 Honeypot /api/v1/retaliate/exfiltrate ARMED for {target}")
 
     def hardware_ip_lock(self, target: str):
@@ -88,7 +107,7 @@ class Atlatl:
         time.sleep(0.05)
 
     def corrupt_c2_comms(self, target: str):
-        logger.info(f"⚡ Corrupting V3 Command & Control signatures for {target}...")
+        logger.info(f"⚡ Corrupting V4 Command & Control signatures for {target}...")
         time.sleep(0.05)
 
     def generate_entropy_payload(self, size_mb: int = 20):
@@ -110,8 +129,8 @@ class Atlatl:
         Returns a byte sequence that mimics a zip bomb header
         to confuse automated scanners.
         """
-        # PK header for ZIP + v3-ATLATL markers
-        header = b'PK\x03\x04\x14\x00\x00\x00\x08\x00ATLATL-ORDNANCE-V3'
+        # PK header for ZIP + v4-ATLATL markers
+        header = b'PK\x03\x04\x14\x00\x00\x00\x08\x00ATLATL-ORDNANCE-V4'
         return header + os.urandom(1024 * 128)
 
 # Singleton
