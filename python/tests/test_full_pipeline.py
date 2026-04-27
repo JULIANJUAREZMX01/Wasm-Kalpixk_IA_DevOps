@@ -4,7 +4,7 @@ tests/integration/test_full_pipeline.py
 Full pipeline integration tests:
   raw log → WASM parse → feature matrix → GPU detect → alert → explain
 
-Run: cd python && KALPIXK_FORCE_CPU=true uv run pytest tests/ -v
+Run: cd python && KALPIXK_FORCE_CPU=true uv run pytest tests/test_full_pipeline.py -v
 """
 
 import time
@@ -49,7 +49,9 @@ def normal_traffic_features():
 async def test_api_health():
     from api.kalpixk_api import app
 
-    async with httpx.AsyncClient(app=app, base_url=BASE) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE
+    ) as c:
         r = await c.get("/api/health")
     assert r.status_code == 200
     data = r.json()
@@ -71,7 +73,9 @@ async def test_detect_brute_force(brute_force_features):
         "source_type": "syslog",
         "metadata": [{"event_type": "login_failure"}] * 50,
     }
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=30) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=30
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     assert r.status_code == 200
     data = r.json()
@@ -92,7 +96,9 @@ async def test_detect_normal_traffic_low_anomalies(normal_traffic_features):
         "source_type": "json",
         "metadata": [{"event_type": "db_query"}] * 100,
     }
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=30) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=30
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     assert r.status_code == 200
     data = r.json()
@@ -115,7 +121,9 @@ async def test_detection_latency_under_50ms():
         "metadata": [{}] * 100,
     }
     start = time.perf_counter()
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=10) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     elapsed_ms = (time.perf_counter() - start) * 1000
 
@@ -136,7 +144,9 @@ async def test_all_scores_in_unit_interval():
         "source_type": "syslog",
         "metadata": [{}] * 200,
     }
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=30) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=30
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     for result in r.json()["results"]:
         s = result["anomaly_score"]
@@ -151,7 +161,9 @@ async def test_empty_batch_handled():
     from api.kalpixk_api import app
 
     payload = {"features": [], "event_ids": [], "source_type": "syslog", "metadata": []}
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=10) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     assert r.status_code in (200, 422)
 
@@ -167,7 +179,9 @@ async def test_wrong_feature_dimension_rejected():
         "source_type": "syslog",
         "metadata": [{}],
     }
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=10) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     assert r.status_code in (400, 422), "Wrong feature dimension should be rejected"
 
@@ -183,7 +197,9 @@ async def test_mismatched_counts_rejected():
         "source_type": "syslog",
         "metadata": [{}],
     }
-    async with httpx.AsyncClient(app=app, base_url=BASE, timeout=10) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10
+    ) as c:
         r = await c.post("/api/detect", json=payload)
     assert r.status_code in (400, 422)
 
@@ -195,7 +211,9 @@ async def test_mismatched_counts_rejected():
 async def test_metrics_endpoint():
     from api.kalpixk_api import app
 
-    async with httpx.AsyncClient(app=app, base_url=BASE) as c:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url=BASE
+    ) as c:
         r = await c.get("/api/metrics")
     assert r.status_code == 200
     m = r.json()

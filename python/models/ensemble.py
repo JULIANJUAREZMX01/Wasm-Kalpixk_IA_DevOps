@@ -16,8 +16,17 @@ class DetectionEnsemble:
         self.autoencoder = KalpixkAutoencoder(device)
         logger.info(f"Ensemble inicializado en {device}")
 
+    def fit(self, X: np.ndarray):
+        """Entrena los componentes del ensemble (IsolationForest y Autoencoder)."""
+        logger.info(f"Entrenando ensemble con {len(X)} muestras...")
+        self.iso_forest.fit(X)
+        self.autoencoder.fit(X, epochs=10)
+        self._trained = True
+
     def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float]]:
-        features_np = features.cpu().numpy()
+        features_np = (
+            features.cpu().numpy() if isinstance(features, torch.Tensor) else np.asarray(features)
+        )
 
         # Inferencia
         if_scores, if_conf = self.iso_forest.predict(features_np)

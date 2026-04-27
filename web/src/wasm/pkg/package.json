@@ -1,0 +1,20 @@
+{
+  "name": "kalpixk-core",
+  "type": "module",
+  "collaborators": [
+    "Julián Juárez <julianjuarezmx01@gmail.com>"
+  ],
+  "description": "WASM-native log parser and feature extractor for Blue Team SIEM",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "kalpixk_core_bg.wasm",
+    "kalpixk_core.js",
+    "kalpixk_core.d.ts"
+  ],
+  "main": "kalpixk_core.js",
+  "types": "kalpixk_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
