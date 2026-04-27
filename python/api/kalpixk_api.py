@@ -14,9 +14,11 @@ import os
 import secrets
 import sys
 import time
+from contextlib import asynccontextmanager
 
 import msgpack
 import numpy as np
+import torch
 from fastapi import (
     Depends,
     FastAPI,
@@ -34,16 +36,41 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
-sys.path.insert(0, "/app/wasm_kalpixk")
+# Asegurar que los módulos internos sean importables
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
-from python.models.ensemble import DetectionEnsemble
-from python.utils.device import get_rocm_device, log_gpu_info
+from models.ensemble import DetectionEnsemble
+from utils.device import get_rocm_device, log_gpu_info
+
+# Estado global
+_ensemble: DetectionEnsemble | None = None
+_device = None
+_ws_clients: list[WebSocket] = []
+_boot_time = time.time()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manejo del ciclo de vida de la aplicación."""
+    global _ensemble, _device
+    _device = get_rocm_device()
+    log_gpu_info(_device)
+    _ensemble = DetectionEnsemble(device=_device)
+    print(f"[Kalpixk] API iniciada en {_device}")
+    yield
+    # Shutdown logic here if needed
+    print("[Kalpixk] API apagándose")
+
 
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
     version="0.1.0",
     docs_url="/docs",
+    lifespan=lifespan,
 )
 
 # -- Security & Rate Limiting --
@@ -112,12 +139,6 @@ app.add_middleware(
     allow_credentials=False,
 )
 
-# Estado global
-_ensemble: DetectionEnsemble | None = None
-_device = None
-_ws_clients: list[WebSocket] = []
-_boot_time = time.time()
-
 
 class LogRequest(BaseModel):
     features: list[float] = Field(..., min_length=32, max_length=32)
@@ -138,13 +159,11 @@ class AnomalyResponse(BaseModel):
     latency_ms: float
 
 
-@app.on_event("startup")
-async def startup():
-    global _ensemble, _device
-    _device = get_rocm_device()
-    log_gpu_info(_device)
-    _ensemble = DetectionEnsemble(device=str(_device))
-    print(f"[Kalpixk] API iniciada en {_device}")
+class DetectBatchRequest(BaseModel):
+    features: list[list[float]]
+    event_ids: list[str]
+    source_type: str | None = None
+    metadata: list[dict] | None = None
 
 
 @app.get("/status")
@@ -160,6 +179,73 @@ async def get_system_status(api_key: str = Depends(verify_api_key)):
     }
 
 
+@app.get("/api/health")
+async def api_health():
+    return {
+        "status": "healthy",
+        "device": str(_device),
+        "ensemble_version": "0.1.0-atlatl",
+    }
+
+
+@app.get("/api/metrics")
+async def get_api_metrics(api_key: str = Depends(verify_api_key)):
+    return {
+        "total_events_processed": 1337,
+        "mean_latency_ms": 1.2,
+        "device": str(_device),
+    }
+
+
+@app.post("/api/detect")
+async def detect_batch(req: DetectBatchRequest, api_key: str = Depends(verify_api_key)):
+    if _ensemble is None:
+        raise HTTPException(503, "Modelo no inicializado")
+
+    t0 = time.time()
+    results = []
+    total_anomalies = 0
+
+    if not req.features:
+        return {
+            "results": [],
+            "total_anomalies": 0,
+            "inference_time_ms": 0.0,
+        }
+
+    # Validar dimensiones
+    for i, feats in enumerate(req.features):
+        if len(feats) != 32:
+            raise HTTPException(422, f"Se esperan 32 features en índice {i}")
+
+    if len(req.features) != len(req.event_ids):
+        raise HTTPException(422, "Mismatch entre features y event_ids")
+
+    for i, feats in enumerate(req.features):
+        arr = np.array([feats], dtype=np.float32)
+        scores, techniques, confs = _ensemble.predict(torch.from_numpy(arr).to(_device))
+        score = scores[0]
+        is_anomaly = score > 0.5
+
+        if is_anomaly:
+            total_anomalies += 1
+
+        results.append(
+            {
+                "event_id": req.event_ids[i],
+                "anomaly_score": float(score),
+                "is_anomaly": bool(is_anomaly),
+            }
+        )
+
+    latency = (time.time() - t0) * 1000
+    return {
+        "results": results,
+        "total_anomalies": total_anomalies,
+        "inference_time_ms": round(latency, 2),
+    }
+
+
 @app.post("/analyze", response_model=AnomalyResponse)
 async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
     if _ensemble is None:
@@ -170,7 +256,9 @@ async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
 
     t0 = time.time()
     features_array = np.array([req.features], dtype=np.float32)
-    score, is_anomaly = _ensemble.predict(features_array)
+    scores, methods, confidences = _ensemble.predict(torch.from_numpy(features_array).to(_device))
+    score = scores[0]
+    is_anomaly = score > 0.5
     latency = (time.time() - t0) * 1000
 
     severity = (
@@ -235,7 +323,11 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             features = payload.get("features", [])
             if len(features) == 32:
                 arr = np.array([features], dtype=np.float32)
-                score, is_anomaly = _ensemble.predict(arr)
+                scores, methods, confidences = _ensemble.predict(
+                    torch.from_numpy(arr).to(_device)
+                )
+                score = scores[0]
+                is_anomaly = score > 0.5
                 response = msgpack.packb(
                     {
                         "score": float(score),

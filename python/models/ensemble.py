@@ -3,8 +3,8 @@ import logging
 import numpy as np
 import torch
 
-from python.detection.autoencoder import KalpixkAutoencoder
-from python.detection.isolation_forest import KalpixkIsolationForest
+from detection.autoencoder import KalpixkAutoencoder
+from detection.isolation_forest import KalpixkIsolationForest
 
 logger = logging.getLogger("kalpixk.models.ensemble")
 
