@@ -9,19 +9,28 @@ Endpoints:
 """
 
 # Importaciones internas
+import json
 import os
 import secrets
-import json
 import sys
 import time
 
 import msgpack
 import numpy as np
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Security, status, Request
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    Security,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -199,7 +208,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
     # simple token check for WS
     if (env == "production" or expected_key) and expected_key:
         if not token or not secrets.compare_digest(token, expected_key):
-            await ws.close(code=status.WS_1008_POLICY_VIOLATION)
+            await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
 
     await ws.accept()
