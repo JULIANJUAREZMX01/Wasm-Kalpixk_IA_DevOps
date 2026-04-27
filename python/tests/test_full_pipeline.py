@@ -6,12 +6,13 @@ Full pipeline integration tests:
 
 Run: cd python && KALPIXK_FORCE_CPU=true uv run pytest tests/ -v
 """
-import json
 import time
 
+import httpx
 import numpy as np
 import pytest
-import httpx
+
+from api.kalpixk_api import app
 
 BASE = "http://localhost:8000"
 
@@ -45,8 +46,8 @@ def normal_traffic_features():
 
 @pytest.mark.asyncio
 async def test_api_health():
-    async with httpx.AsyncClient() as c:
-        r = await c.get(f"{BASE}/api/health")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/health")
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "healthy"
@@ -64,8 +65,8 @@ async def test_detect_brute_force(brute_force_features):
         "source_type": "syslog",
         "metadata":   [{"event_type": "login_failure"}] * 50,
     }
-    async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=30) as c:
+        r = await c.post("/api/detect", json=payload)
     assert r.status_code == 200
     data = r.json()
     assert "results"          in data
@@ -83,8 +84,8 @@ async def test_detect_normal_traffic_low_anomalies(normal_traffic_features):
         "source_type": "json",
         "metadata":   [{"event_type": "db_query"}] * 100,
     }
-    async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=30) as c:
+        r = await c.post("/api/detect", json=payload)
     assert r.status_code == 200
     data = r.json()
     anomaly_rate = data["total_anomalies"] / 100
@@ -103,8 +104,8 @@ async def test_detection_latency_under_50ms():
         "metadata":   [{}] * 100,
     }
     start = time.perf_counter()
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10) as c:
+        r = await c.post("/api/detect", json=payload)
     elapsed_ms = (time.perf_counter() - start) * 1000
 
     assert r.status_code == 200
@@ -117,8 +118,8 @@ async def test_all_scores_in_unit_interval():
     features = rng.uniform(0, 1, (200, 32)).tolist()
     payload = {"features": features, "event_ids": [f"e{i}" for i in range(200)],
                "source_type": "syslog", "metadata": [{}] * 200}
-    async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=30) as c:
+        r = await c.post("/api/detect", json=payload)
     for result in r.json()["results"]:
         s = result["anomaly_score"]
         assert 0.0 <= s <= 1.0, f"Score {s} out of [0,1]"
@@ -129,8 +130,8 @@ async def test_all_scores_in_unit_interval():
 @pytest.mark.asyncio
 async def test_empty_batch_handled():
     payload = {"features": [], "event_ids": [], "source_type": "syslog", "metadata": []}
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10) as c:
+        r = await c.post("/api/detect", json=payload)
     assert r.status_code in (200, 422)
 
 
@@ -143,8 +144,8 @@ async def test_wrong_feature_dimension_rejected():
         "source_type": "syslog",
         "metadata":   [{}],
     }
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10) as c:
+        r = await c.post("/api/detect", json=payload)
     assert r.status_code in (400, 422), "Wrong feature dimension should be rejected"
 
 
@@ -157,8 +158,8 @@ async def test_mismatched_counts_rejected():
         "source_type": "syslog",
         "metadata":   [{}],
     }
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.post(f"{BASE}/api/detect", json=payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE, timeout=10) as c:
+        r = await c.post("/api/detect", json=payload)
     assert r.status_code in (400, 422)
 
 
@@ -166,8 +167,8 @@ async def test_mismatched_counts_rejected():
 
 @pytest.mark.asyncio
 async def test_metrics_endpoint():
-    async with httpx.AsyncClient() as c:
-        r = await c.get(f"{BASE}/api/metrics")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/metrics")
     assert r.status_code == 200
     m = r.json()
     for key in ["total_events_processed", "mean_latency_ms", "device"]:
@@ -178,8 +179,9 @@ async def test_metrics_endpoint():
 
 class TestIsolationForest:
     def test_fit_and_predict(self):
-        from detection.isolation_forest import KalpixkIsolationForest
         import torch
+
+        from detection.isolation_forest import KalpixkIsolationForest
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         X = np.random.default_rng(0).normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
         model.fit(X)
@@ -189,15 +191,17 @@ class TestIsolationForest:
         assert all(0.0 <= c <= 1.0 for c in confs)
 
     def test_synthetic_fit(self):
-        from detection.isolation_forest import KalpixkIsolationForest
         import torch
+
+        from detection.isolation_forest import KalpixkIsolationForest
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         model.fit_synthetic(n_samples=500)
         assert model.is_trained
 
     def test_anomaly_scores_higher_for_outliers(self):
-        from detection.isolation_forest import KalpixkIsolationForest
         import torch
+
+        from detection.isolation_forest import KalpixkIsolationForest
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         X_normal = np.random.default_rng(0).normal(0.3, 0.05, (500, 32)).clip(0, 1).astype(np.float32)
         model.fit(X_normal)
@@ -217,8 +221,9 @@ class TestIsolationForest:
 
 class TestAutoencoder:
     def test_fit_and_predict(self):
-        from detection.autoencoder import KalpixkAutoencoder
         import torch
+
+        from detection.autoencoder import KalpixkAutoencoder
         ae = KalpixkAutoencoder(torch.device("cpu"))
         X = np.random.default_rng(1).normal(0.3, 0.1, (300, 32)).clip(0, 1).astype(np.float32)
         ae.fit(X, epochs=5)  # Quick for tests
@@ -227,8 +232,9 @@ class TestAutoencoder:
         assert all(0.0 <= s <= 1.0 for s in scores)
 
     def test_latent_representation_shape(self):
-        from detection.autoencoder import KalpixkAutoencoder
         import torch
+
+        from detection.autoencoder import KalpixkAutoencoder
         ae = KalpixkAutoencoder(torch.device("cpu"))
         ae.fit_synthetic(n_samples=200)
         X = np.random.rand(5, 32).astype(np.float32)
@@ -252,8 +258,8 @@ class TestWmsConnector:
         from utils.wms_connector import WmsConnector
         c = WmsConnector(mode="mock")
         batch = c.stream_batch(n=500)
-        suspicious = [l for l in batch if any(
-            kw in l.upper() for kw in ["DROP", "EXPORT", "GRANT", "UNKNOWN"]
+        suspicious = [line for line in batch if any(
+            kw in line.upper() for kw in ["DROP", "EXPORT", "GRANT", "UNKNOWN"]
         )]
         assert len(suspicious) > 0, "Mock stream should inject anomalies"
 

@@ -33,7 +33,7 @@ def test_node_7_sync_success():
         "timestamp": int(time.time()),
         "version": "4.0.0-atlatl"
     }
-    data = json.dumps(payload, sort_keys=True).encode()
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     signature = hmac.new(API_KEY.encode(), data, hashlib.sha256).hexdigest()
 
     headers = {

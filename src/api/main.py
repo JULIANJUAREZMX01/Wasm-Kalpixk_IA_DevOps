@@ -5,6 +5,8 @@ import os
 import secrets
 import json
 import time
+import hmac
+import hashlib
 from contextlib import asynccontextmanager
 from typing import List, Optional, Any, Annotated
 
@@ -118,8 +120,8 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "4.0.0-atlatl",
+        "atlatl_ordnance": "v4.0-macuahuitl",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
         "mesh_status": "guerrilla_active"
@@ -170,7 +172,7 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "4.0-atlatl",
         "device": str(detector.device),
         "mesh_active": True
     }
@@ -181,6 +183,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
+    version: str = Field("4.0.0-atlatl", max_length=32)
 
     @field_validator("timestamp")
     @classmethod
@@ -194,16 +197,29 @@ class ThreatReport(BaseModel):
 @limiter.limit("10/minute")
 def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
     source_ip = request.client.host
-    logger.info(f"📡 Guerrilla Node sync from {report.node_id}@{source_ip}")
+    signature = request.headers.get("X-Kalpixk-Signature")
 
-    # [ATLATL-ORDNANCE] Integrate with Rust Core mesh
-    # Note: In a real scenario, we'd call the WASM/FFI functions here.
-    # For now, we simulate the interaction with the decentralized registry.
+    if not signature:
+        logger.error(f"Missing signature from {report.node_id}")
+        raise HTTPException(status_code=401, detail="Missing integrity signature")
+
+    # Verify HMAC signature (Node-7 MESH_INTEGRITY)
+    # Using model_dump() with sort_keys to ensure deterministic serialization
+    expected_key = os.getenv("KALPIXK_API_KEY", "development_secret")
+    data = json.dumps(report.model_dump(), sort_keys=True, separators=(",", ":")).encode()
+    expected_signature = hmac.new(expected_key.encode(), data, hashlib.sha256).hexdigest()
+
+    if not secrets.compare_digest(signature, expected_signature):
+        logger.error(f"Invalid signature from {report.node_id}")
+        raise HTTPException(status_code=401, detail="Invalid integrity signature")
+
+    logger.info(f"📡 Guerrilla Node sync (VERIFIED) from {report.node_id}@{source_ip}")
 
     return {
         "status": "synced",
-        "mesh_update": "v3.1-guerrilla",
-        "active_mesh_nodes": 5, # Placeholder for real count
+        "integrity": "verified",
+        "mesh_update": "v4.0-guerrilla",
+        "active_mesh_nodes": 7,
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 
