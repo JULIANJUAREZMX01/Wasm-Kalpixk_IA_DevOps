@@ -9,19 +9,30 @@ Endpoints:
 """
 
 # Importaciones internas
+import json
 import os
 import secrets
-import json
 import sys
 import time
 
 import msgpack
 import numpy as np
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Security, status, Request
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    Security,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi import (
+    status as fastapi_status,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -39,6 +50,7 @@ app = FastAPI(
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
+
 async def verify_api_key(api_key: str = Security(api_key_header)):
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
@@ -46,14 +58,25 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     if env == "production":
         if not expected_key:
             from loguru import logger
+
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error",
+            )
         if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_403_FORBIDDEN,
+                detail="Invalid credentials",
+            )
     else:
         if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_403_FORBIDDEN,
+                detail="Invalid credentials",
+            )
     return api_key
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -62,6 +85,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
         return response
+
 
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -100,6 +124,7 @@ class LogRequest(BaseModel):
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
 
+
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
@@ -123,13 +148,13 @@ async def startup():
 
 
 @app.get("/status")
-async def status(api_key: str = Depends(verify_api_key)):
+async def get_system_status(api_key: str = Depends(verify_api_key)):
     uptime = time.time() - _boot_time
     return {
         "status": "ok",
         "module": "kalpixk-api",
         "device": str(_device),
-        "model_trained": _ensemble is not None and getattr(_ensemble, '_trained', False),
+        "model_trained": _ensemble is not None and getattr(_ensemble, "_trained", False),
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
     }
@@ -149,20 +174,19 @@ async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
     latency = (time.time() - t0) * 1000
 
     severity = (
-        "CRITICAL" if score > 0.8
-        else "HIGH" if score > 0.6
-        else "MEDIUM" if score > 0.4
-        else "LOW"
+        "CRITICAL" if score > 0.8 else "HIGH" if score > 0.6 else "MEDIUM" if score > 0.4 else "LOW"
     )
 
     # Broadcast a clientes WebSocket conectados
     if _ws_clients and is_anomaly:
-        alert = msgpack.packb({
-            "type": "anomaly",
-            "score": float(score),
-            "severity": severity,
-            "source": req.source,
-        })
+        alert = msgpack.packb(
+            {
+                "type": "anomaly",
+                "score": float(score),
+                "severity": severity,
+                "source": req.source,
+            }
+        )
         for ws in _ws_clients[:]:
             try:
                 await ws.send_bytes(alert)
@@ -199,7 +223,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
     # simple token check for WS
     if (env == "production" or expected_key) and expected_key:
         if not token or not secrets.compare_digest(token, expected_key):
-            await ws.close(code=status.WS_1008_POLICY_VIOLATION)
+            await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
 
     await ws.accept()
@@ -212,11 +236,13 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             if len(features) == 32:
                 arr = np.array([features], dtype=np.float32)
                 score, is_anomaly = _ensemble.predict(arr)
-                response = msgpack.packb({
-                    "score": float(score),
-                    "is_anomaly": bool(is_anomaly),
-                    "severity": "HIGH" if score > 0.6 else "LOW",
-                })
+                response = msgpack.packb(
+                    {
+                        "score": float(score),
+                        "is_anomaly": bool(is_anomaly),
+                        "severity": "HIGH" if score > 0.6 else "LOW",
+                    }
+                )
                 await ws.send_bytes(response)
     except WebSocketDisconnect:
         _ws_clients.remove(ws)
@@ -229,15 +255,37 @@ async def get_feature_names(api_key: str = Depends(verify_api_key)):
         "feature_dim": 32,
         "contract_version": "1.0.0",
         "features": [
-            "event_type_encoded", "local_severity", "hour_of_day", "day_of_week",
-            "is_weekend", "is_off_hours", "source_is_internal", "destination_exists",
-            "has_user", "source_entropy", "user_entropy", "metadata_field_count",
-            "is_privileged_port", "dst_port_normalized", "bytes_log10_normalized",
-            "has_db_keyword", "has_destructive_op", "is_sensitive_table",
-            "has_bulk_operation", "has_network_scan_sig", "is_privileged_account",
-            "process_is_known", "has_lateral_movement", "source_is_cloud",
-            "raw_length_normalized", "has_base64_payload", "has_powershell_sig",
-            "windows_event_risk", "db2_operation_risk", "netflow_risk",
-            "composite_risk_1", "composite_risk_2",
-        ]
+            "event_type_encoded",
+            "local_severity",
+            "hour_of_day",
+            "day_of_week",
+            "is_weekend",
+            "is_off_hours",
+            "source_is_internal",
+            "destination_exists",
+            "has_user",
+            "source_entropy",
+            "user_entropy",
+            "metadata_field_count",
+            "is_privileged_port",
+            "dst_port_normalized",
+            "bytes_log10_normalized",
+            "has_db_keyword",
+            "has_destructive_op",
+            "is_sensitive_table",
+            "has_bulk_operation",
+            "has_network_scan_sig",
+            "is_privileged_account",
+            "process_is_known",
+            "has_lateral_movement",
+            "source_is_cloud",
+            "raw_length_normalized",
+            "has_base64_payload",
+            "has_powershell_sig",
+            "windows_event_risk",
+            "db2_operation_risk",
+            "netflow_risk",
+            "composite_risk_1",
+            "composite_risk_2",
+        ],
     }

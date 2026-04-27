@@ -10,12 +10,14 @@ from api.kalpixk_api import app
 
 client = TestClient(app)
 
+
 def test_status_endpoint():
     response = client.get("/status")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
     assert "device" in data
+
 
 def test_features_endpoint():
     response = client.get("/features")

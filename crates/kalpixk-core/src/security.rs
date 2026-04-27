@@ -17,7 +17,7 @@ pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
 
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
-    None    => "atlatl-v4",
+    None => "atlatl-v4",
 };
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -124,7 +124,11 @@ impl SharedBufferGuard {
 
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
-            if self.locked.compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire).is_ok() {
+            if self
+                .locked
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire)
+                .is_ok()
+            {
                 let ver = self.version.fetch_add(1, Ordering::SeqCst);
                 return Ok(BufferWriteGuard {
                     locked: Arc::clone(&self.locked),
@@ -151,7 +155,9 @@ impl Drop for BufferWriteGuard {
 }
 
 pub fn obfuscate_offset(base: usize) -> usize {
-    let seed = BUILD_HASH.bytes().fold(0usize, |acc, b| acc.wrapping_mul(31).wrapping_add(b as usize));
+    let seed = BUILD_HASH.bytes().fold(0usize, |acc, b| {
+        acc.wrapping_mul(31).wrapping_add(b as usize)
+    });
     base ^ (seed & 0xFF)
 }
 
