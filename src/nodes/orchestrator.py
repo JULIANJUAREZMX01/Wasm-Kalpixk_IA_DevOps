@@ -22,7 +22,8 @@ class GuerrillaOrchestrator:
 
     def sign_payload(self, payload: dict) -> str:
         """[ATLATL-ORDNANCE] Node-7 HMAC-SHA256 Signing."""
-        data = json.dumps(payload, sort_keys=True).encode()
+        # Use deterministic separators to match API verification
+        data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return hmac.new(self.api_key.encode(), data, hashlib.sha256).hexdigest()
 
     def get_local_threats(self):

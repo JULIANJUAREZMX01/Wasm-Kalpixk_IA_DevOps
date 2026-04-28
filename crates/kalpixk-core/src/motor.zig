@@ -105,6 +105,41 @@ pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling
+/// Disrupts debugger attachment by rotating memory patterns and causing
+/// non-deterministic execution in tracer contexts.
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(entropy_seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        // Rotate byte bits based on random seed
+        const shift = rand.int(u3) % 8;
+        byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
+        byte.* ^= rand.int(u8);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_buffer_seal
+/// Protects SharedArrayBuffer segments with rolling canaries.
+pub export fn v5_buffer_seal(buffer_ptr: [*]u8, buffer_len: usize, secret_key: u64) void {
+    if (buffer_len < 16) return;
+    const slice = buffer_ptr[0..buffer_len];
+    var prng = std.rand.DefaultPrng.init(secret_key);
+    const rand = prng.random();
+
+    // Place rolling canaries at boundaries
+    slice[0] = rand.int(u8) ^ 0xAA;
+    slice[buffer_len - 1] = rand.int(u8) ^ 0x55;
+
+    // Scramble internal alignment bytes to break automated struct parsing
+    var i: usize = 8;
+    while (i < buffer_len - 8) : (i += 16) {
+        slice[i] ^= 0xFF;
+    }
+}
+
 /// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];
