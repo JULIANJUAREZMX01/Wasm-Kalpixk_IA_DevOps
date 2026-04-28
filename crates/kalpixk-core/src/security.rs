@@ -17,7 +17,7 @@ pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
 
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
-    None    => "atlatl-v4",
+    None => "atlatl-v4",
 };
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -53,7 +53,9 @@ impl SecurityGuard {
     /// Detects high-velocity low-entropy attacks (credential stuffing) or
     /// low-velocity high-entropy attacks (exfiltration).
     pub fn analyze_behavioral_entropy(stream: &[&str]) -> f32 {
-        if stream.is_empty() { return 0.0; }
+        if stream.is_empty() {
+            return 0.0;
+        }
         let mut total_entropy = 0.0f32;
         for line in stream {
             total_entropy += crate::entropy::shannon_entropy(line.as_bytes());
@@ -61,8 +63,12 @@ impl SecurityGuard {
         let avg_entropy = total_entropy / stream.len() as f32;
 
         // Return a score based on deviation from "normal" log entropy (~4.0 - 5.5)
-        if avg_entropy > 7.2 { return 0.9; } // Likely encrypted data/shellcode
-        if avg_entropy < 2.5 { return 0.7; } // Likely repetitive automated patterns
+        if avg_entropy > 7.2 {
+            return 0.9;
+        } // Likely encrypted data/shellcode
+        if avg_entropy < 2.5 {
+            return 0.7;
+        } // Likely repetitive automated patterns
         0.0
     }
 }
@@ -141,7 +147,11 @@ impl SharedBufferGuard {
 
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
-            if self.locked.compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire).is_ok() {
+            if self
+                .locked
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire)
+                .is_ok()
+            {
                 let ver = self.version.fetch_add(1, Ordering::SeqCst);
                 return Ok(BufferWriteGuard {
                     locked: Arc::clone(&self.locked),
@@ -168,7 +178,9 @@ impl Drop for BufferWriteGuard {
 }
 
 pub fn obfuscate_offset(base: usize) -> usize {
-    let seed = BUILD_HASH.bytes().fold(0usize, |acc, b| acc.wrapping_mul(31).wrapping_add(b as usize));
+    let seed = BUILD_HASH.bytes().fold(0usize, |acc, b| {
+        acc.wrapping_mul(31).wrapping_add(b as usize)
+    });
     base ^ (seed & 0xFF)
 }
 
