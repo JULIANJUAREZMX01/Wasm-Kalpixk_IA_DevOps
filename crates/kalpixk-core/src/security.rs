@@ -48,6 +48,23 @@ impl SecurityGuard {
     pub fn is_payload_suspicious(data: &[u8]) -> bool {
         crate::entropy::shannon_entropy(data) > 7.5
     }
+
+    /// [ATLATL-ORDNANCE] Stage 3: Behavioral Entropy Analysis
+    /// Detects high-velocity low-entropy attacks (credential stuffing) or
+    /// low-velocity high-entropy attacks (exfiltration).
+    pub fn analyze_behavioral_entropy(stream: &[&str]) -> f32 {
+        if stream.is_empty() { return 0.0; }
+        let mut total_entropy = 0.0f32;
+        for line in stream {
+            total_entropy += crate::entropy::shannon_entropy(line.as_bytes());
+        }
+        let avg_entropy = total_entropy / stream.len() as f32;
+
+        // Return a score based on deviation from "normal" log entropy (~4.0 - 5.5)
+        if avg_entropy > 7.2 { return 0.9; } // Likely encrypted data/shellcode
+        if avg_entropy < 2.5 { return 0.7; } // Likely repetitive automated patterns
+        0.0
+    }
 }
 
 pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {

@@ -389,8 +389,32 @@ pub fn detect_exfiltration(
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
-    // Only trigger Node-7 if explicitly called from mesh sync context without a token
-    let score = if event.source_type == "mesh_sync" && !event.metadata.contains_key("mesh_token") { 0.9 } else { 0.0 };
+    let mut score = 0.0;
+
+    // [ATLATL-ORDNANCE] Time-windowed HMAC validation (Conceptual)
+    // In a real WASM scenario, we'd verify the 'mesh_token' here.
+    if event.source_type == "mesh_sync" {
+        match event.metadata.get("mesh_token").and_then(|v| v.as_str()) {
+            Some(token) if token.len() == 64 => {
+                // Token exists and has valid length
+                score = 0.0;
+            }
+            _ => {
+                // MISSING OR INVALID TOKEN - IMMEDIATE ISOLATION
+                score = 1.0;
+            }
+        }
+
+        // Replay Protection: Check timestamp window (±5 mins)
+        if let Some(ts) = event.metadata.get("timestamp").and_then(|v| v.as_i64()) {
+            let now = chrono::Utc::now().timestamp();
+            if (now - ts).abs() > 300 {
+                score = 1.0;
+            }
+        } else {
+            score = 1.0;
+        }
+    }
 
     NodeResult {
         node: "NODE-7: MESH_INTEGRITY".to_string(),

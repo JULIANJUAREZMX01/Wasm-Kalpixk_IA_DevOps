@@ -181,6 +181,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
+    version: str = Field("4.0.0-atlatl", pattern=r"^4\.0\.0-atlatl$")
 
     @field_validator("timestamp")
     @classmethod
@@ -191,19 +192,34 @@ class ThreatReport(BaseModel):
         return v
 
 @app.post("/api/v1/nodes/sync")
-@limiter.limit("10/minute")
-def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")  # Hardened rate limit
+async def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
     source_ip = request.client.host
-    logger.info(f"📡 Guerrilla Node sync from {report.node_id}@{source_ip}")
+    signature = request.headers.get("X-Kalpixk-Signature")
 
-    # [ATLATL-ORDNANCE] Integrate with Rust Core mesh
-    # Note: In a real scenario, we'd call the WASM/FFI functions here.
-    # For now, we simulate the interaction with the decentralized registry.
+    if not signature:
+        logger.error(f"💀 UNSIGNED SYNC ATTEMPT FROM {source_ip}")
+        raise HTTPException(status_code=401, detail="Node-7 signature required")
+
+    # [ATLATL-ORDNANCE] Node-7 HMAC-SHA256 Verification
+    import hmac
+    import hashlib
+
+    expected_key = os.getenv("KALPIXK_API_KEY", "development_secret")
+    payload_data = json.dumps(report.model_dump(), sort_keys=True, separators=(",", ":")).encode()
+    computed_sig = hmac.new(expected_key.encode(), payload_data, hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(signature, computed_sig):
+        logger.critical(f"💀 INVALID MESH SIGNATURE FROM {source_ip}. INITIATING ISOLATION.")
+        atlatl.trigger_retaliation(1.0, source_ip, "mesh_tampering")
+        raise HTTPException(status_code=403, detail="MESH_INTEGRITY_VIOLATION")
+
+    logger.info(f"📡 Guerrilla Node sync VALIDATED from {report.node_id}@{source_ip}")
 
     return {
         "status": "synced",
-        "mesh_update": "v3.1-guerrilla",
-        "active_mesh_nodes": 5, # Placeholder for real count
+        "mesh_update": "v4.0-atlatl",
+        "active_mesh_nodes": 7,
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 

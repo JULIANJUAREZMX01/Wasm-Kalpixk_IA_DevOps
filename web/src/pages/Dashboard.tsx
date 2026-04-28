@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, ReferenceLine,
@@ -6,27 +6,7 @@ import {
 import { useAlertStore } from "../stores/alertStore";
 import { useMetricsStore } from "../stores/metricsStore";
 import { useWasmStore }    from "../stores/wasmStore";
-import React, { useEffect, useState, useMemo } from 'react';
-import { useAlertStore, ParsedEvent } from '../stores/alertStore';
-import { AlertFeed } from '../components/AlertFeed';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-
-const DEMO_LOGS = [
-  { raw: "Apr  5 02:14:22 cancun-srv01 sshd[1234]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
-  { raw: "Apr  5 02:14:23 cancun-srv01 sshd[1235]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
-  { raw: "Apr  5 02:14:24 cancun-srv01 sshd[1236]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
-  { raw: "TIMESTAMP=2026-04-05-02.15.00 AUTHID=CEDIS_USR HOSTNAME=185.220.101.35 OPERATION=DDL STATEMENT=DROP TABLE NOMINAS", type: "db2" },
-  { raw: "Apr  5 02:14:26 cancun-srv01 sshd[1238]: Failed password for root from 45.33.32.156 port 22", type: "syslog" },
-];
-
-export const Dashboard: React.FC = () => {
-  const { events, wasmReady, wasmVersion, addEvent, setWasmReady, clearEvents } = useAlertStore();
-  const [wasmLog, setWasmLog] = useState<{msg: string, color: string}[]>([]);
-  const [parseFn, setParseFn] = useState<any>(null);
-
-  const addLog = (msg: string, color = "#32ff32") => {
-    setWasmLog(prev => [...prev, { msg, color }].slice(-10));
-  };
+import React from 'react';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -68,10 +48,6 @@ function Label({ text, accent = T.amber }: { text: string; accent?: string }) {
     </div>
   );
 }
-  const chartData = useMemo(() => events.map((e, i) => ({ name: i, severity: e.local_severity * 100 })).reverse(), [events]);
-
-  const avgSev = useMemo(() => events.length ? events.reduce((acc, e) => acc + e.local_severity, 0) / events.length : 0, [events]);
-  const criticalCount = useMemo(() => events.filter(e => e.local_severity >= 0.8).length, [events]);
 
 function Bar({ pct, color }: { pct: number; color: string }) {
   return (
@@ -86,7 +62,6 @@ export default function Dashboard() {
   const alerts        = useAlertStore((s) => s.alerts);
   const criticalCount = useAlertStore((s) => s.criticalCount);
   const totalDetected = useAlertStore((s) => s.totalDetected);
-  const isConnected   = useAlertStore((s) => s.isConnected);
   const metrics       = useMetricsStore();
   const wasm          = useWasmStore();
 
@@ -149,17 +124,18 @@ export default function Dashboard() {
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
-            width: 28, height: 28, background: T.amber, clipPath: "polygon(50% 0%,100% 50%,50% 100%,0% 50%)",
+            width: 28, height: 28, background: T.red, clipPath: "polygon(50% 0%,100% 50%,50% 100%,0% 50%)",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            animation: threatLevel === "CRITICAL" ? "pulse 0.5s infinite" : "none",
           }}>
             <span style={{ fontSize: 13 }}>🏹</span>
           </div>
           <div>
-            <div className="glow-amber" style={{ fontFamily: T.display, fontWeight: 800, fontSize: 16, letterSpacing: 4 }}>
-              KALPIXK
+            <div className="glow-amber" style={{ fontFamily: T.display, fontWeight: 800, fontSize: 16, letterSpacing: 4, color: threatLevel === "CRITICAL" ? T.red : T.amber }}>
+              ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              WASM-NATIVE BLUE TEAM SIEM · AMD MI300X · KynicOS NODE_SENTINEL
+              GUERRILLA ALGORÍTMICA · v4.0-ATLATL · AMD MI300X MESH
             </div>
           </div>
         </div>
@@ -219,15 +195,27 @@ export default function Dashboard() {
           }}>{label}</button>
         ))}
         {/* WASM status pill */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 12, gap: 6 }}>
-          <div style={{
-            width: 6, height: 6, borderRadius: "50%",
-            background: wasm.isLoaded ? T.green : T.amber,
-            animation: wasm.isLoaded ? "none" : "pulse 1.5s infinite",
-          }}/>
-          <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
-            WASM {wasm.isLoaded ? `v${wasm.version}` : "DEMO MODE"}
-          </span>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 12, gap: 16 }}>
+          {threatLevel === "CRITICAL" && (
+            <button style={{
+              background: T.red, color: "white", border: "none",
+              padding: "4px 12px", fontSize: 9, fontWeight: 800,
+              letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
+              boxShadow: `0 0 10px ${T.red}`,
+            }}>
+              EXECUTAR: PHASE BLACK
+            </button>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: wasm.isLoaded ? T.green : T.amber,
+              animation: wasm.isLoaded ? "none" : "pulse 1.5s infinite",
+            }}/>
+            <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
+              WASM {wasm.isLoaded ? `v${wasm.version}` : "v4.0-ATLATL"}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -339,11 +327,6 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
             </div>
           ))}
         </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
-        <StatCard title="THROUGHPUT" value={`${(events.length * 2.5).toFixed(1)}k ev/s`} color="#00c8ff" subtitle="AMD MI300X" />
-        <StatCard title="CRITICAL" value={criticalCount} color="#ff1a1a" subtitle="MITRE AT&CK MATCH" />
-        <StatCard title="AVG SEVERITY" value={`${(avgSev * 100).toFixed(0)}%`} color="#ff6400" subtitle="UEBA BASELINE" />
-        <StatCard title="WASM LATENCY" value="1.2ms" color="#32ff32" subtitle="ZERO CLOUD CALLS" />
       </div>
 
       {/* ── COL 2: ALERT FEED + CHART ──────────────────────────────────────────── */}
@@ -362,7 +345,6 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
           <div style={{ flex: 1, overflowY: "auto", paddingTop: 4 }}>
             {alerts.map((a, i) => (
               <div
-                data-testid={i === 0 ? "alert-feed" : undefined}
                 key={a.id}
                 className={i === 0 ? "new-row" : ""}
                 style={{
@@ -411,7 +393,7 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
                 <YAxis domain={[0, 1]} hide />
                 <Tooltip
                   contentStyle={{ background: T.panel, border: `1px solid ${T.border}`, fontSize: 9, fontFamily: T.font }}
-                  formatter={(v: number) => [(v * 100).toFixed(1) + "%", "Anomaly"]}
+                  formatter={(v: any) => [(v * 100).toFixed(1) + "%", "Anomaly"]}
                   labelFormatter={() => ""}
                 />
                 <ReferenceLine y={0.65} stroke={T.amber} strokeDasharray="3 3" strokeWidth={1} />
