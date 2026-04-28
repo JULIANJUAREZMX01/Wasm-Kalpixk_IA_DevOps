@@ -17,6 +17,7 @@ import time
 
 import msgpack
 import numpy as np
+import torch
 from fastapi import (
     Depends,
     FastAPI,
