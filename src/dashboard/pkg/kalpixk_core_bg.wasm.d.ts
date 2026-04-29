@@ -2,13 +2,13 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const analyze_and_retaliate: (a: number, b: number) => [number, number];
-export const cabi_post_kalpixk:core/kalpixk-monitor#extract-features: (a: number) => void;
+export const cabi_post_extract_features: (a: number) => void;
 export const compute_ueba_features: (a: number, b: number) => [number, number];
 export const extract_features_legacy: (a: number, b: number) => [number, number];
 export const get_feature_names: () => [number, number];
 export const get_security_telemetry: () => [number, number];
 export const health_check: () => [number, number];
-export const kalpixk:core/kalpixk-monitor#extract-features: (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
+export const extract_features: (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
 export const parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
 export const process_batch: (a: number, b: number, c: number, d: number) => [number, number];
 export const version: () => [number, number];
