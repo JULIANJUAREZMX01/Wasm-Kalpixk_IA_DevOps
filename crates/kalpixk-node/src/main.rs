@@ -24,7 +24,7 @@ struct ThreatReport {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let node_id = env::var("NODE_ID")
-        .unwrap_or_else(|_| format!("node-{}", Uuid::new_v4().to_string()[..8].to_string()));
+        .unwrap_or_else(|_| format!("node-{}", &Uuid::new_v4().to_string()[..8]));
     let api_key = env::var("KALPIXK_API_KEY").unwrap_or_else(|_| "development_secret".to_string());
     let upstream_url = env::var("UPSTREAM_URL")
         .unwrap_or_else(|_| "http://localhost:8000/api/v1/nodes/sync".to_string());
