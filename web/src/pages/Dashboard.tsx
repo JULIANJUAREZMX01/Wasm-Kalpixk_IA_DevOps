@@ -135,7 +135,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v4.0-ATLATL · AMD MI300X MESH
+              GUERRILLA ALGORÍTMICA · v5.0-ATLATL · AMD MI300X MESH
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function Dashboard() {
               animation: wasm.isLoaded ? "none" : "pulse 1.5s infinite",
             }}/>
             <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
-              WASM {wasm.isLoaded ? `v${wasm.version}` : "v4.0-ATLATL"}
+              WASM {wasm.isLoaded ? `v${wasm.version}` : "v5.0-ATLATL"}
             </span>
           </div>
         </div>

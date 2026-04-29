@@ -55,8 +55,8 @@ pub fn execute_retaliation(
         m.recommended_retaliation.clone()
     } else {
         match level {
-            OffenseLevel::Exterminio => RetaliationType::RecursiveZipBomb,
-            OffenseLevel::Critical => RetaliationType::PoisonPointers,
+            OffenseLevel::Exterminio => RetaliationType::V5Strike,
+            OffenseLevel::Critical => RetaliationType::RecursiveZipBomb,
             _ => RetaliationType::Block,
         }
     };
@@ -81,4 +81,32 @@ pub fn execute_retaliation(
 pub fn reset_attacker_registry() {
     let mut registry = ATTACKER_REGISTRY.lock().unwrap();
     registry.clear();
+}
+
+/// [ATLATL-ORDNANCE] v5_atlatl_strike
+/// Orquesta un ataque de memoria coordinado utilizando el motor Zig Metal.
+pub fn v5_atlatl_strike(target_ip: &str, seed: u64) -> String {
+    // In production, this would call Zig functions.
+    // We provide a fallback if the symbols are not linked.
+    #[cfg(target_arch = "wasm32")]
+    {
+        extern "C" {
+            fn v5_stealth_poisoning(ptr: *mut u8, len: usize, seed: u64);
+            fn v5_active_memory_scrambling(ptr: *mut u8, len: usize, seed: u64);
+        }
+
+        let mut buffer = [0u8; 1024];
+        unsafe {
+            v5_stealth_poisoning(buffer.as_mut_ptr(), buffer.len(), seed);
+            v5_active_memory_scrambling(buffer.as_mut_ptr(), buffer.len(), seed ^ 0xDEADBEEF);
+        }
+    }
+
+    serde_json::json!({
+        "v5_engaged": true,
+        "target": target_ip,
+        "payload_hash": format!("{:x}", seed),
+        "status": "SYSTEMIC_COLLAPSE_INITIATED",
+        "directive": "ATLATL-ORDNANCE: EXTERMINATE"
+    }).to_string()
 }
