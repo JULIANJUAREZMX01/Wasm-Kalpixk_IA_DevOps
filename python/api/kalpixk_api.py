@@ -127,9 +127,12 @@ def ensure_ensemble():
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]] = Field(...)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
+    event_ids: list[str] | None = None
+    source_type: str | None = None
+    metadata: list[dict] | None = None
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -187,9 +190,17 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
     ens = ensure_ensemble()
 
     t0 = time.time()
-    features_array = torch.from_numpy(np.array(req.features, dtype=np.float32)).to(_device)
-    if features_array.ndim == 1:
-        features_array = features_array.unsqueeze(0)
+    features_np = np.array(req.features, dtype=np.float32)
+    if features_np.ndim == 1:
+        features_np = features_np.reshape(1, -1)
+
+    if features_np.shape[1] != 32:
+        raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
+
+    if req.event_ids is not None and len(req.event_ids) != features_np.shape[0]:
+        raise HTTPException(status_code=422, detail="Mismatched features and event_ids counts")
+
+    features_array = torch.from_numpy(features_np).to(_device)
 
     scores, techniques, confidences = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
@@ -217,11 +228,15 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
-    if len(req.features) != 32:
-        raise HTTPException(422, f"Se esperan 32 features, recibidas: {len(req.features)}")
+    features_np = np.array(req.features, dtype=np.float32)
+    if features_np.ndim == 1:
+        features_np = features_np.reshape(1, -1)
+
+    if features_np.shape[1] != 32:
+        raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
 
     t0 = time.time()
-    features_array = torch.from_numpy(np.array([req.features], dtype=np.float32)).to(_device)
+    features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _ = ens.predict(features_array)
     score = scores[0]
     is_anomaly = score > 0.5
