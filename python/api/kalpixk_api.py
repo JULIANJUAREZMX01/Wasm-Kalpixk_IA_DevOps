@@ -121,7 +121,7 @@ def ensure_ensemble():
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]] = Field(...)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
 
@@ -178,10 +178,14 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
     ens = ensure_ensemble()
 
     t0 = time.time()
-    features_array = torch.from_numpy(np.array(req.features, dtype=np.float32)).to(_device)
-    if features_array.ndim == 1:
-        features_array = features_array.unsqueeze(0)
+    X = np.array(req.features, dtype=np.float32)
+    if X.ndim == 1:
+        X = X.reshape(1, -1)
 
+    if X.shape[1] != 32:
+        raise HTTPException(422, f"Expected 32 features, got {X.shape[1]}")
+
+    features_array = torch.from_numpy(X).to(_device)
     scores, techniques, confidences = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
 

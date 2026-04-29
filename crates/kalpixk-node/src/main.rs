@@ -3,11 +3,11 @@
 //! [ATLATL-ORDNANCE] Version 5.0-ATLATL
 //! "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
 
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
 use uuid::Uuid;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -23,9 +23,11 @@ struct ThreatReport {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    let node_id = env::var("NODE_ID").unwrap_or_else(|_| format!("node-{}", Uuid::new_v4().to_string()[..8].to_string()));
+    let node_id = env::var("NODE_ID")
+        .unwrap_or_else(|_| format!("node-{}", Uuid::new_v4().to_string()[..8].to_string()));
     let api_key = env::var("KALPIXK_API_KEY").unwrap_or_else(|_| "development_secret".to_string());
-    let upstream_url = env::var("UPSTREAM_URL").unwrap_or_else(|_| "http://localhost:8000/api/v1/nodes/sync".to_string());
+    let upstream_url = env::var("UPSTREAM_URL")
+        .unwrap_or_else(|_| "http://localhost:8000/api/v1/nodes/sync".to_string());
 
     println!("🏹 ATLATL GuerrillaNode v5.0 Iniciando...");
     println!("📡 Node ID: {}", node_id);
@@ -40,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             node_id: node_id.clone(),
             threats,
             timestamp,
-            version: "4.0.0-atlatl".to_string(), // Compatibilidad con main.py
+            version: "5.0.0-atlatl".to_string(), // Compatibilidad con main.py
         };
 
         let _payload_json = serde_json::to_string(&report)?;
@@ -55,7 +57,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let signature = hex::encode(mac.finalize().into_bytes());
 
         let client = reqwest::Client::new();
-        let res = client.post(&upstream_url)
+        let res = client
+            .post(&upstream_url)
             .header("X-Kalpixk-Key", &api_key)
             .header("X-Kalpixk-Signature", signature)
             .json(&report)
@@ -67,7 +70,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if resp.status().is_success() {
                     println!("✅ Sincronización exitosa: {}", resp.status());
                 } else {
-                    println!("❌ Error en sincronización: {} - {:?}", resp.status(), resp.text().await?);
+                    println!(
+                        "❌ Error en sincronización: {} - {:?}",
+                        resp.status(),
+                        resp.text().await?
+                    );
                 }
             }
             Err(e) => println!("⚠️ No se pudo contactar al upstream: {}", e),

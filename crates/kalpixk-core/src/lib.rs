@@ -128,7 +128,8 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 pub fn trigger_v5_retaliation(json_target: &str) -> String {
     // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5
     // Orchestrates a systemic collapse of the attacker infrastructure.
-    let target: String = serde_json::from_str(json_target).unwrap_or_else(|_| "unknown".to_string());
+    let target: String =
+        serde_json::from_str(json_target).unwrap_or_else(|_| "unknown".to_string());
     retaliation::v5_atlatl_strike(&target, chrono::Utc::now().timestamp() as u64)
 }
 

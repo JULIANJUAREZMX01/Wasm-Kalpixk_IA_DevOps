@@ -108,5 +108,6 @@ pub fn v5_atlatl_strike(target_ip: &str, seed: u64) -> String {
         "payload_hash": format!("{:x}", seed),
         "status": "SYSTEMIC_COLLAPSE_INITIATED",
         "directive": "ATLATL-ORDNANCE: EXTERMINATE"
-    }).to_string()
+    })
+    .to_string()
 }

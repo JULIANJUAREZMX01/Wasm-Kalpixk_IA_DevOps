@@ -183,7 +183,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
-    version: str = Field("4.0.0-atlatl", pattern=r"^4\.0\.0-atlatl$")
+    version: str = Field("5.0.0-atlatl", pattern=r"^5\.0\.0-atlatl$")
 
     @field_validator("timestamp")
     @classmethod
