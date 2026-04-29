@@ -120,8 +120,9 @@ def ensure_ensemble():
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
-            X = rng.normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
-            _ensemble.autoencoder.fit(X, epochs=5)
+            # Match integration test distribution (0.3, 0.05) to ensure stable baseline in CI
+            X = rng.normal(0.3, 0.05, (500, 32)).clip(0, 1).astype(np.float32)
+            _ensemble.autoencoder.fit(X, epochs=10)
             _ensemble.iso_forest.fit(X)
     return _ensemble
 
