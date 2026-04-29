@@ -78,6 +78,7 @@ dependencies = [
     # Para recibir archivos/formularios en la API (subida de logs)
     "python-multipart>=0.0.12",
     "msgpack>=1.1.2",
+    "slowapi>=0.1.9",
 ]
 
 # =============================================================================
