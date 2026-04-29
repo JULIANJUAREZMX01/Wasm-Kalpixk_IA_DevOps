@@ -118,11 +118,12 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "5.0.0-atlatl",
+        "atlatl_ordnance": "v5.0-macuahuitl",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
-        "mesh_status": "guerrilla_active"
+        "mesh_status": "guerrilla_active",
+        "v5_strike": "ENGAGED"
     }
 
 @app.get("/api/v1/metrics")
@@ -170,9 +171,10 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "5.0-atlatl",
         "device": str(detector.device),
-        "mesh_active": True
+        "mesh_active": True,
+        "v5_metal_strike": "READY"
     }
 
 # -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
@@ -181,7 +183,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
-    version: str = Field("4.0.0-atlatl", pattern=r"^4\.0\.0-atlatl$")
+    version: str = Field("5.0.0-atlatl", pattern=r"^5\.0\.0-atlatl$")
 
     @field_validator("timestamp")
     @classmethod
@@ -223,7 +225,23 @@ async def node_sync(request: Request, report: ThreatReport, api_key: str = Depen
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 
-# [ATLATL-ORDNANCE] Offensive Honeypots v3
+@app.post("/api/v1/retaliate/v5_strike")
+@limiter.limit("5/minute")
+def v5_strike(request: Request, payload: dict, api_key: str = Depends(verify_api_key)):
+    """
+    [ATLATL-ORDNANCE] Direct V5 Metal Strike.
+    Only for authorized command center triggers.
+    """
+    target = payload.get("target")
+    if not target:
+        raise HTTPException(status_code=400, detail="Target required")
+
+    logger.critical(f"🏹 V5 METAL STRIKE TRIGGERED AGAINST {target}")
+    # Integration with atlatl.py
+    result = atlatl.v5_strike_engaged(target)
+    return result
+
+# [ATLATL-ORDNANCE] Offensive Honeypots v5
 @app.get("/api/v1/retaliate/exfiltrate")
 @limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):

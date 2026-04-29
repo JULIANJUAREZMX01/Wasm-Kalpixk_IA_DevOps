@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -125,17 +125,12 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
-    serde_json::json!({
-        "status": "V4_ARMED",
-        "chaotic_poisoning": true,
-        "entropy_trap": "ACTIVE",
-        "target_fingerprint": json_target.chars().take(32).collect::<String>()
-    })
-    .to_string()
+pub fn trigger_v5_retaliation(json_target: &str) -> String {
+    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v5
+    // Orchestrates a systemic collapse of the attacker infrastructure.
+    let target: String =
+        serde_json::from_str(json_target).unwrap_or_else(|_| "unknown".to_string());
+    retaliation::v5_atlatl_strike(&target, chrono::Utc::now().timestamp() as u64)
 }
 
 #[wasm_bindgen]
@@ -282,9 +277,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "v5_metal_strike": "READY"
     })
     .to_string()
 }
