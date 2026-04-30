@@ -18,5 +18,5 @@ export function parse_log_line(line: string, log_type: string) {
 }
 
 export function version() {
-  return "0.1.0-neural-wasm";
+  return "5.0.0-atlatl";
 }

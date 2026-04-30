@@ -52,7 +52,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v5 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -66,8 +66,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v3",
-    version="3.1.0-atlatl",
+    title="Kalpixk SIEM API v5",
+    version="5.0.0-atlatl",
     lifespan=lifespan
 )
 
@@ -172,7 +172,7 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "5.0-atlatl",
         "device": str(detector.device),
         "mesh_active": True
     }
