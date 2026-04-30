@@ -34,3 +34,8 @@
 **Vulnerability:** The legacy backend API (`python/api/kalpixk_api.py`) lacked all security controls: no authentication, wildcard CORS, and no security headers.
 **Learning:** Security hardening is often applied to the primary or "new" entry points while leaving legacy or internal-only APIs vulnerable, assuming they are protected by network isolation which may not always be the case.
 **Prevention:** Audit all entry points regardless of their perceived usage. Use shared security dependencies across all FastAPI instances to ensure a consistent security posture.
+
+## 2026-04-21 - ATLATL v5.0 Discrepancy and Missing Strike Endpoint
+**Vulnerability:** The system was in a partially migrated state where security features described in architecture (v5.0) and expected by tests were missing or inconsistent in the codebase (still referencing v3.1/v4.0). Specifically, the mandatory `/api/v1/retaliate/v5_strike` endpoint was missing, and retaliation logic did not return the expected v5 status markers.
+**Learning:** Architectural drift between intended security posture (v5.0-ATLATL) and implementation can lead to gaps in defense-in-depth and failing security validations.
+**Prevention:** Ensure all security-critical endpoints and version-specific logic are implemented and consistent across the API and retaliation modules before declaring a version upgrade complete.

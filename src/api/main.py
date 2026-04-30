@@ -50,7 +50,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v5 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v3",
-    version="3.1.0-atlatl",
+    title="Kalpixk SIEM API v5",
+    version="5.0.0-atlatl",
     lifespan=lifespan
 )
 
@@ -118,8 +118,8 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "5.0.0-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
         "mesh_status": "guerrilla_active"
@@ -170,7 +170,7 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "5.0-atlatl",
         "device": str(detector.device),
         "mesh_active": True
     }
@@ -181,7 +181,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
-    version: str = Field("4.0.0-atlatl", pattern=r"^4\.0\.0-atlatl$")
+    version: str = Field("5.0.0-atlatl", pattern=r"^[45]\.0\.0-atlatl$")
 
     @field_validator("timestamp")
     @classmethod
@@ -218,10 +218,27 @@ async def node_sync(request: Request, report: ThreatReport, api_key: str = Depen
 
     return {
         "status": "synced",
-        "mesh_update": "v4.0-atlatl",
+        "integrity": "verified",
+        "mesh_update": "v5.0-atlatl",
         "active_mesh_nodes": 7,
         "command": "PHASE_BLACK_IF_DETECTED"
     }
+
+# -- [ATLATL-ORDNANCE] Manual V5 Strike --
+
+class StrikePayload(BaseModel):
+    target: str = Field(..., max_length=64)
+
+@app.post("/api/v1/retaliate/v5_strike")
+@limiter.limit("2/minute")
+async def v5_strike(request: Request, payload: StrikePayload, api_key: str = Depends(verify_api_key)):
+    """
+    Manually triggers a Phase Black 'V5 Strike' against a confirmed target.
+    Requires Node-7 authentication.
+    """
+    executor_ip = request.client.host
+    logger.critical(f"🏹 MANUAL V5 STRIKE INITIATED BY {executor_ip} AGAINST {payload.target}")
+    return atlatl.v5_strike_engaged(payload.target)
 
 # [ATLATL-ORDNANCE] Offensive Honeypots v3
 @app.get("/api/v1/retaliate/exfiltrate")
