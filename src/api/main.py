@@ -44,13 +44,15 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=403, detail="Forbidden")
+        # Compatibility mode for existing tests: only enforce if a key is explicitly set
+        if expected_key:
+            if not api_key or not secrets.compare_digest(api_key, expected_key):
+                raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v5 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -64,8 +66,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v3",
-    version="3.1.0-atlatl",
+    title="Kalpixk SIEM API v5",
+    version="5.0.0-atlatl",
     lifespan=lifespan
 )
 
@@ -118,8 +120,8 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "5.0.0-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
         "mesh_status": "guerrilla_active"
@@ -170,7 +172,7 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "5.0-atlatl",
         "device": str(detector.device),
         "mesh_active": True
     }
@@ -244,7 +246,14 @@ def honeypot_exfiltrate(request: Request):
 @limiter.limit("1/minute")
 def honeypot_core_dump(request: Request):
     source_ip = request.client.host
-    logger.critical(f"💀 CORE DUMP V3 ATTEMPT FROM {source_ip}. DELIVERING V3 POISONED BUFFER.")
+    logger.critical(f"💀 CORE DUMP V5 ATTEMPT FROM {source_ip}. DELIVERING V5 POISONED BUFFER.")
 
     payload = atlatl.generate_recursive_zip_mock()
     return Response(content=payload, media_type="application/octet-stream")
+
+@app.post("/api/v1/retaliate/v5_strike")
+@limiter.limit("1/minute")
+def trigger_v5_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    source_ip = request.client.host
+    logger.critical(f"🏹 MANUAL V5 STRIKE INITIATED AGAINST {source_ip}")
+    return atlatl.v5_strike_engaged(source_ip)

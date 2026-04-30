@@ -15,8 +15,10 @@ class Atlatl:
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
-        logger.warning(f"🚨 AGRESOR V3 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
+        logger.warning(f"🚨 AGRESOR V5 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
 
+        if anomaly_score > 0.95:
+            return self.v5_strike_engaged(source_ip)
         if anomaly_score > 0.9 or anomaly_type == "ransomware_detected":
             return self.phase_black(source_ip)
         elif anomaly_score > 0.7:
@@ -98,10 +100,17 @@ class Atlatl:
         """
         logger.critical(f"🏹 v5_strike: engaged against {target}")
         self.phase_black(target)
+        self.v5_active_deception(target)
         # Dynamic Entropy Injection
         payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
         logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+        return {"v5_status": "STRIKE_COMPLETE", "target": target, "measures": ["v5_deception", "entropy_bomb"]}
+
+    def v5_active_deception(self, target: str):
+        """Generates deceptive C2 signatures to confuse EDR systems."""
+        logger.warning(f"🎭 Deploying deceptive signatures to {target} C2 channel...")
+        # Simulated injection of signatures like Cobalt Strike, Meterpreter, etc.
+        time.sleep(0.05)
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

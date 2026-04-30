@@ -7,10 +7,11 @@ async function bootstrap() {
   // Attempt to load WASM engine
   // If it fails (no .wasm file yet), the app still runs in demo mode
   try {
-    const { initKalpixkWasm } = await import("./wasm/kalpixk-wasm");
+    const { initKalpixkWasm, version } = await import("./wasm/kalpixk-wasm");
     await initKalpixkWasm();
-    useWasmStore.getState().setLoaded(true, "0.1.0");
-    console.info("[Kalpixk] WASM engine v0.1.0 loaded ✓");
+    const v = version();
+    useWasmStore.getState().setLoaded(true, v);
+    console.info(`[Kalpixk] WASM engine v${v} loaded ✓`);
   } catch (e) {
     console.warn("[Kalpixk] WASM unavailable — running in demo mode:", e);
     useWasmStore.getState().setLoaded(false, "demo");

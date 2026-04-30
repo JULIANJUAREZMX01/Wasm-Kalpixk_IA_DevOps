@@ -17,6 +17,8 @@ const THREAT_POOL: Omit<KalpixkAlert, "id" | "ts">[] = [
   { ip: "178.62.21.7",    geo: "UK",  msg: "RDP timing attack — EventID 4625 × 340 attempts", score: 0.69, src: "windows", eventType: "BruteForce" },
   { ip: "10.0.3.77",      geo: "LAN", msg: "New service installed — EventID 7045 — svc_backdoor", score: 0.97, src: "windows", eventType: "ServiceInstall" },
   { ip: "104.21.44.11",   geo: "CF",  msg: "HTTP recon — admin path enumeration", score: 0.58, src: "json",   eventType: "Recon" },
+  { ip: "192.168.1.200",  geo: "LAN", msg: "MI300X Tensor Poisoning — malicious weight injection", score: 0.99, src: "rocm",    eventType: "ModelTampering" },
+  { ip: "10.0.5.15",      geo: "LAN", msg: "WASM SharedBuffer Tampering — race condition detected", score: 0.96, src: "wasm",    eventType: "MemoryExploit" },
 ];
 
 let _idCounter = 0;
