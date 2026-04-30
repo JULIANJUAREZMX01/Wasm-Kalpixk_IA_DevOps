@@ -28,7 +28,12 @@ extern "C" {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-unsafe fn v5_active_memory_scrambling(_target_ptr: *mut u8, _target_len: usize, _entropy_seed: u64) {}
+unsafe fn v5_active_memory_scrambling(
+    _target_ptr: *mut u8,
+    _target_len: usize,
+    _entropy_seed: u64,
+) {
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 unsafe fn v5_buffer_seal(_buffer_ptr: *mut u8, _buffer_len: usize, _secret_key: u64) {}

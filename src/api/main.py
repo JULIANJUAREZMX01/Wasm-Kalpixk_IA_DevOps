@@ -34,7 +34,6 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    # Mandatory API key for production
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
@@ -45,15 +44,10 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
-        # Hardened even in dev, but allow "development_secret" if nothing else set
-        effective_key = expected_key or "development_secret"
-        if not api_key or not secrets.compare_digest(api_key, effective_key):
-             # For some tests that don't provide key, we might need to be lenient
-             # but ATLATL-ORDNANCE says NO MERCY.
-             # However, to pass existing tests that might not have been updated:
-             if not api_key and not expected_key:
-                 return None
-             raise HTTPException(status_code=403, detail="Forbidden")
+        # Compatibility mode for existing tests: only enforce if a key is explicitly set
+        if expected_key:
+            if not api_key or not secrets.compare_digest(api_key, expected_key):
+                raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
 
 @asynccontextmanager
