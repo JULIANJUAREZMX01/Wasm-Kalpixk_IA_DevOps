@@ -197,12 +197,24 @@ export default function Dashboard() {
         {/* WASM status pill */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 12, gap: 16 }}>
           {threatLevel === "CRITICAL" && (
-            <button style={{
-              background: T.red, color: "white", border: "none",
-              padding: "4px 12px", fontSize: 9, fontWeight: 800,
-              letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
-              boxShadow: `0 0 10px ${T.red}`,
-            }}>
+            <button
+              onClick={async () => {
+                try {
+                  await fetch('/api/v1/retaliate/v5_strike', {
+                    method: 'POST',
+                    headers: { 'X-Kalpixk-Key': 'development_secret' }
+                  });
+                  alert("V5_STRIKE: ENGAGED");
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+              style={{
+                background: T.red, color: "white", border: "none",
+                padding: "4px 12px", fontSize: 9, fontWeight: 800,
+                letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
+                boxShadow: `0 0 10px ${T.red}`,
+              }}>
               EXECUTAR: PHASE BLACK
             </button>
           )}

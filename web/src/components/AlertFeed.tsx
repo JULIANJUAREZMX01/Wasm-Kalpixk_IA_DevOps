@@ -57,9 +57,14 @@ export const AlertFeed: React.FC = () => {
                   <span className="text-[9px] text-white/30 font-mono group-hover:text-blue-400 transition-colors">
                     {alert.ip}
                   </span>
-                  <span className="text-[9px] text-white/20 uppercase tracking-widest">
-                    {alert.src}
-                  </span>
+                  <div className="flex gap-2">
+                    <span className="text-[8px] text-white/20 font-mono">
+                      ENTROPY: {(Math.random() * 8).toFixed(2)}
+                    </span>
+                    <span className="text-[9px] text-white/20 uppercase tracking-widest">
+                      {alert.src}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

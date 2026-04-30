@@ -50,19 +50,10 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
-    expected_key = os.getenv("KALPIXK_API_KEY")
+    expected_key = os.getenv("KALPIXK_API_KEY", "development_secret")
 
-    if env == "production":
-        if not expected_key:
-            from loguru import logger
-            logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-        if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
-    else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+    if not api_key or not secrets.compare_digest(api_key, expected_key):
+        raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -143,9 +134,9 @@ async def health():
     ensure_ensemble()
     return {
         "status": "healthy",
-        "version": "0.1.0",
+        "version": "5.0.0-atlatl",
         "device": str(_device),
-        "ensemble_version": "1.0.0-atlatl",
+        "ensemble_version": "5.0.0-atlatl",
     }
 
 

@@ -21,6 +21,18 @@ use crate::runtime_features::extract_32_features;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use wasm_bindgen::prelude::*;
 
+#[cfg(target_arch = "wasm32")]
+extern "C" {
+    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
+    fn v5_buffer_seal(buffer_ptr: *mut u8, buffer_len: usize, secret_key: u64);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v5_active_memory_scrambling(_target_ptr: *mut u8, _target_len: usize, _entropy_seed: u64) {}
+
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v5_buffer_seal(_buffer_ptr: *mut u8, _buffer_len: usize, _secret_key: u64) {}
+
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
     path: "../../kalpixk.wit",
@@ -55,7 +67,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -152,7 +164,20 @@ pub fn mesh_heartbeat(node_id: &str) -> String {
 pub fn parse_log_line(raw: &str, source_type: &str) -> Option<String> {
     SHARED_ACCESS_COUNT.fetch_add(1, Ordering::Relaxed);
 
-    if security::validate_raw_log(raw).is_err() {
+    let mut buf = raw.as_bytes().to_vec();
+    let len = buf.len();
+    let seed = 0x54321; // In WASM we might need a better seed if available
+
+    unsafe {
+        v5_active_memory_scrambling(buf.as_mut_ptr(), len, seed);
+        v5_buffer_seal(buf.as_mut_ptr(), len, seed ^ 0xDEADBEEF);
+        // Descramble for actual parsing (since v5_active_memory_scrambling is symmetric XOR/Rotate)
+        v5_active_memory_scrambling(buf.as_mut_ptr(), len, seed);
+    }
+
+    let raw_safe = String::from_utf8_lossy(&buf);
+
+    if security::validate_raw_log(&raw_safe).is_err() {
         return None;
     }
 
@@ -282,7 +307,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })

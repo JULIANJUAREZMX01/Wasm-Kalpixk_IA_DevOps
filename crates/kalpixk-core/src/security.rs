@@ -89,6 +89,8 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
         (b"<script", "xss_attempt"),
         (b"../", "path_traversal"),
         (b"0xEB0xFE", "hex_jmp_self"),
+        (b"__ATLATL_TENSOR_POISON__", "tensor_tampering"),
+        (b"\\xEB\\xFE\\x5A\\x5A", "atlatl_trap_loop"),
     ];
 
     let bytes = raw.as_bytes();
