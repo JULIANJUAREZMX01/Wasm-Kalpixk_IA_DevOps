@@ -95,8 +95,8 @@ pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, 
     const slice = target_ptr[0..target_len];
 
     for (slice) |*byte| {
-        const shift = rand.int(u3) % 8;
-        byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
+        const shift: u3 = @truncate(rand.int(u8) % 8);
+        byte.* = (byte.* << shift) | (byte.* >> @truncate(8 - @as(u4, shift)));
         byte.* ^= rand.int(u8);
     }
 }
@@ -124,4 +124,20 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
         if (byte != expected_canary) return true;
     }
     return false;
+}
+
+test "v5 stealth poisoning is non-zero" {
+    var buffer: [512]u8 = undefined;
+    @memset(&buffer, 0);
+    v5_stealth_poisoning(&buffer, buffer.len, 0x54321);
+    var sum: u64 = 0;
+    for (buffer) |b| sum += b;
+    try std.testing.expect(sum > 0);
+}
+
+test "mesh entropy shredder produces high entropy" {
+    var buffer: [1024]u8 = undefined;
+    mesh_entropy_shredder(&buffer, buffer.len, 0x98765);
+    const entropy = shannon_entropy(&buffer, buffer.len);
+    try std.testing.expect(entropy > 7.5);
 }
