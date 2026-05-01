@@ -18,12 +18,12 @@ from src.retaliation.atlatl import atlatl
 client = TestClient(app)
 API_KEY = "development_secret"
 
-def test_health_v5():
-    print("Testing health v5...")
+def test_health_v4():
+    print("Testing health v4...")
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "5.0.0-atlatl"
-    print("Health v5: OK")
+    assert response.json()["version"] == "4.0.0-atlatl"
+    print("Health v4: OK")
 
 def test_node_7_sync_success():
     print("Testing node-7 sync success...")
@@ -31,9 +31,9 @@ def test_node_7_sync_success():
         "node_id": "test-node",
         "threats": ["192.168.1.100"],
         "timestamp": int(time.time()),
-        "version": "5.0.0-atlatl"
+        "version": "4.0.0-atlatl"
     }
-    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    data = json.dumps(payload, sort_keys=True).encode()
     signature = hmac.new(API_KEY.encode(), data, hashlib.sha256).hexdigest()
 
     headers = {
@@ -52,25 +52,15 @@ def test_node_7_sync_failure():
         "node_id": "malicious-node",
         "threats": ["1.2.3.4"],
         "timestamp": int(time.time()),
-        "version": "5.0.0-atlatl"
+        "version": "4.0.0-atlatl"
     }
     headers = {
         "X-Kalpixk-Key": API_KEY,
         "X-Kalpixk-Signature": "wrong-signature"
     }
     response = client.post("/api/v1/nodes/sync", json=payload, headers=headers)
-    # API returns 403 for signature violation (MESH_INTEGRITY_VIOLATION)
-    assert response.status_code == 403
+    assert response.status_code == 401
     print("Node-7 sync failure: OK")
-
-def test_v5_strike_manual():
-    print("Testing manual v5 strike...")
-    payload = {"target": "10.0.0.5"}
-    headers = {"X-Kalpixk-Key": API_KEY}
-    response = client.post("/api/v1/retaliate/v5_strike", json=payload, headers=headers)
-    assert response.status_code == 200
-    assert response.json()["v5_status"] == "STRIKE_COMPLETE"
-    print("Manual v5 strike: OK")
 
 def test_honeypot_exfiltrate():
     print("Testing honeypot exfiltrate...")
@@ -88,13 +78,12 @@ def test_phase_black_retaliation():
 
 if __name__ == "__main__":
     try:
-        test_health_v5()
+        test_health_v4()
         test_node_7_sync_success()
         test_node_7_sync_failure()
-        test_v5_strike_manual()
         test_honeypot_exfiltrate()
         test_phase_black_retaliation()
-        print("\nALL TESTS PASSED SUCCESSFULLY (v5.0.0-atlatl)")
+        print("\nALL TESTS PASSED SUCCESSFULLY (v4.0.0-atlatl)")
     except Exception as e:
         print(f"\nTEST FAILED: {e}")
         sys.exit(1)

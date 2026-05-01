@@ -41,7 +41,7 @@ from python.utils.device import get_rocm_device, log_gpu_info
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="0.1.0",
+    version="5.0.0-atlatl",
     docs_url="/docs",
 )
 
@@ -57,12 +57,12 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not expected_key:
             from loguru import logger
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
         if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -136,7 +136,7 @@ class LogRequest(BaseModel):
     @classmethod
     def validate_features(cls, v):
         if not v:
-             return v
+            return v
         if isinstance(v[0], list):
             for sub in v:
                 if len(sub) != 32:
@@ -172,9 +172,9 @@ async def health():
     ensure_ensemble()
     return {
         "status": "healthy",
-        "version": "0.1.0",
+        "version": "5.0.0-atlatl",
         "device": str(_device),
-        "ensemble_version": "1.0.0-atlatl",
+        "ensemble_version": "5.0.0-atlatl",
     }
 
 
@@ -239,8 +239,8 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
 async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
-    if len(req.features) != 32:
-        raise HTTPException(422, f"Se esperan 32 features, recibidas: {len(req.features)}")
+    if isinstance(req.features[0], list):
+        raise HTTPException(422, "Use batch API for multiple features")
 
     t0 = time.time()
     features_array = torch.from_numpy(np.array([req.features], dtype=np.float32)).to(_device)

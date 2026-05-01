@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — GuerrillaMesh Orchestrator
 Handles P2P heartbeats and threat synchronization between decentralized nodes.
-Versión: 5.0-ATLATL
+Versión: 4.0-ATLATL
 """
 import time
 import requests
@@ -18,7 +18,7 @@ class GuerrillaOrchestrator:
         self.sync_interval = 30
         self.local_api = os.getenv("LOCAL_API", "http://localhost:8000")
         self.api_key = os.getenv("KALPIXK_API_KEY", "development_secret")
-        logger.info(f"🏹 Orchestrator v5.0 initialized for {self.node_id} with {len(self.peer_nodes)} peers.")
+        logger.info(f"🏹 Orchestrator v4.0 initialized for {self.node_id} with {len(self.peer_nodes)} peers.")
 
     def sign_payload(self, payload: dict) -> str:
         """[ATLATL-ORDNANCE] Node-7 HMAC-SHA256 Signing."""
@@ -42,7 +42,7 @@ class GuerrillaOrchestrator:
             "node_id": self.node_id,
             "threats": threats,
             "timestamp": int(time.time()),
-            "version": "5.0.0-atlatl"
+            "version": "4.0.0-atlatl"
         }
         signature = self.sign_payload(payload)
 
@@ -59,7 +59,7 @@ class GuerrillaOrchestrator:
                 logger.error(f"Failed to sync with peer {peer}: {e}")
 
     def run(self):
-        logger.info("🚀 GuerrillaMesh v5.0 Orchestration Loop Started.")
+        logger.info("🚀 GuerrillaMesh v4.0 Orchestration Loop Started.")
         while True:
             try:
                 self.sync_with_peers()

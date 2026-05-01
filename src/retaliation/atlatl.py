@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 5.0-ATLATL
+Versión: 3.1-ATLATL
 """
 from loguru import logger
 import time
@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -43,8 +43,6 @@ class Atlatl:
         return {
             "action": "EXTERMINATE",
             "target": source_ip,
-            "v5_status": "STRIKE_COMPLETE",
-            "v5_strike": "engaged",
             "measures": [
                 "recursive_zip_bomb",
                 "hardware_lock",
