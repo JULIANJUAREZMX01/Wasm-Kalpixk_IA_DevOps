@@ -466,7 +466,7 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
             node_id: "WASM-CORE-ATLATL-V5".to_string(),
             technique: max_res
                 .mitre_techniques
-                .get(0)
+                .first()
                 .cloned()
                 .unwrap_or_else(|| "TA-DETECTION".to_string()),
             score,
