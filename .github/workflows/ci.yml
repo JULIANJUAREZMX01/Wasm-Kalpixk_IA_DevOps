@@ -73,7 +73,7 @@ jobs:
         with:
           name: kalpixk-core-wasm
           path: web/src/wasm/pkg/
-      - run: cd web && npm ci
+      - run: cd web && npm install
       - run: cd web && npx tsc --noEmit
       - name: Build for GitHub Pages
         run: cd web && npm run build
