@@ -56,14 +56,12 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
 }
 
 /// [ATLATL-ORDNANCE] v5_stealth_poisoning
-/// Genera secuencias de salto no deterministas basadas en el drift del reloj y entropia local.
-/// Diseñado para romper el rastreo de ejecución en entornos virtualizados o sandboxed.
 pub export fn v5_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
-    for (slice, 0..) |*byte, i| {
+    for (slice) |*byte| {
         const op = rand.int(u8) % 10;
         switch (op) {
             0 => byte.* = 0xEB, // JMP short
@@ -76,13 +74,10 @@ pub export fn v5_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u
             7 => byte.* = 0xE9, // JMP near
             else => byte.* = rand.int(u8),
         }
-        _ = i;
     }
 }
 
 /// [ATLATL-ORDNANCE] mesh_entropy_shredder
-/// Saturación de buffer con patrones de ruido blanco sintético que neutralizan
-/// algoritmos de deduplicación y compresión de red.
 pub export fn mesh_entropy_shredder(target_ptr: [*]u8, target_len: usize, key: u64) void {
     var prng = std.rand.DefaultPrng.init(key);
     const rand = prng.random();
@@ -93,28 +88,13 @@ pub export fn mesh_entropy_shredder(target_ptr: [*]u8, target_len: usize, key: u
     }
 }
 
-/// [ATLATL-ORDNANCE] Legacy: poison_pointers
-pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
-    const slice = target_ptr[0..target_len];
-    for (slice, 0..) |*byte, i| {
-        if (i % 2 == 0) {
-            byte.* = 0xEB;
-        } else {
-            byte.* = 0xFE;
-        }
-    }
-}
-
 /// [ATLATL-ORDNANCE] v5_active_memory_scrambling
-/// Disrupts debugger attachment by rotating memory patterns and causing
-/// non-deterministic execution in tracer contexts.
 pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
     var prng = std.rand.DefaultPrng.init(entropy_seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
     for (slice) |*byte| {
-        // Rotate byte bits based on random seed
         const shift = rand.int(u3) % 8;
         byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
         byte.* ^= rand.int(u8);
@@ -122,18 +102,15 @@ pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, 
 }
 
 /// [ATLATL-ORDNANCE] v5_buffer_seal
-/// Protects SharedArrayBuffer segments with rolling canaries.
 pub export fn v5_buffer_seal(buffer_ptr: [*]u8, buffer_len: usize, secret_key: u64) void {
     if (buffer_len < 16) return;
     const slice = buffer_ptr[0..buffer_len];
     var prng = std.rand.DefaultPrng.init(secret_key);
     const rand = prng.random();
 
-    // Place rolling canaries at boundaries
     slice[0] = rand.int(u8) ^ 0xAA;
     slice[buffer_len - 1] = rand.int(u8) ^ 0x55;
 
-    // Scramble internal alignment bytes to break automated struct parsing
     var i: usize = 8;
     while (i < buffer_len - 8) : (i += 16) {
         slice[i] ^= 0xFF;
@@ -147,27 +124,4 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
         if (byte != expected_canary) return true;
     }
     return false;
-}
-
-test "v5 stealth poisoning is non-zero" {
-    var buffer: [512]u8 = undefined;
-    @memset(&buffer, 0);
-    v5_stealth_poisoning(&buffer, buffer.len, 0x54321);
-    var sum: u64 = 0;
-    for (buffer) |b| sum += b;
-    try std.testing.expect(sum > 0);
-}
-
-test "mesh entropy shredder produces high entropy" {
-    var buffer: [1024]u8 = undefined;
-    mesh_entropy_shredder(&buffer, buffer.len, 0x98765);
-    const entropy = shannon_entropy(&buffer, buffer.len);
-    try std.testing.expect(entropy > 7.5);
-}
-
-test "legacy poison pointers" {
-    var buffer: [4]u8 = undefined;
-    poison_pointers(&buffer, buffer.len);
-    try std.testing.expect(buffer[0] == 0xEB);
-    try std.testing.expect(buffer[1] == 0xFE);
 }

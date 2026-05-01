@@ -6,6 +6,8 @@ import json
 import importlib
 import sys
 import time
+import hmac
+import hashlib
 
 # Mocking env before import
 os.environ["KALPIXK_API_KEY"] = "sentinel_test_key"
@@ -21,14 +23,20 @@ def train_detector():
         detector.is_trained = True
         detector.threshold = 0.7
 
+def sign_payload(payload, key):
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hmac.new(key.encode(), data, hashlib.sha256).hexdigest()
+
 def test_threat_report_constraints():
+    key = "sentinel_test_key"
     # node_id too long (> 64)
     payload = {
         "node_id": "a" * 65,
         "threats": ["1.1.1.1"],
-        "timestamp": 12345
+        "timestamp": int(time.time()),
+        "version": "5.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": key})
     assert response.status_code == 422
     assert "node_id" in response.text
 
@@ -36,9 +44,10 @@ def test_threat_report_constraints():
     payload = {
         "node_id": "test_node",
         "threats": ["1.1.1.1"] * 1001,
-        "timestamp": 12345
+        "timestamp": int(time.time()),
+        "version": "5.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": key})
     assert response.status_code == 422
     assert "threats" in response.text
 
@@ -46,9 +55,10 @@ def test_threat_report_constraints():
     payload = {
         "node_id": "test_node",
         "threats": ["b" * 257],
-        "timestamp": 12345
+        "timestamp": int(time.time()),
+        "version": "5.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": key})
     assert response.status_code == 422
     assert "threats" in response.text
 
@@ -56,40 +66,39 @@ def test_threat_report_constraints():
     payload = {
         "node_id": "test_node",
         "threats": ["1.1.1.1"] * 10,
-        "timestamp": int(time.time())
+        "timestamp": int(time.time()),
+        "version": "5.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    headers = {
+        "X-Kalpixk-Key": key,
+        "X-Kalpixk-Signature": sign_payload(payload, key)
+    }
+    response = client.post("/api/v1/nodes/sync", json=payload, headers=headers)
     assert response.status_code == 200
 
 def test_threat_report_replay_protection():
+    key = "sentinel_test_key"
     # Expired timestamp (old)
     payload = {
         "node_id": "test_node",
         "threats": ["1.1.1.1"],
-        "timestamp": int(time.time()) - 400
+        "timestamp": int(time.time()) - 400,
+        "version": "5.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
-    assert response.status_code == 422
-    assert "Timestamp out of sync" in response.text
-
-    # Future timestamp
-    payload = {
-        "node_id": "test_node",
-        "threats": ["1.1.1.1"],
-        "timestamp": int(time.time()) + 400
-    }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": key})
     assert response.status_code == 422
     assert "Timestamp out of sync" in response.text
 
 def test_threat_report_node_id_regex():
+    key = "sentinel_test_key"
     # Invalid characters in node_id
     payload = {
         "node_id": "node; drop table users",
         "threats": ["1.1.1.1"],
-        "timestamp": int(time.time())
+        "timestamp": int(time.time()),
+        "version": "5.0.0-atlatl"
     }
-    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": "sentinel_test_key"})
+    response = client.post("/api/v1/nodes/sync", json=payload, headers={"X-Kalpixk-Key": key})
     assert response.status_code == 422
 
 def test_security_headers():

@@ -1,10 +1,12 @@
 """
-Wasm-Kalpixk API (v3) — ATLATL-ORDNANCE Guerrilla Hardening
+Wasm-Kalpixk API (v5) — ATLATL-ORDNANCE Guerrilla Hardening
 """
 import os
 import secrets
 import json
 import time
+import hmac
+import hashlib
 from contextlib import asynccontextmanager
 from typing import List, Optional, Any, Annotated
 
@@ -50,7 +52,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v5 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -60,12 +62,12 @@ async def lifespan(app: FastAPI):
         metrics = detector.evaluate(data['X'], data['y'])
         detector.save_evaluation_report(metrics)
 
-    logger.success("🏹 Sistema ATLATL Armado y Operacional")
+    logger.success("🏹 Sistema ATLATL Armado y Operacional (v5.0.0-atlatl)")
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v3",
-    version="3.1.0-atlatl",
+    title="Kalpixk SIEM API v5",
+    version="5.0.0-atlatl",
     lifespan=lifespan
 )
 
@@ -82,7 +84,6 @@ try:
             logger.error("Wildcard CORS detected in production! Forcing to empty list.")
             cors_origins = []
     elif env == "production":
-        # Hardened: No wildcard CORS in production
         logger.warning("CORS_ORIGINS not set in production. Defaulting to empty list.")
         cors_origins = []
     else:
@@ -118,8 +119,8 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "5.0.0-atlatl",
+        "atlatl_ordnance": "v5.0-macuahuitl",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
         "mesh_status": "guerrilla_active"
@@ -155,22 +156,13 @@ def detect(request: Request, payload: DetectPayload, api_key: str = Depends(veri
 
     return result
 
-@app.get("/api/v1/report")
-@limiter.limit("5/minute")
-def get_report(request: Request, api_key: str = Depends(verify_api_key)):
-    report_path = "models/evaluation_report.json"
-    if os.path.exists(report_path):
-        with open(report_path, "r") as f:
-            return json.load(f)
-    raise HTTPException(status_code=404, detail="Report not found")
-
 @app.get("/api/v1/status")
 @limiter.limit("10/minute")
 def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "5.0.0-atlatl",
         "device": str(detector.device),
         "mesh_active": True
     }
@@ -181,7 +173,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
-    version: str = Field("4.0.0-atlatl", pattern=r"^4\.0\.0-atlatl$")
+    version: str = Field("5.0.0-atlatl", pattern=r"^[45]\.0\.0-atlatl$")
 
     @field_validator("timestamp")
     @classmethod
@@ -192,7 +184,7 @@ class ThreatReport(BaseModel):
         return v
 
 @app.post("/api/v1/nodes/sync")
-@limiter.limit("5/minute")  # Hardened rate limit
+@limiter.limit("5/minute")
 async def node_sync(request: Request, report: ThreatReport, api_key: str = Depends(verify_api_key)):
     source_ip = request.client.host
     signature = request.headers.get("X-Kalpixk-Signature")
@@ -200,10 +192,6 @@ async def node_sync(request: Request, report: ThreatReport, api_key: str = Depen
     if not signature:
         logger.error(f"💀 UNSIGNED SYNC ATTEMPT FROM {source_ip}")
         raise HTTPException(status_code=401, detail="Node-7 signature required")
-
-    # [ATLATL-ORDNANCE] Node-7 HMAC-SHA256 Verification
-    import hmac
-    import hashlib
 
     expected_key = os.getenv("KALPIXK_API_KEY", "development_secret")
     payload_data = json.dumps(report.model_dump(), sort_keys=True, separators=(",", ":")).encode()
@@ -218,33 +206,41 @@ async def node_sync(request: Request, report: ThreatReport, api_key: str = Depen
 
     return {
         "status": "synced",
-        "mesh_update": "v4.0-atlatl",
+        "mesh_update": "v5.0-atlatl",
         "active_mesh_nodes": 7,
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 
-# [ATLATL-ORDNANCE] Offensive Honeypots v3
+# -- [ATLATL-ORDNANCE] Retaliation Endpoints v5 --
+
+@app.post("/api/v1/retaliate/v5_strike")
+@limiter.limit("1/minute")
+def trigger_v5_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """Triggers a manual v5 strike against a detected threat."""
+    target = request.query_params.get("target")
+    if not target:
+        raise HTTPException(status_code=400, detail="Target required")
+
+    logger.critical(f"🏹 MANUAL v5_strike TRIGGERED AGAINST {target}")
+    return atlatl.v5_strike_engaged(target)
+
 @app.get("/api/v1/retaliate/exfiltrate")
 @limiter.limit("1/minute")
 def honeypot_exfiltrate(request: Request):
-    """
-    Honeypot that delivers high entropy garbage via streaming
-    to prevent memory exhaustion on the server while slowing down the attacker.
-    """
     source_ip = request.client.host
-    logger.critical(f"💀 EXFILTRATION V3 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
+    logger.critical(f"💀 EXFILTRATION V5 DETECTED FROM {source_ip}. DELIVERING RECURSIVE ENTROPY TRAP.")
 
     return StreamingResponse(
         atlatl.stream_entropy_payload(size_mb=100),
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=core_exfil.bin"}
+        headers={"Content-Disposition": "attachment; filename=atlatl_exfil_v5.bin"}
     )
 
 @app.get("/api/v1/retaliate/debug/core_dump")
 @limiter.limit("1/minute")
 def honeypot_core_dump(request: Request):
     source_ip = request.client.host
-    logger.critical(f"💀 CORE DUMP V3 ATTEMPT FROM {source_ip}. DELIVERING V3 POISONED BUFFER.")
+    logger.critical(f"💀 CORE DUMP V5 ATTEMPT FROM {source_ip}. DELIVERING V5 POISONED BUFFER.")
 
     payload = atlatl.generate_recursive_zip_mock()
     return Response(content=payload, media_type="application/octet-stream")

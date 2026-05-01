@@ -3,9 +3,9 @@
 //!
 //! 7 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
-//! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
+//! - Node-7: MESH_INTEGRITY (v5.0-ATLATL)
 //!
-//! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
+//! [ATLATL-ORDNANCE] Version 5.0: Cryptographic Node Integrity & Phase Black Triggers
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -20,21 +20,16 @@ pub struct ThreatSignature {
     pub technique: String,
     pub score: f64,
     pub timestamp: i64,
-    pub signature: Option<String>, // [ATLATL-ORDNANCE] Node-7 HMAC
+    pub signature: Option<String>,
+    pub version: String,
 }
 
 lazy_static::lazy_static! {
-    /// Decentralized Peer-to-Peer Threat Sharing (GuerrillaMode)
     static ref GLOBAL_THREAT_REGISTRY: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
-
-    /// [ATLATL-ORDNANCE] Detailed Threat Signatures for P2P Sync
     static ref THREAT_SIGNATURE_DB: Mutex<HashMap<String, ThreatSignature>> = Mutex::new(HashMap::new());
-
-    /// [ATLATL-ORDNANCE] GuerrillaMesh Node Health
     static ref MESH_NODES: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
 }
 
-/// Severity score from 0.0 to 1.0
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SeverityScore(pub f64);
 
@@ -57,20 +52,18 @@ impl SeverityScore {
     }
 }
 
-/// [ATLATL-ORDNANCE] GuerrillaMesh: Register Node Heartbeat
 pub fn register_node_heartbeat(node_id: String) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(node_id, chrono::Utc::now().timestamp_millis());
     }
 }
 
-/// [ATLATL-ORDNANCE] GuerrillaMesh: Get Active Nodes
 pub fn get_active_nodes() -> Vec<String> {
     if let Ok(nodes) = MESH_NODES.lock() {
         let now = chrono::Utc::now().timestamp_millis();
         nodes
             .iter()
-            .filter(|(_, &ts)| now - ts < 60000) // Active if seen in last 60s
+            .filter(|(_, &ts)| now - ts < 60000)
             .map(|(id, _)| id.clone())
             .collect()
     } else {
@@ -78,7 +71,6 @@ pub fn get_active_nodes() -> Vec<String> {
     }
 }
 
-/// [ATLATL-ORDNANCE] Export Global Blacklist for synchronization
 pub fn get_global_blacklist() -> Vec<String> {
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
         registry.iter().cloned().collect()
@@ -87,7 +79,6 @@ pub fn get_global_blacklist() -> Vec<String> {
     }
 }
 
-/// [ATLATL-ORDNANCE] Detailed Sync Logic
 pub fn register_threat_signature(sig: ThreatSignature) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         registry.insert(sig.source.clone());
@@ -125,7 +116,6 @@ impl SeverityLevel {
     }
 }
 
-/// Defense node detection result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeResult {
     pub node: String,
@@ -133,11 +123,8 @@ pub struct NodeResult {
     pub level: SeverityLevel,
     pub mitre_techniques: Vec<String>,
     pub description: String,
+    pub atlatl_version: String,
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 1: RECONNAISSANCE DETECTOR
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_reconnaissance(
     _event: &KalpixkEvent,
@@ -151,7 +138,6 @@ pub fn detect_reconnaissance(
     let user = user_lower;
     let raw = raw_lower;
 
-    // Advanced heuristics for recon
     if raw.contains("dns") && (raw.contains("enum") || raw.contains("axfr") || raw.contains("zone"))
     {
         score += 0.4;
@@ -191,13 +177,10 @@ pub fn detect_reconnaissance(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: format!("Recon score: {:.2}", score),
+        description: format!("Recon score: {:.2} (v5.0)", score),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 2: LATERAL MOVEMENT DETECTOR
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_lateral_movement(
     event: &KalpixkEvent,
@@ -239,13 +222,10 @@ pub fn detect_lateral_movement(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: format!("Lateral movement score: {:.2}", score),
+        description: format!("Lateral movement score: {:.2} (v5.0)", score),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 3: CREDENTIAL THEFT DETECTOR
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_credential_theft(
     _event: &KalpixkEvent,
@@ -281,13 +261,10 @@ pub fn detect_credential_theft(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: format!("Credential theft score: {:.2}", score),
+        description: format!("Credential theft score: {:.2} (v5.0)", score),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 4: PAYLOAD/EXECUTION DETECTOR
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_payload_execution(
     _event: &KalpixkEvent,
@@ -332,13 +309,10 @@ pub fn detect_payload_execution(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: format!("Execution score: {:.2}", score),
+        description: format!("Execution score: {:.2} (v5.0)", score),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 5: RCE / INJECTION DETECTOR
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_rce_injection(
     _event: &KalpixkEvent,
@@ -377,13 +351,10 @@ pub fn detect_rce_injection(
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: format!("RCE score: {:.2}", score),
+        description: format!("RCE score: {:.2} (v5.0)", score),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 6: EXFILTRATION DETECTOR
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_exfiltration(
     _event: &KalpixkEvent,
@@ -409,55 +380,29 @@ pub fn detect_exfiltration(
         techniques.push("T1074".to_string());
     }
 
-    if (raw.contains("bitsadmin")
-        || raw.contains("certutil")
-        || raw.contains("curl -s")
-        || raw.contains("wget -q"))
-        && (raw.contains("http")
-            || raw.contains(".exe")
-            || raw.contains(".sh")
-            || raw.contains(".ps1"))
-    {
-        score += 0.7;
-        techniques.push("T1105".to_string());
-    }
-
-    if raw.contains("dns") && raw.contains("txt") && raw.len() > 200 {
-        score += 0.7;
-        techniques.push("T1048".to_string());
-    }
-
     NodeResult {
         node: "NODE-6: EXFIL".to_string(),
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: format!("Exfil score: {:.2}", score),
+        description: format!("Exfil score: {:.2} (v5.0)", score),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 7: MESH_INTEGRITY DETECTOR (v4.0-ATLATL)
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
 
-    // [ATLATL-ORDNANCE] Time-windowed HMAC validation (Conceptual)
-    // In a real WASM scenario, we'd verify the 'mesh_token' here.
     if event.source_type == "mesh_sync" {
         match event.metadata.get("mesh_token").and_then(|v| v.as_str()) {
             Some(token) if token.len() == 64 => {
-                // Token exists and has valid length
                 score = 0.0;
             }
             _ => {
-                // MISSING OR INVALID TOKEN - IMMEDIATE ISOLATION
                 score = 1.0;
             }
         }
 
-        // Replay Protection: Check timestamp window (±5 mins)
         if let Some(ts) = event.metadata.get("timestamp").and_then(|v| v.as_i64()) {
             let now = chrono::Utc::now().timestamp();
             if (now - ts).abs() > 300 {
@@ -466,6 +411,12 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
         } else {
             score = 1.0;
         }
+
+        if let Some(ver) = event.metadata.get("version").and_then(|v| v.as_str()) {
+            if ver != "5.0.0-atlatl" {
+                score = 1.0;
+            }
+        }
     }
 
     NodeResult {
@@ -473,13 +424,10 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: vec!["T1557".to_string()],
-        description: "Cryptographic mesh integrity validation".to_string(),
+        description: "v5.0 Cryptographic mesh integrity validation".to_string(),
+        atlatl_version: "5.0.0-atlatl".to_string(),
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 7 nodes
-// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
@@ -503,7 +451,6 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
-    // Prefer higher scores, then higher node index if scores are equal (simplified)
     results
         .into_iter()
         .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
@@ -511,21 +458,21 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
 }
 
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
-    let score = get_max_severity(event).score;
+    let max_res = get_max_severity(event);
+    let score = max_res.score;
     if score >= 0.7 {
-        // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-ATLATL".to_string(),
-            technique: "TA-DETECTION".to_string(),
+            node_id: "WASM-CORE-ATLATL-V5".to_string(),
+            technique: max_res.mitre_techniques.get(0).cloned().unwrap_or_else(|| "TA-DETECTION".to_string()),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: None,
+            version: "5.0.0-atlatl".to_string(),
         });
         return true;
     }
 
-    // Check global blacklist
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
         if registry.contains(&event.source) {
             return true;
@@ -535,7 +482,6 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     false
 }
 
-/// [ATLATL-ORDNANCE] P2P Threat Sync
 pub fn sync_threats(external_threats: Vec<String>) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         for threat in external_threats {
