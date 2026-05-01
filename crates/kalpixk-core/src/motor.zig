@@ -95,8 +95,8 @@ pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, 
     const slice = target_ptr[0..target_len];
 
     for (slice) |*byte| {
-        const shift: u3 = @truncate(rand.int(u8) % 8);
-        byte.* = (byte.* << shift) | (byte.* >> @truncate(8 - @as(u4, shift)));
+        const shift = @as(u3, @truncate(rand.int(u8) % 8));
+        byte.* = std.math.rotl(u8, byte.*, shift);
         byte.* ^= rand.int(u8);
     }
 }
