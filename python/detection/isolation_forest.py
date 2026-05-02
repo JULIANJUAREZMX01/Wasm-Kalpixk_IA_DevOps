@@ -164,17 +164,15 @@ class KalpixkIsolationForest:
             self.fit_synthetic()
 
         X = X.astype(np.float32)
-        raw = self._model.score_samples(X)  # More negative = more anomalous
 
-        # Normalize to [0, 1] using calibrated range
-        span = self._score_max - self._score_min
-        if span > 1e-8:
-            normalized = np.clip(
-                1.0 - (raw - self._score_min) / span,
-                0.0, 1.0
-            )
-        else:
-            normalized = np.full(len(raw), 0.5)
+        # Use decision_function for stable [0, 1] mapping where 0.5 is threshold
+        # decision_function = score_samples - offset_ (offset_ is set by contamination)
+        # decision > 0: inlier, decision < 0: outlier
+        decision = self._model.decision_function(X)
+
+        # Sigmoid centered at 0 maps decision to [0, 1]
+        # We want decision < 0 to have score > 0.5
+        normalized = 1.0 / (1.0 + np.exp(10.0 * decision))
 
         # Confidence: distance from the 0.5 boundary
         confidences = np.clip(np.abs(normalized - 0.5) * 2, 0.3, 1.0)
