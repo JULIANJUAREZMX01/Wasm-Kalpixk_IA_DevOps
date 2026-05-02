@@ -114,16 +114,21 @@ def ensure_ensemble():
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
-            X = rng.normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
+            X = rng.normal(0.3, 0.05, (500, 32)).clip(0, 1).astype(np.float32)
+            X[:, 5] = 0.0
+            X[:, 6] = 1.0
             _ensemble.autoencoder.fit(X, epochs=5)
             _ensemble.iso_forest.fit(X)
     return _ensemble
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]]
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
+    event_ids: list[str] | None = None
+    source_type: str | None = None
+    metadata: list[dict] | None = None
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -177,11 +182,20 @@ async def get_metrics(api_key: str = Depends(verify_api_key)):
 async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
-    t0 = time.time()
-    features_array = torch.from_numpy(np.array(req.features, dtype=np.float32)).to(_device)
-    if features_array.ndim == 1:
-        features_array = features_array.unsqueeze(0)
+    features_np = np.array(req.features, dtype=np.float32)
+    if features_np.ndim == 1:
+        if len(features_np) == 0:
+            raise HTTPException(422, "Empty batch")
+        features_np = features_np.reshape(1, -1)
 
+    if features_np.shape[1] != 32:
+        raise HTTPException(422, f"Se esperan 32 features, recibidas: {features_np.shape[1]}")
+
+    if req.event_ids and len(req.event_ids) != features_np.shape[0]:
+         raise HTTPException(422, "Mismatched counts")
+
+    t0 = time.time()
+    features_array = torch.from_numpy(features_np).to(_device)
     scores, techniques, confidences = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
 
@@ -254,8 +268,9 @@ async def train(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
     normal_data = np.random.randn(payload.n_samples, 32).astype(np.float32)
-    normal_data = np.clip(normal_data * 0.1 + 0.5, 0, 1)
-    _ensemble.fit(normal_data)
+    normal_data = np.clip(normal_data * 0.1 + 0.3, 0, 1)
+    _ensemble.autoencoder.fit(normal_data, epochs=5)
+    _ensemble.iso_forest.fit(normal_data)
     return {"status": "trained", "n_samples": payload.n_samples, "device": str(_device)}
 
 
