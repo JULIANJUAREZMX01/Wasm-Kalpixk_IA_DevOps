@@ -15,3 +15,6 @@
 ## 2025-04-15 - [Optimize ML prediction loops with NumPy vectorization]
 **Learning:** In machine learning prediction loops, native Python list comprehensions for calculating scores and confidences from arrays create a severe performance bottleneck. Native loops iterate item by item in Python's evaluation loop, whereas NumPy vectorized operations push the iteration down into optimized C code.
 **Action:** Always prefer native NumPy vectorized operations (like `np.clip`, `np.abs`, and direct arithmetic) over Python loops or list comprehensions when processing arrays or tensors, particularly in hot paths like ML prediction.
+## 2026-05-02 - [React list rendering optimization with React.memo in Dashboard.tsx]
+**Learning:** Extracting inline list components into external `React.memo()` wrapped components prevents unnecessary O(N) re-renders, greatly reducing CPU overhead for streaming arrays like `alerts` which continuously prepend items.
+**Action:** Always wrap dynamically expanding array items in `React.memo` using the item as prop along with its primitive properties, to guarantee standard object comparison works and re-renders are completely skipped.
