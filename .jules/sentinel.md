@@ -34,3 +34,8 @@
 **Vulnerability:** The legacy backend API (`python/api/kalpixk_api.py`) lacked all security controls: no authentication, wildcard CORS, and no security headers.
 **Learning:** Security hardening is often applied to the primary or "new" entry points while leaving legacy or internal-only APIs vulnerable, assuming they are protected by network isolation which may not always be the case.
 **Prevention:** Audit all entry points regardless of their perceived usage. Use shared security dependencies across all FastAPI instances to ensure a consistent security posture.
+
+## 2026-05-20 - Legacy API Rate Limiting and Exception Handling Fix
+**Vulnerability:** Lack of rate limiting on expensive GPU endpoints and a NameError crash in authentication logic.
+**Learning:** Even if an API has authentication, it can still be vulnerable to DoS if it performs heavy computation (like neural training/inference) without rate limits. Furthermore, naming collisions between local functions and library modules (e.g., `status`) can lead to runtime crashes in error-handling paths, effectively turning a security check into a crash-inducing bug.
+**Prevention:** Always apply rate limits to resource-intensive endpoints. Use distinct aliases for imported modules (like `fastapi_status`) to avoid collisions with common local variable or function names.
