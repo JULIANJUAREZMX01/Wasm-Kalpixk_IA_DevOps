@@ -16,5 +16,5 @@
     "noUnusedParameters": false
   },
   "include": ["src"],
-  "exclude": ["src/wasm/pkg", "src/wasm/kalpixk_core_bg.wasm.d.ts"]
+  "exclude": ["src/wasm/pkg/**/*", "**/kalpixk_core_bg.wasm.d.ts"]
 }

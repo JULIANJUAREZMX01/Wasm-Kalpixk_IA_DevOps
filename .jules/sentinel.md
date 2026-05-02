@@ -44,3 +44,8 @@
 **Vulnerability:** 422 errors and potential crashes in `python/api/kalpixk_api.py` due to unconstrained `LogRequest` model and missing input validation.
 **Learning:** When expanding a `BaseModel` to support batching, explicit validators are required to ensure that all vectors in the batch maintain the expected dimensionality (e.g., 32 features) and that auxiliary arrays (e.g., `event_ids`) remain synchronized with the main payload. Without these, internal components like scikit-learn's `IsolationForest` will raise `ValueError` at runtime, potentially leading to DoS.
 **Prevention:** Use Pydantic's `field_validator` and `model_validator` to enforce structural integrity on complex input models. Ensure that `exclude` rules in `tsconfig.json` are specific enough to target only the problematic generated files without breaking legitimate source paths.
+
+## 2026-05-20 - CI Pipeline and Deployment Hardening
+**Vulnerability:** Build and test failures in CI due to missing dependencies and generated file conflicts.
+**Learning:** Security hardening must extend to the CI/CD pipeline. Inconsistent dependency manifests (`requirements.txt` vs `pyproject.toml`) can lead to environment-specific vulnerabilities or build failures. Additionally, auto-generated files (like WASM TypeScript definitions) can introduce syntax errors that block production deployments if not properly excluded from the main compilation path.
+**Prevention:** Maintain strict parity between root requirements and package-level dependencies. Use glob patterns in `tsconfig.json` to robustly exclude build artifacts. Implement more conservative auto-calibration for security models used in CI to prevent flakiness from masking real regressions.
