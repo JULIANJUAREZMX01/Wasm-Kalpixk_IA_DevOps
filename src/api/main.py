@@ -50,7 +50,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v5 (ATLATL-ORDNANCE)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v3",
-    version="3.1.0-atlatl",
+    title="Kalpixk SIEM API v5",
+    version="5.0.0-atlatl",
     lifespan=lifespan
 )
 
@@ -118,8 +118,8 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "3.1.0-atlatl",
-        "atlatl_ordnance": "v3.1-macuahuitl",
+        "version": "5.0.0-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
         "mesh_status": "guerrilla_active"
@@ -170,7 +170,7 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "3.1-atlatl",
+        "atlatl_version": "5.0-atlatl",
         "device": str(detector.device),
         "mesh_active": True
     }
@@ -181,7 +181,7 @@ class ThreatReport(BaseModel):
     node_id: str = Field(..., max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
     threats: List[Annotated[str, Field(max_length=256)]] = Field(..., max_length=1000)
     timestamp: int
-    version: str = Field("4.0.0-atlatl", pattern=r"^4\.0\.0-atlatl$")
+    version: str = Field("5.0.0-atlatl", pattern=r"^[45]\.0\.0-atlatl$")
 
     @field_validator("timestamp")
     @classmethod
@@ -190,6 +190,14 @@ class ThreatReport(BaseModel):
         if abs(now - v) > 300:
             raise ValueError("Timestamp out of sync (replay protection)")
         return v
+
+@app.post("/api/v1/retaliate/v5_strike")
+@limiter.limit("2/minute")
+async def v5_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    source_ip = request.client.host
+    logger.critical(f"🏹 v5_strike command received from {source_ip}")
+    result = atlatl.v5_strike_engaged(source_ip)
+    return result
 
 @app.post("/api/v1/nodes/sync")
 @limiter.limit("5/minute")  # Hardened rate limit

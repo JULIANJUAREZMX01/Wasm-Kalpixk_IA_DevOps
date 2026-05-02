@@ -22,7 +22,7 @@ def test_health_v4():
     print("Testing health v4...")
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["version"] == "4.0.0-atlatl"
+    assert response.json()["version"] == "5.0.0-atlatl"
     print("Health v4: OK")
 
 def test_node_7_sync_success():
@@ -31,9 +31,9 @@ def test_node_7_sync_success():
         "node_id": "test-node",
         "threats": ["192.168.1.100"],
         "timestamp": int(time.time()),
-        "version": "4.0.0-atlatl"
+        "version": "5.0.0-atlatl"
     }
-    data = json.dumps(payload, sort_keys=True).encode()
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     signature = hmac.new(API_KEY.encode(), data, hashlib.sha256).hexdigest()
 
     headers = {
@@ -43,7 +43,7 @@ def test_node_7_sync_success():
 
     response = client.post("/api/v1/nodes/sync", json=payload, headers=headers)
     assert response.status_code == 200
-    assert response.json()["integrity"] == "verified"
+    assert response.json()["status"] == "synced"
     print("Node-7 sync success: OK")
 
 def test_node_7_sync_failure():
@@ -52,14 +52,14 @@ def test_node_7_sync_failure():
         "node_id": "malicious-node",
         "threats": ["1.2.3.4"],
         "timestamp": int(time.time()),
-        "version": "4.0.0-atlatl"
+        "version": "5.0.0-atlatl"
     }
     headers = {
         "X-Kalpixk-Key": API_KEY,
         "X-Kalpixk-Signature": "wrong-signature"
     }
     response = client.post("/api/v1/nodes/sync", json=payload, headers=headers)
-    assert response.status_code == 401
+    assert response.status_code == 403
     print("Node-7 sync failure: OK")
 
 def test_honeypot_exfiltrate():

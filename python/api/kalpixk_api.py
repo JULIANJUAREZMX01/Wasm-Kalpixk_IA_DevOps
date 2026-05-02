@@ -39,9 +39,9 @@ from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
 
 app = FastAPI(
-    title="Wasm-Kalpixk_IA_DevOps API",
+    title="Wasm-Kalpixk_IA_DevOps API v5",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="0.1.0",
+    version="5.0.0-atlatl",
     docs_url="/docs",
 )
 
@@ -143,9 +143,9 @@ async def health():
     ensure_ensemble()
     return {
         "status": "healthy",
-        "version": "0.1.0",
+        "version": "5.0.0-atlatl",
         "device": str(_device),
-        "ensemble_version": "1.0.0-atlatl",
+        "ensemble_version": "5.0.0-atlatl",
     }
 
 

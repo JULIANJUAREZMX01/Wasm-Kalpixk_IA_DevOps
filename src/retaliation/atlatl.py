@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 5.0-ATLATL
 """
 from loguru import logger
 import time
@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -43,6 +43,7 @@ class Atlatl:
         return {
             "action": "EXTERMINATE",
             "target": source_ip,
+            "v5_strike": "engaged",
             "measures": [
                 "recursive_zip_bomb",
                 "hardware_lock",
@@ -79,7 +80,7 @@ class Atlatl:
 
     def deliver_recursive_zip_bomb(self, target: str):
         """Envía un archivo que se expande a petabytes si el atacante intenta leerlo."""
-        logger.info(f"💣 Delivering Recursive Zip Bomb (v3-MACUAHUITL) to {target}...")
+        logger.info(f"💣 Delivering Recursive Zip Bomb (v5-ATLATL) to {target}...")
         logger.warning(f"💀 Honeypot /api/v1/retaliate/exfiltrate ARMED for {target}")
 
     def hardware_ip_lock(self, target: str):
@@ -101,7 +102,7 @@ class Atlatl:
         # Dynamic Entropy Injection
         payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
         logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+        return {"v5_status": "STRIKE_COMPLETE", "target": target, "v5_strike": "engaged"}
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

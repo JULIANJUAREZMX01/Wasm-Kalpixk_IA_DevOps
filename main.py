@@ -98,7 +98,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     return api_key
 
 # -- FastAPI App --
-app = FastAPI(title="Kalpixk SIEM", version="1.0.0")
+app = FastAPI(title="Kalpixk SIEM v5", version="5.0.0-atlatl")
 app.state.limiter = limiter
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -121,10 +121,22 @@ app.add_middleware(
 def health():
     return {
         "status": "ok",
+        "version": "5.0.0-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "model_trained": detector.is_trained,
         "device": str(detector.device),
-        "ip_assigned": get_local_ip()
+        "ip_assigned": get_local_ip(),
+        "mesh_status": "guerrilla_active"
     }
+
+@app.post("/api/v1/retaliate/v5_strike")
+@limiter.limit("2/minute")
+async def v5_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    source_ip = request.client.host
+    logger.critical(f"🏹 v5_strike command received from {source_ip}")
+    from src.retaliation.atlatl import atlatl
+    result = atlatl.v5_strike_engaged(source_ip)
+    return result
 
 @app.get("/api/v1/metrics")
 @limiter.limit("60/minute")

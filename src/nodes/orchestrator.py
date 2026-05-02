@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — GuerrillaMesh Orchestrator
 Handles P2P heartbeats and threat synchronization between decentralized nodes.
-Versión: 4.0-ATLATL
+Versión: 5.0-ATLATL
 """
 import time
 import requests
@@ -42,7 +42,7 @@ class GuerrillaOrchestrator:
             "node_id": self.node_id,
             "threats": threats,
             "timestamp": int(time.time()),
-            "version": "4.0.0-atlatl"
+            "version": "5.0.0-atlatl"
         }
         signature = self.sign_payload(payload)
 

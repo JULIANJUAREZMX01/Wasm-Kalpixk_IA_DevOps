@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -282,7 +282,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })
