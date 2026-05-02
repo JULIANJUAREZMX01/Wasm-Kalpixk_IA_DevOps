@@ -75,10 +75,12 @@ jobs:
           path: web/src/wasm/pkg/
       - name: Patch WASM Type Definitions
         run: |
-          # wasm-pack sometimes generates 'export const fn: (...) => ...'
+          # 1. Remove WIT mangled names (cabi_post_...) which cause TS errors
+          sed -i '/cabi_post/d' web/src/wasm/pkg/kalpixk_core_bg.wasm.d.ts
+          # 2. wasm-pack sometimes generates 'export const fn: (...) => ...'
           # which causes TS1005 in some TypeScript/Vite versions.
           # We convert them to standard 'export function fn(...) : ...'
-          sed -i 's/export const \([^:]*\): (\([^)]*\)) => \([^;]*\);/export function \1(\2): \3;/g' \
+          sed -i 's/export const \(.*\): (\(.*\)) => \(.*\);/export function \1(\2): \3;/g' \
             web/src/wasm/pkg/kalpixk_core_bg.wasm.d.ts
       - run: cd web && npm ci
       - run: cd web && npx tsc --noEmit

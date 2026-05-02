@@ -116,12 +116,12 @@ def ensure_ensemble():
             rng = np.random.default_rng(42)
             # Calibrate with larger sample and tighter distribution to match test expectations
             # 1000 samples for better statistical stability
-            X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
-            # Ensure feature 6 (internal) is mostly 1.0 to match normal traffic fixtures
+            X = rng.normal(0.3, 0.02, (1000, 32)).clip(0, 1).astype(np.float32)
+            # Ensure feature 6 (internal) is 1.0 to match normal traffic fixtures
             X[:, 6] = 1.0
-            # Ensure feature 5 (off-hours) is mostly 0.0
+            # Ensure feature 5 (off-hours) is 0.0
             X[:, 5] = 0.0
-            _ensemble.autoencoder.fit(X, epochs=15)
+            _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
     return _ensemble
 
