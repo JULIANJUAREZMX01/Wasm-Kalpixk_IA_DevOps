@@ -15,5 +15,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/wasm/pkg", "src/wasm/kalpixk_core_bg.wasm.d.ts"]
 }

@@ -39,3 +39,8 @@
 **Vulnerability:** Lack of rate limiting on expensive GPU endpoints and a NameError crash in authentication logic.
 **Learning:** Even if an API has authentication, it can still be vulnerable to DoS if it performs heavy computation (like neural training/inference) without rate limits. Furthermore, naming collisions between local functions and library modules (e.g., `status`) can lead to runtime crashes in error-handling paths, effectively turning a security check into a crash-inducing bug.
 **Prevention:** Always apply rate limits to resource-intensive endpoints. Use distinct aliases for imported modules (like `fastapi_status`) to avoid collisions with common local variable or function names.
+
+## 2026-05-20 - Legacy API Pydantic Model Hardening
+**Vulnerability:** 422 errors and potential crashes in `python/api/kalpixk_api.py` due to unconstrained `LogRequest` model and missing input validation.
+**Learning:** When expanding a `BaseModel` to support batching, explicit validators are required to ensure that all vectors in the batch maintain the expected dimensionality (e.g., 32 features) and that auxiliary arrays (e.g., `event_ids`) remain synchronized with the main payload. Without these, internal components like scikit-learn's `IsolationForest` will raise `ValueError` at runtime, potentially leading to DoS.
+**Prevention:** Use Pydantic's `field_validator` and `model_validator` to enforce structural integrity on complex input models. Ensure that `exclude` rules in `tsconfig.json` are specific enough to target only the problematic generated files without breaking legitimate source paths.

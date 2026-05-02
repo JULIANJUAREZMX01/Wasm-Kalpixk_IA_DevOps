@@ -30,7 +30,7 @@ from fastapi import (
 from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -121,16 +121,43 @@ def ensure_ensemble():
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
-            X = rng.normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
-            _ensemble.autoencoder.fit(X, epochs=5)
+            # Increase sample size and match expected distribution for stability in CI
+            X = rng.normal(0.3, 0.1, (500, 32)).clip(0, 1).astype(np.float32)
+            _ensemble.autoencoder.fit(X, epochs=10)
             _ensemble.iso_forest.fit(X)
     return _ensemble
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]] = Field(...)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
+    event_ids: list[str] | None = None
+    source_type: str | None = None
+    metadata: list[dict] | None = None
+
+    @field_validator("features")
+    @classmethod
+    def validate_features(cls, v: list[float] | list[list[float]]) -> list[float] | list[list[float]]:
+        if not v:
+            raise ValueError("Features cannot be empty")
+        if isinstance(v[0], list):
+            for i, vec in enumerate(v):
+                if len(vec) != 32:
+                    raise ValueError(f"Vector at index {i} must have 32 features, got {len(vec)}")
+        else:
+            if len(v) != 32:
+                raise ValueError(f"Feature vector must have 32 elements, got {len(v)}")
+        return v
+
+    @model_validator(mode="after")
+    def validate_batch_counts(self) -> "LogRequest":
+        if isinstance(self.features, list) and self.features and isinstance(self.features[0], list):
+            n = len(self.features)
+            if self.event_ids is not None and len(self.event_ids) != n:
+                raise ValueError(f"event_ids length ({len(self.event_ids)}) must match features length ({n})")
+        return self
+
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
