@@ -223,7 +223,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
 
     // [ATLATL-ORDNANCE] v5 Aggressive Memory Scrambling
     if critical_detected {
-        let _decoy = vec![0u8; 1024];
+        let mut _decoy = vec![0u8; 1024];
         #[cfg(target_arch = "wasm32")]
         unsafe {
             v5_active_memory_scrambling(

@@ -115,9 +115,11 @@ def ensure_ensemble():
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
             # Use same distribution as normal_traffic_features in tests to minimize FPs
-            # Increase samples and epochs for better calibration in CI
-            X = rng.normal(0.3, 0.1, (500, 32)).clip(0, 1).astype(np.float32)
-            _ensemble.autoencoder.fit(X, epochs=20)
+            X = rng.normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
+            # Match columns 5 (off_hours) and 6 (internal) of normal_traffic_features
+            X[:, 5] = 0.0
+            X[:, 6] = 1.0
+            _ensemble.autoencoder.fit(X, epochs=5)
             _ensemble.iso_forest.fit(X)
     return _ensemble
 
