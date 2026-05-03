@@ -30,8 +30,8 @@ wit_bindgen::generate!({
 struct KalpixkCore;
 
 // Implement the exported interface
-impl exports::kalpixk::core::kalpixk_monitor::Guest for KalpixkCore {
-    fn extract_features(event: exports::kalpixk::core::kalpixk_monitor::WasmEvent) -> Vec<f32> {
+impl Guest for KalpixkCore {
+    fn extractfeatures(event: WasmEvent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
             instruction_count: event.instruction_count,
             memory_pages: event.memory_pages,
@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "5.0.0-atlatl".to_string()
+    "3.1.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -64,16 +64,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
-        "atlatl_ordnance": "v5.0-atlatl"
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
     }).to_string()
-}
-
-// [ATLATL-ORDNANCE] Zig v5 Metal Core FFI
-extern "C" {
-    fn v5_stealth_poisoning(ptr: *mut u8, len: usize, seed: u64);
-    fn v5_active_memory_scrambling(ptr: *mut u8, len: usize, entropy_seed: u64);
-    fn v5_buffer_seal(ptr: *mut u8, len: usize, secret_key: u64);
 }
 
 #[wasm_bindgen]
@@ -202,8 +194,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut feature_matrix: Vec<Vec<f64>> = Vec::new();
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
-    let critical_threshold = 0.85f64;
-    let mut critical_detected = false;
 
     for line in &lines {
         if security::validate_raw_log(line).is_err() {
@@ -214,34 +204,15 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             if event.local_severity > threshold {
                 anomaly_count += 1;
             }
-            if event.local_severity > critical_threshold {
-                critical_detected = true;
-            }
             feature_matrix.push(fvec);
-        }
-    }
-
-    // [ATLATL-ORDNANCE] v5 Aggressive Memory Scrambling
-    if critical_detected {
-        let mut _decoy = vec![0u8; 1024];
-        #[cfg(target_arch = "wasm32")]
-        unsafe {
-            v5_active_memory_scrambling(
-                _decoy.as_mut_ptr(),
-                _decoy.len(),
-                chrono::Utc::now().timestamp() as u64,
-            );
-            v5_stealth_poisoning(_decoy.as_mut_ptr(), _decoy.len(), 0x1337);
         }
     }
 
     serde_json::json!({
         "parsed_count": feature_matrix.len(),
         "anomaly_count": anomaly_count,
-        "critical_detected": critical_detected,
         "feature_matrix": feature_matrix,
         "feature_names": features::FEATURE_NAMES,
-        "atlatl_v5_status": if critical_detected { "DEFENSIVE_SCRAMBLING_ACTIVE" } else { "MONITORING" }
     })
     .to_string()
 }
@@ -311,10 +282,9 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v5.0-atlatl",
+        "atlatl_ordnance": "v3.1-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true,
-        "v5_capabilities": ["stealth_poisoning", "memory_scrambling", "buffer_seal"]
+        "mesh_active": true
     })
     .to_string()
 }
