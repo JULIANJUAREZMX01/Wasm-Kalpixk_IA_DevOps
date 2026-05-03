@@ -223,11 +223,15 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
 
     // [ATLATL-ORDNANCE] v5 Aggressive Memory Scrambling
     if critical_detected {
-        let mut decoy = vec![0u8; 1024];
+        let _decoy = vec![0u8; 1024];
         #[cfg(target_arch = "wasm32")]
         unsafe {
-            v5_active_memory_scrambling(decoy.as_mut_ptr(), decoy.len(), chrono::Utc::now().timestamp() as u64);
-            v5_stealth_poisoning(decoy.as_mut_ptr(), decoy.len(), 0x1337);
+            v5_active_memory_scrambling(
+                _decoy.as_mut_ptr(),
+                _decoy.len(),
+                chrono::Utc::now().timestamp() as u64,
+            );
+            v5_stealth_poisoning(_decoy.as_mut_ptr(), _decoy.len(), 0x1337);
         }
     }
 
