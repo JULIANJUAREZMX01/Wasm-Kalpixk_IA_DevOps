@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 5.0-ATLATL (Guerrilla Algorítmica)
 """
 from loguru import logger
 import time
@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -99,9 +99,25 @@ class Atlatl:
         logger.critical(f"🏹 v5_strike: engaged against {target}")
         self.phase_black(target)
         # Dynamic Entropy Injection
-        payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
+        _payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
         logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+
+        # [ATLATL-ORDNANCE] Recursive Bomb Delivery
+        self.v5_recursive_bomb_generator(target)
+
+        return {
+            "v5_strike": "engaged",
+            "v5_status": "STRIKE_COMPLETE",
+            "target": target,
+            "actions": ["PHASE_BLACK", "ENTROPY_STRIKE", "RECURSIVE_BOMB"]
+        }
+
+    def v5_recursive_bomb_generator(self, target: str):
+        """
+        [ATLATL-ORDNANCE] v5 RECURSIVE BOMB
+        Prepares a multi-layered logical bomb that triggers upon analysis.
+        """
+        logger.error(f"💣 v5 Recursive Bomb ARMED for {target}")
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

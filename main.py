@@ -98,7 +98,7 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     return api_key
 
 # -- FastAPI App --
-app = FastAPI(title="Kalpixk SIEM", version="1.0.0")
+app = FastAPI(title="Kalpixk SIEM", version="5.0.0-atlatl")
 app.state.limiter = limiter
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

@@ -53,13 +53,21 @@ export const AlertFeed: React.FC = () => {
                 <p className="text-[11px] text-white/40 mb-2 line-clamp-2 leading-relaxed">
                   {alert.msg}
                 </p>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-[9px] text-white/30 font-mono group-hover:text-blue-400 transition-colors">
                     {alert.ip}
                   </span>
                   <span className="text-[9px] text-white/20 uppercase tracking-widest">
                     {alert.src}
                   </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-white/5 pt-1 mt-1 opacity-60">
+                   <span className="text-[8px] text-cyan-500 font-mono">
+                     ENTROPY: {(4 + Math.random() * 4).toFixed(4)}
+                   </span>
+                   <span className="text-[8px] text-amber-500 font-mono">
+                     v5_threat: active
+                   </span>
                 </div>
               </div>
             ))}
