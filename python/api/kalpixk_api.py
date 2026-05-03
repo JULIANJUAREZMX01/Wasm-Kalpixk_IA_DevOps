@@ -32,18 +32,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
     version="0.1.0",
     docs_url="/docs",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # -- Security & Rate Limiting --
 API_KEY_NAME = "X-Kalpixk-Key"
@@ -57,12 +63,12 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not expected_key:
             from loguru import logger
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
         if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -121,7 +127,7 @@ def ensure_ensemble():
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]] = Field(...)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
 
@@ -139,7 +145,8 @@ class AnomalyResponse(BaseModel):
 
 
 @app.get("/api/health")
-async def health():
+@limiter.limit("20/minute")
+async def health(request: Request):
     ensure_ensemble()
     return {
         "status": "healthy",
@@ -150,7 +157,8 @@ async def health():
 
 
 @app.get("/status")
-async def status(api_key: str = Depends(verify_api_key)):
+@limiter.limit("10/minute")
+async def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     ensure_ensemble()
     uptime = time.time() - _boot_time
     return {
@@ -164,7 +172,8 @@ async def status(api_key: str = Depends(verify_api_key)):
 
 
 @app.get("/api/metrics")
-async def get_metrics(api_key: str = Depends(verify_api_key)):
+@limiter.limit("20/minute")
+async def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     ensure_ensemble()
     return {
         "total_events_processed": 1247,
@@ -174,7 +183,8 @@ async def get_metrics(api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/api/detect")
-async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
     t0 = time.time()
@@ -204,15 +214,21 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
 
 
 @app.post("/analyze", response_model=AnomalyResponse)
-async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
-    if len(req.features) != 32:
-        raise HTTPException(422, f"Se esperan 32 features, recibidas: {len(req.features)}")
+    # Support single or batch
+    features = req.features
+    if isinstance(features[0], float):
+        features = [features]
+
+    if len(features[0]) != 32:
+        raise HTTPException(422, f"Se esperan 32 features, recibidas: {len(features[0])}")
 
     t0 = time.time()
-    features_array = torch.from_numpy(np.array([req.features], dtype=np.float32)).to(_device)
-    scores, _, _ = ens.predict(features_array)
+    features_array = torch.from_numpy(np.array(features, dtype=np.float32)).to(_device)
+    scores, techniques, confidences = ens.predict(features_array)
     score = scores[0]
     is_anomaly = score > 0.5
     latency = (time.time() - t0) * 1000
@@ -249,7 +265,8 @@ async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/train")
-async def train(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")
+async def train(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     """Entrena el modelo con datos normales sintéticos (baseline)."""
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
@@ -274,13 +291,16 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
     await ws.accept()
     _ws_clients.append(ws)
     try:
+        ens = ensure_ensemble()
         while True:
             data = await ws.receive_bytes()
             payload = msgpack.unpackb(data, raw=False)
             features = payload.get("features", [])
             if len(features) == 32:
-                arr = np.array([features], dtype=np.float32)
-                score, is_anomaly = _ensemble.predict(arr)
+                arr = torch.from_numpy(np.array([features], dtype=np.float32)).to(_device)
+                scores, techniques, confidences = ens.predict(arr)
+                score = scores[0]
+                is_anomaly = score > 0.5
                 response = msgpack.packb({
                     "score": float(score),
                     "is_anomaly": bool(is_anomaly),
@@ -292,7 +312,8 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
 
 @app.get("/features")
-async def get_feature_names(api_key: str = Depends(verify_api_key)):
+@limiter.limit("10/minute")
+async def get_feature_names(request: Request, api_key: str = Depends(verify_api_key)):
     """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,
