@@ -15,3 +15,7 @@
 ## 2025-04-15 - [Optimize ML prediction loops with NumPy vectorization]
 **Learning:** In machine learning prediction loops, native Python list comprehensions for calculating scores and confidences from arrays create a severe performance bottleneck. Native loops iterate item by item in Python's evaluation loop, whereas NumPy vectorized operations push the iteration down into optimized C code.
 **Action:** Always prefer native NumPy vectorized operations (like `np.clip`, `np.abs`, and direct arithmetic) over Python loops or list comprehensions when processing arrays or tensors, particularly in hot paths like ML prediction.
+
+## 2024-05-20 - [Frontend list rendering optimization with React.memo in Dashboard]
+**Learning:** In a real-time SIEM dashboard, rendering prepended lists like the `alerts` array with just standard inline components causes React to unmount and remount every single row whenever a new log arrives. This is especially true if the items are somewhat complex and React struggles to diff them efficiently, resulting in an O(N) rendering bottleneck.
+**Action:** Extract the list item into a separate component wrapped with `React.memo()` using a custom equality check (e.g., `prev.a.id === next.a.id && (prev.i === 0) === (next.i === 0)`) to skip re-rendering rows that haven't changed.
