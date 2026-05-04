@@ -114,16 +114,20 @@ def ensure_ensemble():
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
-            X = rng.normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
-            _ensemble.autoencoder.fit(X, epochs=5)
+            # Increase sample size and adjust distribution for calibration
+            X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+            _ensemble.autoencoder.fit(X, epochs=10)
             _ensemble.iso_forest.fit(X)
     return _ensemble
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]] = Field(...)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
+    event_ids: list[str] | None = None
+    source_type: str | None = None
+    metadata: list[dict] | None = None
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -177,10 +181,29 @@ async def get_metrics(api_key: str = Depends(verify_api_key)):
 async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
+    features = req.features
+    # Se espera list[list[float]] o list[float]
+    if not features:
+        return {
+            "results": [],
+            "total_anomalies": 0,
+            "inference_time_ms": 0,
+        }
+
+    arr = np.array(features, dtype=np.float32)
+    if arr.ndim == 1:
+        if len(features) != 32:
+            raise HTTPException(422, f"Se esperan 32 features, recibidas: {len(features)}")
+        arr = arr.reshape(1, -1)
+    else:
+        if arr.shape[1] != 32:
+            raise HTTPException(422, f"Se esperan 32 features por vector, recibidas: {arr.shape[1]}")
+
+    if req.event_ids and len(arr) != len(req.event_ids):
+        raise HTTPException(422, "features and event_ids must have the same length")
+
     t0 = time.time()
-    features_array = torch.from_numpy(np.array(req.features, dtype=np.float32)).to(_device)
-    if features_array.ndim == 1:
-        features_array = features_array.unsqueeze(0)
+    features_array = torch.from_numpy(arr).to(_device)
 
     scores, techniques, confidences = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
@@ -194,7 +217,8 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
             "confidence": confidences[i],
         })
 
-    total_anomalies = sum(1 for s in scores if s > 0.5)
+    # ATLATL-ORDNANCE: Global anomaly threshold set to 0.6 for v5 stability
+    total_anomalies = sum(1 for s in scores if s > 0.6)
 
     return {
         "results": results,
