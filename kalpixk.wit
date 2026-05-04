@@ -1,19 +1,15 @@
 package kalpixk:core;
 
-interface kalpixkmonitor {
-    record wasmevent {
-        instructioncount: u64,
-        memorypages: u32,
-        fuelconsumed: u64,
-        walltimens: u64,
-        entropy: f32,
-        calldepth: u32,
-        importcalls: u32,
-        exportcalls: u32,
-    }
-    extractfeatures: func(event: wasmevent) -> list<f32>;
-}
-
 world kalpixkcore {
-    export kalpixkmonitor;
+    record wasmevent {
+        instructionCount: u64,
+        memoryPages: u32,
+        fuelConsumed: u64,
+        wallTimeNs: u64,
+        entropy: f32,
+        callDepth: u32,
+        importCalls: u32,
+        exportCalls: u32,
+    }
+    export extractfeatures: func(event: wasmevent) -> list<f32>;
 }

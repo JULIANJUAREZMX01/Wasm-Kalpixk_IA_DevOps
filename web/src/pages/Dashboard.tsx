@@ -200,9 +200,11 @@ export default function Dashboard() {
             <button
               onClick={async () => {
                 try {
+                  // @ts-ignore
+                  const apiKey = import.meta.env.VITE_KALPIXK_API_KEY || "development_secret";
                   const res = await fetch("/api/v1/retaliate/v5_strike", {
                     method: "POST",
-                    headers: { "X-Kalpixk-Key": "development_secret" }
+                    headers: { "X-Kalpixk-Key": apiKey }
                   });
                   const data = await res.json();
                   alert(`v5_strike: ${data.v5_status}`);

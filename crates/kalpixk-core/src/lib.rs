@@ -7,6 +7,7 @@ mod entropy;
 mod event;
 mod features;
 mod metrics;
+mod motor;
 mod parsers;
 mod payloads;
 mod retaliation;
@@ -30,17 +31,17 @@ wit_bindgen::generate!({
 struct KalpixkCore;
 
 // Implement the exported interface
-impl exports::kalpixk::core::kalpixkmonitor::Guest for KalpixkCore {
-    fn extractfeatures(event: exports::kalpixk::core::kalpixkmonitor::Wasmevent) -> Vec<f32> {
+impl Guest for KalpixkCore {
+    fn extractfeatures(event: Wasmevent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
-            instruction_count: event.instructioncount,
-            memory_pages: event.memorypages,
-            fuel_consumed: event.fuelconsumed,
-            wall_time_ns: event.walltimens,
+            instruction_count: event.instructionCount,
+            memory_pages: event.memoryPages,
+            fuel_consumed: event.fuelConsumed,
+            wall_time_ns: event.wallTimeNs,
             entropy: event.entropy,
-            call_depth: event.calldepth,
-            import_calls: event.importcalls,
-            export_calls: event.exportcalls,
+            call_depth: event.callDepth,
+            import_calls: event.importCalls,
+            export_calls: event.exportCalls,
         };
 
         extract_32_features(&internal_event)
@@ -56,10 +57,6 @@ export!(KalpixkCore);
 #[wasm_bindgen]
 pub fn version() -> String {
     "5.0.0-atlatl".to_string()
-}
-
-extern "C" {
-    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
 }
 
 #[wasm_bindgen]
@@ -211,18 +208,21 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             }
 
             if event.local_severity > critical_threshold {
-                #[cfg(target_arch = "wasm32")]
-                unsafe {
-                    let mut dummy_buffer = [0u8; 64];
-                    v5_active_memory_scrambling(
-                        dummy_buffer.as_mut_ptr(),
-                        dummy_buffer.len(),
-                        event.timestamp_ms as u64,
-                    );
-                }
+                // [ATLATL-ORDNANCE] Active memory scrambling on detection.
+                // We scramble the feature vector itself if it's critical,
+                // effectively "poisoning" the output if tampered or traced.
+                let mut poisoned_fvec = fvec;
+                let slice = unsafe {
+                    std::slice::from_raw_parts_mut(
+                        poisoned_fvec.as_mut_ptr() as *mut u8,
+                        poisoned_fvec.len() * std::mem::size_of::<f64>(),
+                    )
+                };
+                motor::v5_active_memory_scrambling(slice, event.timestamp_ms as u64);
+                feature_matrix.push(poisoned_fvec);
+            } else {
+                feature_matrix.push(fvec);
             }
-
-            feature_matrix.push(fvec);
         }
     }
 
