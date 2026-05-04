@@ -34,14 +34,14 @@ struct KalpixkCore;
 impl Guest for KalpixkCore {
     fn extractfeatures(event: Wasmevent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
-            instruction_count: event.instructionCount,
-            memory_pages: event.memoryPages,
-            fuel_consumed: event.fuelConsumed,
-            wall_time_ns: event.wallTimeNs,
+            instruction_count: event.instructioncount,
+            memory_pages: event.memorypages,
+            fuel_consumed: event.fuelconsumed,
+            wall_time_ns: event.walltimens,
             entropy: event.entropy,
-            call_depth: event.callDepth,
-            import_calls: event.importCalls,
-            export_calls: event.exportCalls,
+            call_depth: event.calldepth,
+            import_calls: event.importcalls,
+            export_calls: event.exportcalls,
         };
 
         extract_32_features(&internal_event)

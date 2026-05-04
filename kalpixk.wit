@@ -2,14 +2,14 @@ package kalpixk:core;
 
 world kalpixkcore {
     record wasmevent {
-        instructionCount: u64,
-        memoryPages: u32,
-        fuelConsumed: u64,
-        wallTimeNs: u64,
+        instructioncount: u64,
+        memorypages: u32,
+        fuelconsumed: u64,
+        walltimens: u64,
         entropy: f32,
-        callDepth: u32,
-        importCalls: u32,
-        exportCalls: u32,
+        calldepth: u32,
+        importcalls: u32,
+        exportcalls: u32,
     }
     export extractfeatures: func(event: wasmevent) -> list<f32>;
 }
