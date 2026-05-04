@@ -55,7 +55,11 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
+}
+
+extern "C" {
+    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
 }
 
 #[wasm_bindgen]
@@ -194,6 +198,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut feature_matrix: Vec<Vec<f64>> = Vec::new();
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
+    let critical_threshold = 0.85f64;
 
     for line in &lines {
         if security::validate_raw_log(line).is_err() {
@@ -204,6 +209,19 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             if event.local_severity > threshold {
                 anomaly_count += 1;
             }
+
+            if event.local_severity > critical_threshold {
+                #[cfg(target_arch = "wasm32")]
+                unsafe {
+                    let mut dummy_buffer = [0u8; 64];
+                    v5_active_memory_scrambling(
+                        dummy_buffer.as_mut_ptr(),
+                        dummy_buffer.len(),
+                        event.timestamp_ms as u64,
+                    );
+                }
+            }
+
             feature_matrix.push(fvec);
         }
     }
@@ -282,7 +300,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })

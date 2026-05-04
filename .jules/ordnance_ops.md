@@ -19,3 +19,15 @@ Malla de defensa impenetrable y descentralizada. La integridad de la GuerrillaMe
 
 ---
 *ATLATL-ORDNANCE: El Centro de Mando confirma la evolución a v4.0-atlatl.*
+
+## [OP_V5_STRIKE_UPGRADE] - METAL INTEGRATION & V5 STRIKE ORCHESTRATION
+
+**Audit Findings:**
+- **Node-7 HMAC:** Validated in `src/api/main.py` and `src/nodes/orchestrator.py`. Serialization is deterministic using `sort_keys=True`.
+- **WASM FFI:** Current `process_batch` in `lib.rs` lacks integration with Zig metal strikes. `v5_active_memory_scrambling` is defined in `motor.zig` but not utilized in the main processing loop.
+- **Versioning:** Inconsistent versioning across components (v3.1, v4.0). Requires synchronization to v5.0.0-atlatl.
+
+**Strategy:**
+- Inject `v5_active_memory_scrambling` into the `process_batch` loop when high-severity anomalies are detected.
+- Harmonize all version strings to v5.0.0-atlatl.
+- Implement coordinated v5_strike retaliation.

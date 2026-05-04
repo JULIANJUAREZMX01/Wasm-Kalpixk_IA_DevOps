@@ -43,6 +43,7 @@ class Atlatl:
         return {
             "action": "EXTERMINATE",
             "target": source_ip,
+            "v5_status": "STRIKE_COMPLETE",
             "measures": [
                 "recursive_zip_bomb",
                 "hardware_lock",
@@ -101,7 +102,11 @@ class Atlatl:
         # Dynamic Entropy Injection
         payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
         logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+        return {
+            "v5_strike": "engaged",
+            "v5_status": "STRIKE_COMPLETE",
+            "target": target
+        }
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

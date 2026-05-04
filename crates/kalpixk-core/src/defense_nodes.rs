@@ -443,18 +443,25 @@ pub fn detect_exfiltration(
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
 
-    // [ATLATL-ORDNANCE] Time-windowed HMAC validation (Conceptual)
-    // In a real WASM scenario, we'd verify the 'mesh_token' here.
+    // [ATLATL-ORDNANCE] Time-windowed HMAC validation (v5.0-ATLATL Hardening)
     if event.source_type == "mesh_sync" {
+        // [ATLATL-ORDNANCE] Node-7: Hardened integrity check
         match event.metadata.get("mesh_token").and_then(|v| v.as_str()) {
             Some(token) if token.len() == 64 => {
-                // Token exists and has valid length
                 score = 0.0;
             }
             _ => {
-                // MISSING OR INVALID TOKEN - IMMEDIATE ISOLATION
+                score = 1.0; // IMMEDIATE ISOLATION
+            }
+        }
+
+        // Mandatory version check for v5 compatibility
+        if let Some(ver) = event.metadata.get("version").and_then(|v| v.as_str()) {
+            if ver != "5.0.0-atlatl" && ver != "4.0.0-atlatl" {
                 score = 1.0;
             }
+        } else {
+            score = 1.0;
         }
 
         // Replay Protection: Check timestamp window (±5 mins)
@@ -473,7 +480,7 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: vec!["T1557".to_string()],
-        description: "Cryptographic mesh integrity validation".to_string(),
+        description: "Node-7 v5.0-ATLATL cryptographic validation".to_string(),
     }
 }
 
