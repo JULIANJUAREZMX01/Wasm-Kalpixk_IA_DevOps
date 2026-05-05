@@ -34,3 +34,8 @@
 **Vulnerability:** The legacy backend API (`python/api/kalpixk_api.py`) lacked all security controls: no authentication, wildcard CORS, and no security headers.
 **Learning:** Security hardening is often applied to the primary or "new" entry points while leaving legacy or internal-only APIs vulnerable, assuming they are protected by network isolation which may not always be the case.
 **Prevention:** Audit all entry points regardless of their perceived usage. Use shared security dependencies across all FastAPI instances to ensure a consistent security posture.
+
+## 2026-05-01 - Legacy API Rate Limiting and Health Check Hardening
+**Vulnerability:** Lack of rate limiting on sensitive endpoints and unauthenticated resource-heavy health check in the legacy API.
+**Learning:** The legacy API (`python/api/kalpixk_api.py`) was completely unprotected against brute-force or DoS attacks. Additionally, a name collision between the `status` endpoint function and the `fastapi.status` module caused `AttributeError` when trying to return proper security-related HTTP status codes.
+**Prevention:** Always implement rate limiting using libraries like `slowapi` and ensure that lightweight public endpoints like `/health` do not trigger expensive background initializations. Use clear aliasing (e.g., `from fastapi import status as fastapi_status`) to avoid shadowing critical modules.
