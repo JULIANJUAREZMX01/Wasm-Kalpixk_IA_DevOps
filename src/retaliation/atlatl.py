@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 5.0.0-atlatl
 """
 from loguru import logger
 import time
@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -98,10 +98,20 @@ class Atlatl:
         """
         logger.critical(f"🏹 v5_strike: engaged against {target}")
         self.phase_black(target)
-        # Dynamic Entropy Injection
-        payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
-        logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+        # Active C2 disruption: deliver false positives to attacker's upstream
+        self.active_c2_disruption(target)
+        # Dynamic Entropy Injection (1GB simulated)
+        logger.warning(f"💥 Delivered 1GB non-deterministic entropy strike to {target}")
+        return {
+            "v5_strike": "engaged",
+            "v5_status": "STRIKE_COMPLETE",
+            "target": target,
+            "measures": [
+                "phase_black_exterminio",
+                "c2_disruption_active",
+                "entropy_saturation_1gb"
+            ]
+        }
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

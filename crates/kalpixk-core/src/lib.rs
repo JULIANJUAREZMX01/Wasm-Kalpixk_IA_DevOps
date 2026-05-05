@@ -53,9 +53,14 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
+#[cfg(target_arch = "wasm32")]
+extern "C" {
+    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
+}
+
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -195,6 +200,18 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
+    // [ATLATL-ORDNANCE] Active Memory Scrambling v5
+    #[cfg(target_arch = "wasm32")]
+    if lines.len() > 10 {
+        let mut seed_buf = [0u8; 8];
+        getrandom::getrandom(&mut seed_buf).unwrap_or_default();
+        let seed = u64::from_le_bytes(seed_buf);
+        let mut decoy_buffer = [0u8; 64];
+        unsafe {
+            v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+        }
+    }
+
     for line in &lines {
         if security::validate_raw_log(line).is_err() {
             continue;
@@ -282,7 +299,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })
