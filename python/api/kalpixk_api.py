@@ -28,6 +28,9 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi import status as fastapi_status
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
@@ -46,6 +49,10 @@ app = FastAPI(
 )
 
 # -- Security & Rate Limiting --
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
@@ -57,12 +64,12 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not expected_key:
             from loguru import logger
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
         if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -139,8 +146,8 @@ class AnomalyResponse(BaseModel):
 
 
 @app.get("/api/health")
-async def health():
-    ensure_ensemble()
+@limiter.limit("60/minute")
+async def health(request: Request):
     return {
         "status": "healthy",
         "version": "0.1.0",
@@ -150,7 +157,8 @@ async def health():
 
 
 @app.get("/status")
-async def status(api_key: str = Depends(verify_api_key)):
+@limiter.limit("20/minute")
+async def status(request: Request, api_key: str = Depends(verify_api_key)):
     ensure_ensemble()
     uptime = time.time() - _boot_time
     return {
@@ -164,7 +172,8 @@ async def status(api_key: str = Depends(verify_api_key)):
 
 
 @app.get("/api/metrics")
-async def get_metrics(api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     ensure_ensemble()
     return {
         "total_events_processed": 1247,
@@ -174,7 +183,8 @@ async def get_metrics(api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/api/detect")
-async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
     t0 = time.time()
@@ -204,7 +214,8 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
 
 
 @app.post("/analyze", response_model=AnomalyResponse)
-async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
     ens = ensure_ensemble()
 
     if len(req.features) != 32:
@@ -249,7 +260,8 @@ async def analyze(req: LogRequest, api_key: str = Depends(verify_api_key)):
 
 
 @app.post("/train")
-async def train(payload: TrainPayload, api_key: str = Depends(verify_api_key)):
+@limiter.limit("5/minute")
+async def train(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     """Entrena el modelo con datos normales sintéticos (baseline)."""
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
@@ -271,6 +283,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
 
+    ens = ensure_ensemble()
     await ws.accept()
     _ws_clients.append(ws)
     try:
@@ -279,8 +292,10 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             payload = msgpack.unpackb(data, raw=False)
             features = payload.get("features", [])
             if len(features) == 32:
-                arr = np.array([features], dtype=np.float32)
-                score, is_anomaly = _ensemble.predict(arr)
+                arr = torch.from_numpy(np.array([features], dtype=np.float32)).to(_device)
+                scores, _, _ = ens.predict(arr)
+                score = scores[0]
+                is_anomaly = score > 0.5
                 response = msgpack.packb({
                     "score": float(score),
                     "is_anomaly": bool(is_anomaly),
@@ -292,7 +307,8 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
 
 @app.get("/features")
-async def get_feature_names(api_key: str = Depends(verify_api_key)):
+@limiter.limit("60/minute")
+async def get_feature_names(request: Request, api_key: str = Depends(verify_api_key)):
     """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,

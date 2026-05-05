@@ -34,3 +34,8 @@
 **Vulnerability:** The legacy backend API (`python/api/kalpixk_api.py`) lacked all security controls: no authentication, wildcard CORS, and no security headers.
 **Learning:** Security hardening is often applied to the primary or "new" entry points while leaving legacy or internal-only APIs vulnerable, assuming they are protected by network isolation which may not always be the case.
 **Prevention:** Audit all entry points regardless of their perceived usage. Use shared security dependencies across all FastAPI instances to ensure a consistent security posture.
+
+## 2026-05-05 - Legacy API Namespace Collision and DoS
+**Vulnerability:** Endpoint shadowing of library modules and unauthenticated expensive operations.
+**Learning:** In `python/api/kalpixk_api.py`, an endpoint named `status` shadowed the `fastapi.status` module, leading to an `AttributeError` when attempting to raise HTTP exceptions in the security dependency. Additionally, the unauthenticated `/api/health` endpoint triggered expensive model initialization (`ensure_ensemble`), creating a DoS vector.
+**Prevention:** Always alias library imports (e.g., `from fastapi import status as fastapi_status`) to avoid collisions with local function names. Never perform resource-intensive operations on unauthenticated public endpoints; move initialization to authenticated paths or a background task.
