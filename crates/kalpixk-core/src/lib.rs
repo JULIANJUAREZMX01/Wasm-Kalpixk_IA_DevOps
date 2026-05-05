@@ -31,7 +31,7 @@ struct KalpixkCore;
 
 // Implement the exported interface
 impl exports::kalpixk::core::kalpixkmonitor::Guest for KalpixkCore {
-    fn extract_features(event: exports::kalpixk::core::kalpixkmonitor::Wasmevent) -> Vec<f32> {
+    fn extractfeatures(event: exports::kalpixk::core::kalpixkmonitor::Wasmevent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
             instruction_count: event.instructioncount,
             memory_pages: event.memorypages,

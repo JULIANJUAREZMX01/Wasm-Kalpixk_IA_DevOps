@@ -164,17 +164,14 @@ class KalpixkIsolationForest:
             self.fit_synthetic()
 
         X = X.astype(np.float32)
-        raw = self._model.score_samples(X)  # More negative = more anomalous
+        # decision_function: negative values are anomalies, positive are normal.
+        # Boundary is at 0.0.
+        raw = self._model.decision_function(X)
 
-        # Normalize to [0, 1] using calibrated range
-        span = self._score_max - self._score_min
-        if span > 1e-8:
-            normalized = np.clip(
-                1.0 - (raw - self._score_min) / span,
-                0.0, 1.0
-            )
-        else:
-            normalized = np.full(len(raw), 0.5)
+        # Normalize to [0, 1]
+        # 0.5 is the decision boundary.
+        # Scores > 0.5 are anomalies, scores < 0.5 are normal.
+        normalized = np.clip(0.5 - (raw * 2.0), 0.0, 1.0)
 
         # Confidence: distance from the 0.5 boundary
         confidences = np.clip(np.abs(normalized - 0.5) * 2, 0.3, 1.0)
