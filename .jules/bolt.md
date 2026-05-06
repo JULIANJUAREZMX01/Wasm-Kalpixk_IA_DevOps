@@ -15,3 +15,7 @@
 ## 2025-04-15 - [Optimize ML prediction loops with NumPy vectorization]
 **Learning:** In machine learning prediction loops, native Python list comprehensions for calculating scores and confidences from arrays create a severe performance bottleneck. Native loops iterate item by item in Python's evaluation loop, whereas NumPy vectorized operations push the iteration down into optimized C code.
 **Action:** Always prefer native NumPy vectorized operations (like `np.clip`, `np.abs`, and direct arithmetic) over Python loops or list comprehensions when processing arrays or tensors, particularly in hot paths like ML prediction.
+
+## 2024-04-14 - [Frontend dashboard tab and interval optimization]
+**Learning:** The `Dashboard` component triggers frequent global re-renders every 70ms due to the `scan` state updating a CRT scanline effect. Because child tab components (like `RealtimeTab`, `ParsersTab`, etc.) were not memoized, they unnecessarily re-rendered 14 times per second, wasting CPU cycles even when their specific props had not changed.
+**Action:** Extract and wrap large child components, especially tabs or heavy structural blocks, using `React.memo()` in parent components that rely on high-frequency interval state updates (like clocks or animation triggers) to short-circuit top-down render cascading.

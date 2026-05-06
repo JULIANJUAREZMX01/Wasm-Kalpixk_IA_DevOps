@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, ReferenceLine,
 } from "recharts";
-import { useAlertStore } from "../stores/alertStore";
+import { useAlertStore, KalpixkAlert } from "../stores/alertStore";
 import { useMetricsStore } from "../stores/metricsStore";
 import { useWasmStore }    from "../stores/wasmStore";
 import React from 'react';
@@ -56,6 +56,32 @@ function Bar({ pct, color }: { pct: number; color: string }) {
     </div>
   );
 }
+
+const AlertRow = React.memo(function AlertRow({ a, isFirst }: { a: KalpixkAlert, isFirst: boolean }) {
+  return (
+    <div
+      className={isFirst ? "new-row" : ""}
+      style={{
+        display: "grid", gridTemplateColumns: "52px 110px 28px 1fr 80px",
+        gap: 6, padding: "5px 6px", marginBottom: 2,
+        background: isFirst ? `${scoreColor(a.score)}09` : T.surface,
+        border: `1px solid ${isFirst ? `${scoreColor(a.score)}30` : T.border}`,
+        borderLeft: `3px solid ${scoreColor(a.score)}`,
+        transition: "background 1.2s",
+      }}>
+      <span style={{ color: T.dim, fontSize: 9 }}>{fmt(a.ts)}</span>
+      <span style={{ color: T.text, fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.ip}</span>
+      <span style={{ color: T.dim, fontSize: 9 }}>{a.geo.slice(0, 3)}</span>
+      <span style={{ color: T.bright, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.msg}</span>
+      <div style={{ textAlign: "right" }}>
+        <div style={{ color: scoreColor(a.score), fontSize: 8, letterSpacing: 1 }}>{scoreLabel(a.score)}</div>
+        <div style={{ color: scoreColor(a.score), fontSize: 12, fontWeight: 700 }}>
+          {(a.score * 100).toFixed(1)}%
+        </div>
+      </div>
+    </div>
+  );
+}, (prev, next) => prev.a.id === next.a.id && prev.isFirst === next.isFirst);
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
@@ -250,7 +276,7 @@ export default function Dashboard() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: REAL-TIME
 // ═══════════════════════════════════════════════════════════════════════════════
-function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
+const RealtimeTab = React.memo(function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
   const alerts  = useAlertStore((s) => s.alerts);
   const metrics = useMetricsStore();
 
@@ -344,28 +370,7 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
           </div>
           <div style={{ flex: 1, overflowY: "auto", paddingTop: 4 }}>
             {alerts.map((a, i) => (
-              <div
-                key={a.id}
-                className={i === 0 ? "new-row" : ""}
-                style={{
-                  display: "grid", gridTemplateColumns: "52px 110px 28px 1fr 80px",
-                  gap: 6, padding: "5px 6px", marginBottom: 2,
-                  background: i === 0 ? `${scoreColor(a.score)}09` : T.surface,
-                  border: `1px solid ${i === 0 ? `${scoreColor(a.score)}30` : T.border}`,
-                  borderLeft: `3px solid ${scoreColor(a.score)}`,
-                  transition: "background 1.2s",
-                }}>
-                <span style={{ color: T.dim, fontSize: 9 }}>{fmt(a.ts)}</span>
-                <span style={{ color: T.text, fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.ip}</span>
-                <span style={{ color: T.dim, fontSize: 9 }}>{a.geo.slice(0, 3)}</span>
-                <span style={{ color: T.bright, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.msg}</span>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: scoreColor(a.score), fontSize: 8, letterSpacing: 1 }}>{scoreLabel(a.score)}</div>
-                  <div style={{ color: scoreColor(a.score), fontSize: 12, fontWeight: 700 }}>
-                    {(a.score * 100).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
+              <AlertRow key={a.id} a={a} isFirst={i === 0} />
             ))}
           </div>
         </div>
@@ -480,12 +485,12 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
       </div>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: WASM PARSERS
 // ═══════════════════════════════════════════════════════════════════════════════
-function ParsersTab() {
+const ParsersTab = React.memo(function ParsersTab() {
   const [input,  setInput]  = useState("Apr 04 03:22:11 cedis sshd[1234]: Failed password for root from 185.220.101.42 port 44321 ssh2");
   const [source, setSource] = useState("syslog");
   const [result, setResult] = useState<null | Record<string, unknown>>(null);
@@ -592,12 +597,12 @@ function ParsersTab() {
       </div>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: BENCHMARK
 // ═══════════════════════════════════════════════════════════════════════════════
-function BenchmarkTab() {
+const BenchmarkTab = React.memo(function BenchmarkTab() {
   const metrics = useMetricsStore();
 
   const rows = [
@@ -656,12 +661,12 @@ function BenchmarkTab() {
       </div>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: MITRE ATT&CK
 // ═══════════════════════════════════════════════════════════════════════════════
-function MitreTab() {
+const MitreTab = React.memo(function MitreTab() {
   const TECHNIQUES = [
     { id: "T1110",   name: "Brute Force",               tactic: "Credential Access", count: 14, severity: 0.85 },
     { id: "T1078",   name: "Valid Accounts",             tactic: "Defense Evasion",   count: 8,  severity: 0.72 },
@@ -714,4 +719,4 @@ function MitreTab() {
       </div>
     </div>
   );
-}
+});
