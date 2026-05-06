@@ -1,25 +1,3 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-
-export default defineConfig({
-  plugins: [react()],
-
-  // CRITICAL: without this, GitHub Pages returns 404 on all assets
-  // /assets/main.js → 404  (broken)
-  // /Wasm-Kalpixk_IA_DevOps/assets/main.js → 200 (correct)
-  base: process.env.VITE_BASE_URL ?? "/Wasm-Kalpixk_IA_DevOps/",
-
-  build: {
-    target: "es2022",
-    outDir: "dist",
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-          charts: ["recharts"],
-        },
-      },
-    },
 import { defineConfig, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
 import wasm from "vite-plugin-wasm"
@@ -27,7 +5,7 @@ import topLevelAwait from "vite-plugin-top-level-await"
 import path from "path"
 import { readFileSync, writeFileSync } from "fs"
 
-const BASE = "/Wasm-Kalpixk_IA_DevOps/"
+const BASE = process.env.VITE_BASE_URL ?? "/Wasm-Kalpixk_IA_DevOps/"
 
 // Plugin que corrige el base en el index.html después del build
 // (vite-plugin-wasm puede interferir con la transformación del HTML)
@@ -41,9 +19,9 @@ function fixBasePlugin(): Plugin {
         let html = readFileSync(htmlPath, "utf-8")
         // Reemplazar rutas absolutas /assets/ → BASE/assets/
         const fixed = html
-          .replace(/src="\/assets\//g, )
-          .replace(/href="\/assets\//g, )
-          .replace(/crossorigin src="\/assets\//g, )
+          .replace(/src="\/assets\//g, `src="${BASE}assets/`)
+          .replace(/href="\/assets\//g, `href="${BASE}assets/`)
+          .replace(/crossorigin src="\/assets\//g, `crossorigin src="${BASE}assets/`)
         writeFileSync(htmlPath, fixed)
         console.log("[fix-base] dist/index.html corregido con base:", BASE)
       } catch (e) {
@@ -73,11 +51,6 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    proxy: {
-      "/api": { target: "http://localhost:8000", changeOrigin: true },
-      "/ws":  { target: "ws://localhost:8000",  ws: true },
-    },
-    port: 3000,
     host: "0.0.0.0",
     fs: { allow: [".", ".."] },
     headers: {

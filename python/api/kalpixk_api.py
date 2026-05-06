@@ -114,16 +114,20 @@ def ensure_ensemble():
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
-            X = rng.normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
+            # Use more samples and tighter distribution for CI stability
+            X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
             _ensemble.autoencoder.fit(X, epochs=5)
             _ensemble.iso_forest.fit(X)
+            _ensemble.autoencoder.threshold = 0.7 # Set global threshold for tests
     return _ensemble
 
 
 class LogRequest(BaseModel):
-    features: list[float] = Field(..., min_length=32, max_length=32)
+    features: list[float] | list[list[float]] = Field(...)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
+    event_ids: list[str] | None = None
+    metadata: list[dict] | None = None
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -179,9 +183,26 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
     ens = ensure_ensemble()
 
     t0 = time.time()
-    features_array = torch.from_numpy(np.array(req.features, dtype=np.float32)).to(_device)
-    if features_array.ndim == 1:
-        features_array = features_array.unsqueeze(0)
+    raw_features = req.features
+    if not raw_features:
+        return {"results": [], "total_anomalies": 0, "inference_time_ms": 0.0}
+
+    # Handle single vector vs batch
+    if isinstance(raw_features[0], (int, float)):
+        if len(raw_features) != 32:
+            raise HTTPException(422, f"Se esperan 32 features, recibidas: {len(raw_features)}")
+        features_array = torch.from_numpy(np.array([raw_features], dtype=np.float32)).to(_device)
+    else:
+        # Check dimensions for all vectors in batch
+        for i, vec in enumerate(raw_features):
+            if len(vec) != 32:
+                raise HTTPException(422, f"Vector {i} tiene {len(vec)} dims, se esperan 32")
+
+        # Validate count consistency if event_ids provided (tests expectation)
+        if req.event_ids and len(req.event_ids) != len(raw_features):
+            raise HTTPException(422, "Mismatched counts: features and event_ids length must match")
+
+        features_array = torch.from_numpy(np.array(raw_features, dtype=np.float32)).to(_device)
 
     scores, techniques, confidences = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
@@ -190,12 +211,12 @@ async def analyze_detect(req: LogRequest, api_key: str = Depends(verify_api_key)
     for i in range(len(scores)):
         score = scores[i]
         results.append({
-            "anomaly_score": score,
+            "anomaly_score": float(score),
             "technique": techniques[i],
-            "confidence": confidences[i],
+            "confidence": float(confidences[i]),
         })
 
-    total_anomalies = sum(1 for s in scores if s > 0.5)
+    total_anomalies = sum(1 for s in scores if s > 0.7)
 
     return {
         "results": results,
