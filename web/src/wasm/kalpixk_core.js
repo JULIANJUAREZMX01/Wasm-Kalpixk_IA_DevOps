@@ -1,16 +1,14 @@
 /* @ts-self-types="./kalpixk_core.d.ts" */
 
 /**
- * Analiza un evento JSON y retorna nivel de amenaza + nodo dominante.
- * Exportado a JS para monitoreo activo.
- * @param {string} event_json
+ * @param {string} json_event
  * @returns {string}
  */
-export function analyze_and_retaliate(event_json) {
+export function analyze_and_retaliate(json_event) {
     let deferred2_0;
     let deferred2_1;
     try {
-        const ptr0 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr0 = passStringToWasm0(json_event, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.analyze_and_retaliate(ptr0, len0);
         deferred2_0 = ret[0];
@@ -22,58 +20,6 @@ export function analyze_and_retaliate(event_json) {
 }
 
 /**
- * @param {string} event_json
- * @returns {string}
- */
-export function analyze_defense_nodes(event_json) {
-    let deferred2_0;
-    let deferred2_1;
-    try {
-        const ptr0 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.analyze_defense_nodes(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-    }
-}
-
-/**
- * @param {string} event_json
- * @returns {boolean}
- */
-export function check_lockdown(event_json) {
-    const ptr0 = passStringToWasm0(event_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.check_lockdown(ptr0, len0);
-    return ret !== 0;
-}
-
-/**
- * @param {number} offset
- * @param {number} length
- * @param {number} max_memory
- * @returns {string}
- */
-export function check_memory_bounds_wasp(offset, length, max_memory) {
-    let deferred1_0;
-    let deferred1_1;
-    try {
-        const ret = wasm.check_memory_bounds_wasp(offset, length, max_memory);
-        deferred1_0 = ret[0];
-        deferred1_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
-    }
-}
-
-/**
- * Computa features UEBA desde una sesión de eventos JSON.
- * Input: JSON array de KalpixkEvent
- * Output: { features: [f64;32], risk_score: f64 }
  * @param {string} events_json
  * @returns {string}
  */
@@ -93,14 +39,36 @@ export function compute_ueba_features(events_json) {
 }
 
 /**
- * Retorna los nombres de las 32 features
- * @returns {string}
+ * @param {string} json_event
+ * @returns {Float32Array}
+ */
+export function extract_features_legacy(json_event) {
+    const ptr0 = passStringToWasm0(json_event, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.extract_features_legacy(ptr0, len0);
+    var v2 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+}
+
+/**
+ * @returns {string[]}
  */
 export function get_feature_names() {
+    const ret = wasm.get_feature_names();
+    var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v1;
+}
+
+/**
+ * @returns {string}
+ */
+export function get_global_blacklist_wasm() {
     let deferred1_0;
     let deferred1_1;
     try {
-        const ret = wasm.get_feature_names();
+        const ret = wasm.get_global_blacklist_wasm();
         deferred1_0 = ret[0];
         deferred1_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -110,7 +78,22 @@ export function get_feature_names() {
 }
 
 /**
- * Health check del módulo
+ * @returns {string}
+ */
+export function get_security_telemetry() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.get_security_telemetry();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * @returns {string}
  */
 export function health_check() {
@@ -127,33 +110,25 @@ export function health_check() {
 }
 
 /**
- * Parsea un log JSON crudo (formato interno) y extrae features.
- * @param {string} raw_log
+ * @param {string} node_id
  * @returns {string}
  */
-export function parse_and_extract(raw_log) {
-    let deferred3_0;
-    let deferred3_1;
+export function mesh_heartbeat(node_id) {
+    let deferred2_0;
+    let deferred2_1;
     try {
-        const ptr0 = passStringToWasm0(raw_log, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.parse_and_extract(ptr0, len0);
-        var ptr2 = ret[0];
-        var len2 = ret[1];
-        if (ret[3]) {
-            ptr2 = 0; len2 = 0;
-            throw takeFromExternrefTable0(ret[2]);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
+        const ret = wasm.mesh_heartbeat(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
     } finally {
-        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
 }
 
 /**
- * Parsea una línea de log y retorna JSON con el evento + severidad.
  * @param {string} raw
  * @param {string} source_type
  * @returns {string | undefined}
@@ -173,7 +148,6 @@ export function parse_log_line(raw, source_type) {
 }
 
 /**
- * Procesa un batch de logs JSON y retorna feature matrix + metadata.
  * @param {string} logs_json
  * @param {string} source_type
  * @returns {string}
@@ -196,17 +170,16 @@ export function process_batch(logs_json, source_type) {
 }
 
 /**
- * @param {string} raw
- * @param {number} max_len
+ * @param {string} json_threats
  * @returns {string}
  */
-export function validate_input_wasp(raw, max_len) {
+export function sync_threats_wasm(json_threats) {
     let deferred2_0;
     let deferred2_1;
     try {
-        const ptr0 = passStringToWasm0(raw, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const ptr0 = passStringToWasm0(json_threats, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.validate_input_wasp(ptr0, len0, max_len);
+        const ret = wasm.sync_threats_wasm(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -216,7 +189,25 @@ export function validate_input_wasp(raw, max_len) {
 }
 
 /**
- * Retorna la versión del motor
+ * @param {string} json_target
+ * @returns {string}
+ */
+export function trigger_v4_retaliation(json_target) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(json_target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.trigger_v4_retaliation(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * @returns {string}
  */
 export function version() {
@@ -233,7 +224,6 @@ export function version() {
 }
 
 /**
- * Bloquea un módulo WASM y genera reporte forense.
  * @param {string} node
  * @param {number} score
  * @param {string} event_json
@@ -291,6 +281,38 @@ function __wbg_get_imports() {
     };
 }
 
+function getArrayF32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
+function getArrayJsValueFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    const mem = getDataViewMemory0();
+    const result = [];
+    for (let i = ptr; i < ptr + 4 * len; i += 4) {
+        result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+    }
+    wasm.__externref_drop_slice(ptr, len);
+    return result;
+}
+
+let cachedDataViewMemory0 = null;
+function getDataViewMemory0() {
+    if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
+        cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+    }
+    return cachedDataViewMemory0;
+}
+
+let cachedFloat32ArrayMemory0 = null;
+function getFloat32ArrayMemory0() {
+    if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0) {
+        cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
+    }
+    return cachedFloat32ArrayMemory0;
+}
+
 function getStringFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return decodeText(ptr, len);
@@ -341,12 +363,6 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_externrefs.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
-}
-
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 cachedTextDecoder.decode();
 const MAX_SAFARI_DECODE_BYTES = 2146435072;
@@ -380,6 +396,8 @@ let wasmModule, wasm;
 function __wbg_finalize_init(instance, module) {
     wasm = instance.exports;
     wasmModule = module;
+    cachedDataViewMemory0 = null;
+    cachedFloat32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
     wasm.__wbindgen_start();
     return wasm;

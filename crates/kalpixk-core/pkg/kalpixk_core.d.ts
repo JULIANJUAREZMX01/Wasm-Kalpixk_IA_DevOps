@@ -9,13 +9,21 @@ export function extract_features_legacy(json_event: string): Float32Array;
 
 export function get_feature_names(): string[];
 
+export function get_global_blacklist_wasm(): string;
+
 export function get_security_telemetry(): string;
 
 export function health_check(): string;
 
+export function mesh_heartbeat(node_id: string): string;
+
 export function parse_log_line(raw: string, source_type: string): string | undefined;
 
 export function process_batch(logs_json: string, source_type: string): string;
+
+export function sync_threats_wasm(json_threats: string): string;
+
+export function trigger_v4_retaliation(json_target: string): string;
 
 export function version(): string;
 
@@ -26,15 +34,19 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly analyze_and_retaliate: (a: number, b: number) => [number, number];
-    readonly "cabi_post_kalpixk:core/kalpixk-monitor#extract-features": (a: number) => void;
+    readonly cabi_post_extractfeatures: (a: number) => void;
     readonly compute_ueba_features: (a: number, b: number) => [number, number];
     readonly extract_features_legacy: (a: number, b: number) => [number, number];
+    readonly extractfeatures: (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
     readonly get_feature_names: () => [number, number];
+    readonly get_global_blacklist_wasm: () => [number, number];
     readonly get_security_telemetry: () => [number, number];
     readonly health_check: () => [number, number];
-    readonly "kalpixk:core/kalpixk-monitor#extract-features": (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
+    readonly mesh_heartbeat: (a: number, b: number) => [number, number];
     readonly parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
     readonly process_batch: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly sync_threats_wasm: (a: number, b: number) => [number, number];
+    readonly trigger_v4_retaliation: (a: number, b: number) => [number, number];
     readonly version: () => [number, number];
     readonly wasm_lockdown: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly cabi_realloc: (a: number, b: number, c: number, d: number) => number;

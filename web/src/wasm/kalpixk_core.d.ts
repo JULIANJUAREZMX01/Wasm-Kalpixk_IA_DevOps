@@ -1,60 +1,32 @@
 /* tslint:disable */
 /* eslint-disable */
 
-/**
- * Analiza un evento JSON y retorna nivel de amenaza + nodo dominante.
- * Exportado a JS para monitoreo activo.
- */
-export function analyze_and_retaliate(event_json: string): string;
+export function analyze_and_retaliate(json_event: string): string;
 
-export function analyze_defense_nodes(event_json: string): string;
-
-export function check_lockdown(event_json: string): boolean;
-
-export function check_memory_bounds_wasp(offset: number, length: number, max_memory: number): string;
-
-/**
- * Computa features UEBA desde una sesión de eventos JSON.
- * Input: JSON array de KalpixkEvent
- * Output: { features: [f64;32], risk_score: f64 }
- */
 export function compute_ueba_features(events_json: string): string;
 
-/**
- * Retorna los nombres de las 32 features
- */
-export function get_feature_names(): string;
+export function extract_features_legacy(json_event: string): Float32Array;
 
-/**
- * Health check del módulo
- */
+export function get_feature_names(): string[];
+
+export function get_global_blacklist_wasm(): string;
+
+export function get_security_telemetry(): string;
+
 export function health_check(): string;
 
-/**
- * Parsea un log JSON crudo (formato interno) y extrae features.
- */
-export function parse_and_extract(raw_log: string): string;
+export function mesh_heartbeat(node_id: string): string;
 
-/**
- * Parsea una línea de log y retorna JSON con el evento + severidad.
- */
 export function parse_log_line(raw: string, source_type: string): string | undefined;
 
-/**
- * Procesa un batch de logs JSON y retorna feature matrix + metadata.
- */
 export function process_batch(logs_json: string, source_type: string): string;
 
-export function validate_input_wasp(raw: string, max_len: number): string;
+export function sync_threats_wasm(json_threats: string): string;
 
-/**
- * Retorna la versión del motor
- */
+export function trigger_v4_retaliation(json_target: string): string;
+
 export function version(): string;
 
-/**
- * Bloquea un módulo WASM y genera reporte forense.
- */
 export function wasm_lockdown(node: string, score: number, event_json: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -62,23 +34,28 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly analyze_and_retaliate: (a: number, b: number) => [number, number];
-    readonly analyze_defense_nodes: (a: number, b: number) => [number, number];
-    readonly check_lockdown: (a: number, b: number) => number;
-    readonly check_memory_bounds_wasp: (a: number, b: number, c: number) => [number, number];
+    readonly cabi_post_extractfeatures: (a: number) => void;
     readonly compute_ueba_features: (a: number, b: number) => [number, number];
+    readonly extract_features_legacy: (a: number, b: number) => [number, number];
+    readonly extractfeatures: (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
     readonly get_feature_names: () => [number, number];
+    readonly get_global_blacklist_wasm: () => [number, number];
+    readonly get_security_telemetry: () => [number, number];
     readonly health_check: () => [number, number];
-    readonly parse_and_extract: (a: number, b: number) => [number, number, number, number];
+    readonly mesh_heartbeat: (a: number, b: number) => [number, number];
     readonly parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
     readonly process_batch: (a: number, b: number, c: number, d: number) => [number, number];
-    readonly validate_input_wasp: (a: number, b: number, c: number) => [number, number];
+    readonly sync_threats_wasm: (a: number, b: number) => [number, number];
+    readonly trigger_v4_retaliation: (a: number, b: number) => [number, number];
     readonly version: () => [number, number];
     readonly wasm_lockdown: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+    readonly cabi_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly cabi_realloc_wit_bindgen_0_35_0: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-    readonly __externref_table_dealloc: (a: number) => void;
+    readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_start: () => void;
 }
 
