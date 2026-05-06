@@ -39,3 +39,8 @@
 **Vulnerability:** Lack of rate limiting on sensitive endpoints and unauthenticated resource-heavy health check in the legacy API.
 **Learning:** The legacy API (`python/api/kalpixk_api.py`) was completely unprotected against brute-force or DoS attacks. Additionally, a name collision between the `status` endpoint function and the `fastapi.status` module caused `AttributeError` when trying to return proper security-related HTTP status codes.
 **Prevention:** Always implement rate limiting using libraries like `slowapi` and ensure that lightweight public endpoints like `/health` do not trigger expensive background initializations. Use clear aliasing (e.g., `from fastapi import status as fastapi_status`) to avoid shadowing critical modules.
+
+## 2026-05-02 - WIT Identifier Naming and CI Stability
+**Vulnerability:** TS1005 syntax errors in generated WASM bindings and flaky integration tests.
+**Learning:** Hyphenated identifiers in WIT files (e.g., `kalpixk-monitor`) can cause invalid syntax in generated TypeScript/JavaScript bindings, leading to frontend build failures. Furthermore, tight thresholds in integration tests can cause False Positives (FPs) when models are auto-trained on small synthetic datasets.
+**Prevention:** Always use alphanumeric identifiers (no hyphens) in WIT files for maximum cross-language compatibility. For CI stability, implement higher anomaly thresholds and better calibration in the backend to ensure integration tests don't fail due to model sensitivity during cold-starts.
