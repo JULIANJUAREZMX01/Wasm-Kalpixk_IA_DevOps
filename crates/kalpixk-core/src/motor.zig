@@ -56,27 +56,71 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
 }
 
 /// [ATLATL-ORDNANCE] v5_stealth_poisoning
-/// Genera secuencias de salto no deterministas basadas en el drift del reloj y entropia local.
-/// Diseñado para romper el rastreo de ejecución en entornos virtualizados o sandboxed.
+/// Genera secuencias de salto no deterministas y trampas de ejecución.
+/// Refinado para v5.0 para incluir desbordamientos lógicos y bucles infinitos dinámicos.
 pub export fn v5_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
-    for (slice, 0..) |*byte, i| {
-        const op = rand.int(u8) % 10;
+    var i: usize = 0;
+    while (i < target_len) : (i += 1) {
+        const op = rand.int(u8) % 12;
         switch (op) {
-            0 => byte.* = 0xEB, // JMP short
-            1 => byte.* = 0xFE, // loop
-            2 => byte.* = 0xF4, // HLT
-            3 => byte.* = 0xCC, // INT 3
-            4 => byte.* = 0x0F, // Multi-byte
-            5 => byte.* = 0x0B, // UD2
-            6 => byte.* = 0x90, // NOP
-            7 => byte.* = 0xE9, // JMP near
-            else => byte.* = rand.int(u8),
+            0 => {
+                // JMP short infinite loop (EB FE)
+                slice[i] = 0xEB;
+                if (i + 1 < target_len) {
+                    slice[i + 1] = 0xFE;
+                    i += 1;
+                }
+            },
+            1 => slice[i] = 0xF4, // HLT
+            2 => slice[i] = 0xCC, // INT 3 (Trap)
+            3 => slice[i] = 0x0F, // Multi-byte opcode start
+            4 => slice[i] = 0x0B, // UD2 (Invalid Opcode)
+            5 => {
+                // CALL far to self (E8 FD FF FF FF)
+                slice[i] = 0xE8;
+                if (i + 4 < target_len) {
+                    slice[i + 1] = 0xFD;
+                    slice[i + 2] = 0xFF;
+                    slice[i + 3] = 0xFF;
+                    slice[i + 4] = 0xFF;
+                    i += 4;
+                }
+            },
+            6 => slice[i] = 0x90, // NOP
+            7 => {
+                // PUSH/RET loop
+                slice[i] = 0x68; // PUSH imm32
+                if (i + 5 < target_len) {
+                    // Push current address (simulated)
+                    slice[i + 5] = 0xC3; // RET
+                    i += 5;
+                }
+            },
+            else => slice[i] = rand.int(u8),
         }
-        _ = i;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
+/// Reordena la topología de la memoria del buffer basándose en un mapa de ruido
+/// para invalidar cualquier intento de análisis de estructuras de datos persistentes.
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 2) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    // Fisher-Yates shuffle parcial para interleaving
+    var i: usize = target_len - 1;
+    while (i > 0) : (i -= 1) {
+        const j = rand.intRangeAtMost(usize, 0, i);
+        const temp = slice[i];
+        slice[i] = slice[j] ^ rand.int(u8);
+        slice[j] = temp ^ 0x55;
     }
 }
 

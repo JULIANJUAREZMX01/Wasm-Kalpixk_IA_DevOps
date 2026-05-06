@@ -17,7 +17,7 @@ pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
 
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
-    None => "atlatl-v4",
+    None => "atlatl-v5",
 };
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -89,6 +89,11 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
         (b"<script", "xss_attempt"),
         (b"../", "path_traversal"),
         (b"0xEB0xFE", "hex_jmp_self"),
+        (b"nc -e", "reverse_shell_nc"),
+        (b"bash -i", "interactive_shell"),
+        (b"id;whoami", "recon_chain"),
+        (b"curl http", "exfil_curl"),
+        (b"wget http", "exfil_wget"),
     ];
 
     let bytes = raw.as_bytes();

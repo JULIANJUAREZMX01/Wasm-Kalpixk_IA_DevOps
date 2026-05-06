@@ -437,23 +437,23 @@ pub fn detect_exfiltration(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 7: MESH_INTEGRITY DETECTOR (v4.0-ATLATL)
+// NODE 7: MESH_TRAP DETECTOR (v5.0-ATLATL)
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
+    let mut techniques = vec!["T1557".to_string()];
 
-    // [ATLATL-ORDNANCE] Time-windowed HMAC validation (Conceptual)
-    // In a real WASM scenario, we'd verify the 'mesh_token' here.
+    // [ATLATL-ORDNANCE] MESH_TRAP: Active isolation for unauthorized nodes
     if event.source_type == "mesh_sync" {
+        let mut integrity_fail = false;
+
         match event.metadata.get("mesh_token").and_then(|v| v.as_str()) {
             Some(token) if token.len() == 64 => {
                 // Token exists and has valid length
-                score = 0.0;
             }
             _ => {
-                // MISSING OR INVALID TOKEN - IMMEDIATE ISOLATION
-                score = 1.0;
+                integrity_fail = true;
             }
         }
 
@@ -461,19 +461,30 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
         if let Some(ts) = event.metadata.get("timestamp").and_then(|v| v.as_i64()) {
             let now = chrono::Utc::now().timestamp();
             if (now - ts).abs() > 300 {
-                score = 1.0;
+                integrity_fail = true;
+                techniques.push("T1557.001".to_string());
             }
         } else {
+            integrity_fail = true;
+        }
+
+        if integrity_fail {
             score = 1.0;
+            // [ATLATL-ORDNANCE] MESH_TRAP: Trigger systemic collapse if node is malicious
+            if let Some(v5_mode) = event.metadata.get("v5_strike").and_then(|v| v.as_bool()) {
+                if v5_mode {
+                    score = 1.1; // Beyond critical: triggers immediate Phase Black
+                }
+            }
         }
     }
 
     NodeResult {
-        node: "NODE-7: MESH_INTEGRITY".to_string(),
+        node: "NODE-7: MESH_TRAP".to_string(),
         score,
         level: SeverityScore::new(score).as_level(),
-        mitre_techniques: vec!["T1557".to_string()],
-        description: "Cryptographic mesh integrity validation".to_string(),
+        mitre_techniques: techniques,
+        description: "Active cryptographic mesh trap & isolation".to_string(),
     }
 }
 

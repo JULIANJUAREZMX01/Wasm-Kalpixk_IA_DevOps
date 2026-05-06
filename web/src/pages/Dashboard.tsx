@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre">("realtime");
+  const [striking, setStriking] = useState(false);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -81,6 +82,22 @@ export default function Dashboard() {
       setChart((p) => [...p.slice(1), { t: p[p.length - 1].t + 1, s: alerts[0].score }]);
     }
   }, [alerts]);
+
+  const executePhaseBlack = async () => {
+    setStriking(true);
+    try {
+      const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
+      await fetch("/api/v1/retaliate/v5_strike", {
+        method: "POST",
+        headers: { "X-Kalpixk-Key": apiKey }
+      });
+      alert("🏹 v5_strike: engaged. Systemic Respiratory Collapse initiated.");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setStriking(false), 2000);
+    }
+  };
 
   const threatLevel = alerts[0]?.score >= 0.85 ? "CRITICAL" : alerts[0]?.score >= 0.65 ? "HIGH" : "NORMAL";
   const tlColor     = threatLevel === "CRITICAL" ? T.red : threatLevel === "HIGH" ? T.amber : T.green;
@@ -135,7 +152,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v4.0-ATLATL · AMD MI300X MESH
+              GUERRILLA ALGORÍTMICA · v5.0-ATLATL · AMD MI300X MESH
             </div>
           </div>
         </div>
@@ -197,13 +214,19 @@ export default function Dashboard() {
         {/* WASM status pill */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 12, gap: 16 }}>
           {threatLevel === "CRITICAL" && (
-            <button style={{
-              background: T.red, color: "white", border: "none",
-              padding: "4px 12px", fontSize: 9, fontWeight: 800,
-              letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
-              boxShadow: `0 0 10px ${T.red}`,
-            }}>
-              EXECUTAR: PHASE BLACK
+            <button
+              disabled={striking}
+              onClick={executePhaseBlack}
+              style={{
+                background: striking ? T.dim : T.red,
+                color: "white", border: "none",
+                padding: "4px 12px", fontSize: 9, fontWeight: 800,
+                letterSpacing: 2, cursor: "pointer",
+                animation: striking ? "none" : "pulse 0.8s infinite",
+                boxShadow: striking ? "none" : `0 0 10px ${T.red}`,
+                opacity: striking ? 0.6 : 1,
+              }}>
+              {striking ? "ENGAGING..." : "EXECUTAR: PHASE BLACK"}
             </button>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -213,7 +236,7 @@ export default function Dashboard() {
               animation: wasm.isLoaded ? "none" : "pulse 1.5s infinite",
             }}/>
             <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
-              WASM {wasm.isLoaded ? `v${wasm.version}` : "v4.0-ATLATL"}
+              WASM {wasm.isLoaded ? `v${wasm.version}` : "v5.0-ATLATL"}
             </span>
           </div>
         </div>

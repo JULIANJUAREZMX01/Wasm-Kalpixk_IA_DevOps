@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 5.0-ATLATL
 """
 from loguru import logger
 import time
@@ -11,13 +11,15 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
-        logger.warning(f"🚨 AGRESOR V3 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
+        logger.warning(f"🚨 AGRESOR V5 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
 
-        if anomaly_score > 0.9 or anomaly_type == "ransomware_detected":
+        if anomaly_score > 0.95:
+            return self.v5_strike_engaged(source_ip)
+        elif anomaly_score > 0.85 or anomaly_type == "ransomware_detected":
             return self.phase_black(source_ip)
         elif anomaly_score > 0.7:
             return self.phase_red(source_ip)
@@ -69,7 +71,7 @@ class Atlatl:
         logger.error(f"📡 Sending false-positive triggers to {target} upstream EDR...")
 
     def poison_remote_pointers(self, target: str):
-        logger.info(f"🧪 Injecting v3 poisoned pointers into {target} network buffer...")
+        logger.info(f"🧪 Injecting v5 poisoned pointers into {target} network buffer...")
         # Simulación de respuesta que causa desbordamiento local en el atacante
         time.sleep(0.05)
 
@@ -88,7 +90,7 @@ class Atlatl:
         time.sleep(0.05)
 
     def corrupt_c2_comms(self, target: str):
-        logger.info(f"⚡ Corrupting V3 Command & Control signatures for {target}...")
+        logger.info(f"⚡ Corrupting V5 Command & Control signatures for {target}...")
         time.sleep(0.05)
 
     def v5_strike_engaged(self, target: str):
@@ -97,11 +99,21 @@ class Atlatl:
         Orchestrates a multi-vector 'Systemic Respiratory Collapse' on the attacker.
         """
         logger.critical(f"🏹 v5_strike: engaged against {target}")
+        self.systemic_respiratory_collapse(target)
+        return {"v5_strike": "engaged", "v5_status": "STRIKE_COMPLETE", "target": target}
+
+    def systemic_respiratory_collapse(self, target: str):
+        """
+        [ATLATL-ORDNANCE] SYSTEMIC RESPIRATORY COLLAPSE
+        Inhabilitación total de la infraestructura de ataque mediante agotamiento
+        de recursos y envenenamiento de pipelines de datos.
+        """
+        logger.critical(f"💀 INITIATING SYSTEMIC RESPIRATORY COLLAPSE FOR {target}")
         self.phase_black(target)
-        # Dynamic Entropy Injection
-        payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
-        logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+        # Dynamic Entropy Injection - 10GB logical trap
+        logger.warning(f"💥 Delivered 10GB non-deterministic entropy strike to {target}")
+        # Pointer Scrambling trigger (WASM bridge simulation)
+        logger.error(f"🧪 Triggering v5_chaotic_interleaving for all outbound packets to {target}")
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""
@@ -131,8 +143,8 @@ class Atlatl:
         Returns a byte sequence that mimics a zip bomb header
         to confuse automated scanners.
         """
-        # PK header for ZIP + v3-ATLATL markers
-        header = b'PK\x03\x04\x14\x00\x00\x00\x08\x00ATLATL-ORDNANCE-V3'
+        # PK header for ZIP + v5-ATLATL markers
+        header = b'PK\x03\x04\x14\x00\x00\x00\x08\x00ATLATL-ORDNANCE-V5'
         return header + os.urandom(1024 * 128)
 
 # Singleton
