@@ -26,13 +26,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly analyze_and_retaliate: (a: number, b: number) => [number, number];
-    readonly "cabi_post_kalpixk:core/kalpixk-monitor#extract-features": (a: number) => void;
+    readonly "cabi_post_extract_features": (a: number) => void;
     readonly compute_ueba_features: (a: number, b: number) => [number, number];
     readonly extract_features_legacy: (a: number, b: number) => [number, number];
     readonly get_feature_names: () => [number, number];
     readonly get_security_telemetry: () => [number, number];
     readonly health_check: () => [number, number];
-    readonly "kalpixk:core/kalpixk-monitor#extract-features": (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
+    readonly "extract_features": (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
     readonly parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
     readonly process_batch: (a: number, b: number, c: number, d: number) => [number, number];
     readonly version: () => [number, number];
