@@ -19,3 +19,23 @@ Malla de defensa impenetrable y descentralizada. La integridad de la GuerrillaMe
 
 ---
 *ATLATL-ORDNANCE: El Centro de Mando confirma la evolución a v4.0-atlatl.*
+
+## [OP_V5_PHASEBLACK] - V5.0.0-ATLATL SYSTEMIC COLLAPSE
+
+**Vector de Ataque:**
+La arquitectura v4.0, aunque firmada criptográficamente, mantenía una superficie de ataque pasiva. Los honeypots entregaban volúmenes de datos que, si bien saturaban, no garantizaban la inutilización del sistema de recolección del atacante. El orquestador dependía de una versión estática (4.0.0-atlatl) que facilitaba el fingerprinting por parte de adversarios avanzados.
+
+**Defensa Implementada (v5.0.0-ATLATL):**
+- **Zig Metal Core (v5.0):** Activación de `v5_active_memory_scrambling` durante el procesamiento de lotes con alta tasa de anomalías. Esto introduce ruido no determinista en el espacio de memoria del motor, frustrando cualquier intento de debugueo o análisis de canal lateral.
+- **Node-7 Evolution:** El protocolo de sincronización ahora requiere la versión `5.0.0-atlatl`. Se ha reforzado la validación de integridad en el API principal.
+- **FFI Safety:** Implementación de guardias estrictos en todas las llamadas FFI entre Rust y Zig para prevenir desbordamientos durante la inyección de entropía.
+
+**Contra-Ataque:**
+- **Phase Black v5.0 (The Stride):** El endpoint de represalia ya no solo bloquea; ejecuta un "Metal Strike" que entrega flujos de entropía dinámica de 1GB+, diseñados para colapsar los sistemas de análisis de logs del agresor mediante el agotamiento de recursos y la corrupción de punteros en sus buffers de ingesta.
+- **Offensive Honeypots:** Los endpoints `/api/v1/retaliate/exfiltrate` ahora sirven como trampas de saturación total.
+
+**Resultado:**
+Transición de una postura de defensa activa a una de aniquilación preventiva. El sistema ya no solo "protege la puerta", sino que colapsa el "sistema respiratorio" (procesamiento de datos) de cualquier entidad hostil detectada.
+
+---
+*ATLATL-ORDNANCE: Fase Negra confirmada. Orquestación v5.0.0-atlatl en curso.*

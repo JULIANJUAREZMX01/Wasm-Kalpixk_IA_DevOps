@@ -24,23 +24,23 @@ use wasm_bindgen::prelude::*;
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
     path: "../../kalpixk.wit",
-    world: "kalpixk-core",
+    world: "kalpixkcore",
 });
 
 struct KalpixkCore;
 
 // Implement the exported interface
-impl exports::kalpixk::core::kalpixk_monitor::Guest for KalpixkCore {
-    fn extract_features(event: exports::kalpixk::core::kalpixk_monitor::WasmEvent) -> Vec<f32> {
+impl exports::kalpixk::core::kalpixkmonitor::Guest for KalpixkCore {
+    fn extractfeatures(event: exports::kalpixk::core::kalpixkmonitor::Wasmevent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
-            instruction_count: event.instruction_count,
-            memory_pages: event.memory_pages,
-            fuel_consumed: event.fuel_consumed,
-            wall_time_ns: event.wall_time_ns,
+            instruction_count: event.instructioncount,
+            memory_pages: event.memorypages,
+            fuel_consumed: event.fuelconsumed,
+            wall_time_ns: event.walltimens,
             entropy: event.entropy,
-            call_depth: event.call_depth,
-            import_calls: event.import_calls,
-            export_calls: event.export_calls,
+            call_depth: event.calldepth,
+            import_calls: event.importcalls,
+            export_calls: event.exportcalls,
         };
 
         extract_32_features(&internal_event)
@@ -53,9 +53,14 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
+#[cfg(target_arch = "wasm32")]
+extern "C" {
+    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
+}
+
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -195,6 +200,18 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
+    // [ATLATL-ORDNANCE] Active Memory Scrambling v5
+    #[cfg(target_arch = "wasm32")]
+    if lines.len() > 10 {
+        let mut seed_buf = [0u8; 8];
+        getrandom::getrandom(&mut seed_buf).unwrap_or_default();
+        let seed = u64::from_le_bytes(seed_buf);
+        let mut decoy_buffer = [0u8; 64];
+        unsafe {
+            v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+        }
+    }
+
     for line in &lines {
         if security::validate_raw_log(line).is_err() {
             continue;
@@ -282,7 +299,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })
