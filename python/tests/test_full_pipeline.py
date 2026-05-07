@@ -12,8 +12,6 @@ import httpx
 import numpy as np
 import pytest
 
-from api.kalpixk_api import app
-
 BASE = "http://localhost:8000"
 
 
@@ -277,8 +275,8 @@ class TestWmsConnector:
         from utils.wms_connector import WmsConnector
         c = WmsConnector(mode="mock")
         batch = c.stream_batch(n=500)
-        suspicious = [line for line in batch if any(
-            kw in line.upper() for kw in ["DROP", "EXPORT", "GRANT", "UNKNOWN"]
+        suspicious = [log_entry for log_entry in batch if any(
+            kw in log_entry.upper() for kw in ["DROP", "EXPORT", "GRANT", "UNKNOWN"]
         )]
         assert len(suspicious) > 0, "Mock stream should inject anomalies"
 

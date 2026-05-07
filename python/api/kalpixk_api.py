@@ -8,7 +8,6 @@ Endpoints:
   GET  /features    → Nombres de las 32 features (XAI)
 """
 
-# Importaciones internas
 import json
 import os
 import secrets
@@ -17,7 +16,6 @@ import time
 
 import msgpack
 import numpy as np
-import torch
 from fastapi import (
     Depends,
     FastAPI,
@@ -30,7 +28,10 @@ from fastapi import (
 from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
@@ -49,6 +50,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # -- Security & Rate Limiting --
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
@@ -201,7 +206,6 @@ async def health():
 @app.get("/status")
 @limiter.limit("10/minute")
 async def status(request: Request, api_key: str = Depends(verify_api_key)):
-    ensure_ensemble()
     uptime = time.time() - _boot_time
     return {
         "status": "ok",
@@ -269,11 +273,8 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 @app.post("/analyze", response_model=AnomalyResponse)
 @limiter.limit("60/minute")
 async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
-    ens = ensure_ensemble()
-
-    features_np = np.array(req.features, dtype=np.float32)
-    if features_np.ndim == 1:
-        features_np = features_np.reshape(1, -1)
+    if _ensemble is None:
+        raise HTTPException(503, "Modelo no inicializado")
 
     if features_np.shape[1] != 32:
         raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
@@ -361,7 +362,8 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
 
 @app.get("/features")
-async def get_feature_names(api_key: str = Depends(verify_api_key)):
+@limiter.limit("10/minute")
+async def get_feature_names(request: Request, api_key: str = Depends(verify_api_key)):
     """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,

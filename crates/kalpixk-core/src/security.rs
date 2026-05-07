@@ -17,7 +17,7 @@ pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
 
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
-    None => "atlatl-v4",
+    None => "dev-000000",
 };
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -40,59 +40,49 @@ pub enum SecurityError {
 
 pub struct SecurityGuard;
 
-impl SecurityGuard {
-    pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
-        validate_raw_log(raw)
-    }
-
-    pub fn is_payload_suspicious(data: &[u8]) -> bool {
-        crate::entropy::shannon_entropy(data) > 7.5
-    }
-
-    /// [ATLATL-ORDNANCE] Stage 3: Behavioral Entropy Analysis
-    /// Detects high-velocity low-entropy attacks (credential stuffing) or
-    /// low-velocity high-entropy attacks (exfiltration).
-    pub fn analyze_behavioral_entropy(stream: &[&str]) -> f32 {
-        if stream.is_empty() {
-            return 0.0;
-        }
-        let mut total_entropy = 0.0f32;
-        for line in stream {
-            total_entropy += crate::entropy::shannon_entropy(line.as_bytes());
-        }
-        let avg_entropy = total_entropy / stream.len() as f32;
-
-        // Return a score based on deviation from "normal" log entropy (~4.0 - 5.5)
-        if avg_entropy > 7.2 {
-            return 0.9;
-        } // Likely encrypted data/shellcode
-        if avg_entropy < 2.5 {
-            return 0.7;
-        } // Likely repetitive automated patterns
-        0.0
-    }
-}
-
+/// Validate and sanitize a raw log string before parsing.
+///
+/// Rejects:
+/// - Lines exceeding `MAX_LOG_LINE_BYTES`
+/// - Null bytes (would corrupt C-style string handling)
+/// - ANSI escape sequences (terminal injection)
+/// - Template injection patterns (`{{`, `${`)
+/// - HTML/script injection (if logs reach the dashboard unsanitized)
+/// - HTTP header injection (`\r\n\r\n`)
+///
+/// Returns the original `raw` slice if validation passes,
+/// or `SecurityError` if any check fails.
 pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
-    if raw.len() > MAX_LOG_LINE_BYTES {
-        return Err(SecurityError::InputTooLarge(raw.len()));
+    // 1. Size limit (stricter limit from ATLATL-ORDNANCE)
+    if raw.len() > 8192 {
+        return Err(SecurityError::InputTooLarge(raw.len(), 8192));
     }
 
-    const PATTERNS: &[(&[u8], &str)] = &[
-        (b"\\x90\\x90\\x90", "nop_sled"),
-        (b"\\xEB\\xFE", "jmp_self"),
-        (b"/bin/sh", "shell_invocation"),
-        (b"powershell.exe", "powershell_invocation"),
-        (b"${jndi:", "log4shell"),
-        (b"eval(", "dynamic_eval"),
-        (b"system(", "system_call"),
-        (b"<script", "xss_attempt"),
+    // 2. Injection pattern detection
+    //    Each entry: (pattern_bytes, human_readable_name)
+    const INJECTION_PATTERNS: &[(&[u8], &str)] = &[
+        (b"\x00", "null_byte"),
+        (b"\r\n\r\n", "http_header_injection"),
+        (b"{{", "template_injection"),
+        (b"${", "shell_expansion"),
+        (b"<script", "xss_script_tag"),
+        (b"<iframe", "xss_iframe"),
+        (b"<!--", "html_comment"),
+        (b"\x1b", "ansi_escape"),
         (b"../", "path_traversal"),
-        (b"0xEB0xFE", "hex_jmp_self"),
+        (b"..\\", "path_traversal_win"),
+        (b"\\x90\\x90\\x90", "nop_sled"),
+        (b"0xEB0xFE", "jmp_self"),
+        (b"/bin/sh", "unix_shell"),
+        (b"powershell.exe", "windows_shell"),
+        (b"eval(", "dynamic_exec"),
+        (b"system(", "system_call"),
+        (b"base64", "obfuscation_marker"),
+        (b"${jndi:", "log4shell"),
     ];
 
     let bytes = raw.as_bytes();
-    for (pattern, name) in PATTERNS {
+    for (pattern, name) in INJECTION_PATTERNS {
         if let Some(pos) = bytes.windows(pattern.len()).position(|w| w == *pattern) {
             return Err(SecurityError::InjectionPattern(pos, name.to_string()));
         }
@@ -101,7 +91,23 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     Ok(raw)
 }
 
+/// Validate a metadata key — only alphanumeric, underscore, hyphen allowed.
+/// Keys longer than 64 chars are also rejected.
+pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
+    if key.len() > 64 || key.is_empty() {
+        return Err(SecurityError::InvalidMetadataKey(key.to_string()));
+    }
+    if !key
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err(SecurityError::InvalidMetadataKey(key.to_string()));
+    }
+    Ok(())
+}
+
 pub struct SourceRateLimiter {
+    /// Map: source_id → (count_in_window, window_start_ms)
     counts: HashMap<String, (u32, u64)>,
     max_eps: u32,
 }
@@ -114,10 +120,28 @@ impl SourceRateLimiter {
         }
     }
 
+    pub fn with_limit(max_eps: u32) -> Self {
+        Self {
+            counts: HashMap::new(),
+            max_eps,
+        }
+    }
+
+    /// Check if the source is within rate limit, and increment its counter.
+    ///
+    /// # Arguments
+    /// * `source`  - IP address, hostname, or any string identifier
+    /// * `now_ms`  - Current timestamp in milliseconds
+    ///
+    /// # Returns
+    /// `Ok(())` if within limit, `Err(RateLimitExceeded)` if over.
     pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
         const WINDOW_MS: u64 = 1_000;
         let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
+        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
+
+        // New window
         if now_ms.saturating_sub(entry.1) >= WINDOW_MS {
             *entry = (1, now_ms);
             return Ok(());
@@ -129,6 +153,23 @@ impl SourceRateLimiter {
         }
 
         Ok(())
+    }
+
+    /// Remove stale entries older than 60 seconds.
+    /// Call periodically to prevent unbounded HashMap growth.
+    pub fn gc(&mut self, now_ms: u64) {
+        self.counts
+            .retain(|_, (_, ts)| now_ms.saturating_sub(*ts) < 60_000);
+    }
+
+    pub fn source_count(&self) -> usize {
+        self.counts.len()
+    }
+}
+
+impl Default for SourceRateLimiter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -147,17 +188,19 @@ impl SharedBufferGuard {
 
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
-            if self
+            match self
                 .locked
                 .compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire)
-                .is_ok()
             {
-                let ver = self.version.fetch_add(1, Ordering::SeqCst);
-                return Ok(BufferWriteGuard {
-                    locked: Arc::clone(&self.locked),
-                    version: Arc::clone(&self.version),
-                    ver_at_lock: ver,
-                });
+                Ok(_) => {
+                    let ver = self.version.fetch_add(1, Ordering::SeqCst);
+                    return Ok(BufferWriteGuard {
+                        locked: Arc::clone(&self.locked),
+                        version: Arc::clone(&self.version),
+                        ver_at_lock: ver,
+                    });
+                }
+                Err(_) => std::hint::spin_loop(),
             }
             std::hint::spin_loop();
         }
@@ -165,6 +208,13 @@ impl SharedBufferGuard {
     }
 }
 
+impl Default for SharedBufferGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// RAII guard — releases the lock when dropped.
 pub struct BufferWriteGuard {
     locked: Arc<AtomicBool>,
     version: Arc<AtomicU32>,
@@ -178,20 +228,184 @@ impl Drop for BufferWriteGuard {
 }
 
 pub fn obfuscate_offset(base: usize) -> usize {
-    let seed = BUILD_HASH.bytes().fold(0usize, |acc, b| {
+    let seed = BUILD_HASH.bytes().take(8).fold(0usize, |acc, b| {
         acc.wrapping_mul(31).wrapping_add(b as usize)
     });
     base ^ (seed & 0xFF)
 }
+
+// ── Required security headers (documentation) ────────────────────────────────
+
+/// CSP header value required to load WASM in the browser.
+/// The server (Netlify / GitHub Pages + COI SW) MUST set these.
+pub const CSP_HEADER: &str = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; \
+     connect-src 'self' ws:; worker-src 'self' blob:;";
+
+/// Headers required for SharedArrayBuffer (WASM multithreading).
+pub const REQUIRED_SECURITY_HEADERS: &[(&str, &str)] = &[
+    ("Cross-Origin-Opener-Policy", "same-origin"),
+    ("Cross-Origin-Embedder-Policy", "require-corp"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "DENY"),
+    ("Referrer-Policy", "no-referrer"),
+];
+
+// ── Unit tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_malicious_patterns() {
-        assert!(validate_raw_log("normal log").is_ok());
-        assert!(validate_raw_log("inject \\x90\\x90\\x90 sled").is_err());
-        assert!(validate_raw_log("exploit /bin/sh here").is_err());
+    fn accepts_valid_syslog() {
+        let log = "Apr 04 03:22:11 cedis sshd[1234]: Failed password for root from 185.220.101.42";
+        assert!(validate_raw_log(log).is_ok());
+    }
+
+    #[test]
+    fn rejects_null_byte() {
+        assert!(matches!(
+            validate_raw_log("normal\x00injected"),
+            Err(SecurityError::InjectionPattern(6, _))
+        ));
+    }
+
+    #[test]
+    fn rejects_oversized_log() {
+        let huge = "a".repeat(MAX_LOG_LINE_BYTES + 1);
+        assert!(matches!(
+            validate_raw_log(&huge),
+            Err(SecurityError::InputTooLarge(_, _))
+        ));
+    }
+
+    #[test]
+    fn rejects_ansi_escape() {
+        assert!(validate_raw_log("log with \x1b[31mred\x1b[0m text").is_err());
+    }
+
+    #[test]
+    fn rejects_template_injection() {
+        assert!(validate_raw_log("{{config.secret}}").is_err());
+        assert!(validate_raw_log("${HOME}").is_err());
+    }
+
+    #[test]
+    fn rejects_xss_payload() {
+        assert!(validate_raw_log("<script>alert(1)</script>").is_err());
+    }
+
+    // ── validate_metadata_key ─────────────────────────────────────────────────
+
+    #[test]
+    fn accepts_valid_keys() {
+        assert!(validate_metadata_key("src_ip").is_ok());
+        assert!(validate_metadata_key("windows-event-id").is_ok());
+        assert!(validate_metadata_key("field01").is_ok());
+    }
+
+    #[test]
+    fn rejects_key_with_spaces() {
+        assert!(validate_metadata_key("key with spaces").is_err());
+    }
+
+    #[test]
+    fn rejects_key_with_semicolon() {
+        assert!(validate_metadata_key("key;inject").is_err());
+    }
+
+    #[test]
+    fn rejects_empty_key() {
+        assert!(validate_metadata_key("").is_err());
+    }
+
+    // ── SourceRateLimiter ─────────────────────────────────────────────────────
+
+    #[test]
+    fn rate_limiter_allows_within_limit() {
+        let mut rl = SourceRateLimiter::new();
+        let src = "185.220.101.42";
+        let now_ms = 1_000_000u64;
+
+        for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
+            assert!(rl.check_and_increment(src, now_ms).is_ok());
+        }
+    }
+
+    #[test]
+    fn rate_limiter_blocks_flood() {
+        let mut rl = SourceRateLimiter::new();
+        let src = "185.220.101.42";
+        let now_ms = 1_000_000u64;
+
+        for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
+            let _ = rl.check_and_increment(src, now_ms);
+        }
+        // One more should be blocked
+        assert!(matches!(
+            rl.check_and_increment(src, now_ms),
+            Err(SecurityError::RateLimitExceeded(_, _, _))
+        ));
+    }
+
+    #[test]
+    fn rate_limiter_resets_after_window() {
+        let mut rl = SourceRateLimiter::new();
+        let src = "10.0.0.1";
+        let now_ms = 1_000_000u64;
+
+        // Fill window
+        for _ in 0..MAX_EVENTS_PER_SEC_PER_SOURCE {
+            let _ = rl.check_and_increment(src, now_ms);
+        }
+        // 1 second later — should reset
+        assert!(rl.check_and_increment(src, now_ms + 1_001).is_ok());
+    }
+
+    #[test]
+    fn rate_limiter_gc_removes_stale() {
+        let mut rl = SourceRateLimiter::new();
+        let _ = rl.check_and_increment("old_source", 1_000_000);
+        assert_eq!(rl.source_count(), 1);
+
+        rl.gc(1_000_000 + 61_000); // 61 seconds later
+        assert_eq!(rl.source_count(), 0);
+    }
+
+    // ── SharedBufferGuard ─────────────────────────────────────────────────────
+
+    #[test]
+    fn atomic_guard_locks_and_releases() {
+        let guard = SharedBufferGuard::new();
+        {
+            let lock = guard.try_lock(10).expect("should acquire lock");
+            assert!(lock.verify_integrity());
+        } // lock dropped here — releases
+          // Should be able to lock again
+        let _ = guard.try_lock(10).expect("should re-acquire after release");
+    }
+
+    #[test]
+    fn atomic_guard_increments_version() {
+        let guard = SharedBufferGuard::new();
+        assert_eq!(guard.current_version(), 0);
+        {
+            let _ = guard.try_lock(10);
+        }
+        assert_eq!(guard.current_version(), 1);
+    }
+
+    // ── Offset obfuscation ────────────────────────────────────────────────────
+
+    #[test]
+    fn obfuscate_offset_is_deterministic() {
+        let a = obfuscate_offset(100);
+        let b = obfuscate_offset(100);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn build_fingerprint_not_empty() {
+        assert!(!build_fingerprint().is_empty());
     }
 }

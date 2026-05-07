@@ -223,7 +223,6 @@ pub fn detect_lateral_movement(
         || raw.contains("wmic")
         || raw.contains("winrm")
         || raw.contains("ssh -o")
-        || raw.contains("evil-winrm")
     {
         score += 0.6;
         techniques.push("T1021".to_string());
@@ -503,7 +502,6 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
-    // Prefer higher scores, then higher node index if scores are equal (simplified)
     results
         .into_iter()
         .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap())

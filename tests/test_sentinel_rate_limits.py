@@ -31,6 +31,7 @@ def test_rate_limiting_report():
     assert response.status_code == 429
 
 def test_rate_limiting_status():
+    # Limit in src/api/main.py is 10/minute
     for _ in range(10):
         response = client.get("/api/v1/status", headers={"X-Kalpixk-Key": "testkey"})
         assert response.status_code != 429
