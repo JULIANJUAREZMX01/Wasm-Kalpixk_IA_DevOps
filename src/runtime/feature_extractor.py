@@ -31,19 +31,19 @@ class WasmFeatureExtractor:
             return fallback_extractor.extract(metrics_dict)
 
         try:
-            json_str = json.dumps(metrics_dict)
-            # wasm-bindgen usually expects a pointer and length for strings.
-            # But let's check how it's exported in raw wasm.
-            # It might be easier to use a simple C-style interface if wasm-bindgen is too complex for raw wasmtime-py.
-            # However, the ADR says "wasmtime-py must be compatible with the .wit file".
-            # For now, let's assume a direct string call if possible, or fallback.
-
-            # Since I'm using wasm-bindgen, I'll probably need to allocate the string in WASM memory.
-            # For this hackathon, if it gets too complex, I'll use a simplified extractor.
-
-            # TODO: Implement proper string passing to wasm-bindgen export if needed.
-            # For now, return a placeholder or call fallback to keep moving if it fails.
-            return np.zeros((32,), dtype=np.float32)
+            # Call flat WIT function with individual arguments
+            res = self.extract_fn(
+                self.store,
+                metrics_dict.get("instruction-count", 0),
+                metrics_dict.get("memory-pages", 0),
+                metrics_dict.get("fuel-consumed", 0),
+                metrics_dict.get("wall-time-ns", 0),
+                float(metrics_dict.get("entropy", 0.0)),
+                metrics_dict.get("call-depth", 0),
+                metrics_dict.get("import-calls", 0),
+                metrics_dict.get("export-calls", 0),
+            )
+            return np.array(res, dtype=np.float32)
         except Exception as e:
             logger.warning(f"WASM extract failed: {e}. Using fallback.")
             from src.runtime.fallback import fallback_extractor

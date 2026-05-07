@@ -29,18 +29,26 @@ wit_bindgen::generate!({
 
 struct KalpixkCore;
 
-// Implement the exported interface
-impl exports::kalpixk::core::kalpixkmonitor::Guest for KalpixkCore {
-    fn extractfeatures(event: exports::kalpixk::core::kalpixkmonitor::Wasmevent) -> Vec<f32> {
+impl Guest for KalpixkCore {
+    fn extractfeatures(
+        instructioncount: f64,
+        memorypages: f64,
+        fuelconsumed: f64,
+        walltimens: f64,
+        entropy: f64,
+        calldepth: f64,
+        importcalls: f64,
+        exportcalls: f64,
+    ) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
-            instruction_count: event.instruction_count,
-            memory_pages: event.memory_pages,
-            fuel_consumed: event.fuel_consumed,
-            wall_time_ns: event.wall_time_ns,
-            entropy: event.entropy,
-            call_depth: event.call_depth,
-            import_calls: event.import_calls,
-            export_calls: event.export_calls,
+            instruction_count: instructioncount as u64,
+            memory_pages: memorypages as u32,
+            fuel_consumed: fuelconsumed as u64,
+            wall_time_ns: walltimens as u64,
+            entropy: entropy as f32,
+            call_depth: calldepth as u32,
+            import_calls: importcalls as u32,
+            export_calls: exportcalls as u32,
         };
 
         extract_32_features(&internal_event)
