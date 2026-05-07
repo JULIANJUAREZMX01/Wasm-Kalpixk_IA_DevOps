@@ -39,9 +39,9 @@ from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
 
 app = FastAPI(
-    title="Wasm-Kalpixk_IA_DevOps API",
-    description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="0.1.0",
+    title="Wasm-Kalpixk_IA_DevOps API v5.0",
+    description="SIEM portátil — AMD MI300X + WASM Edge Detection (ATLATL-ORDNANCE)",
+    version="5.0.0-atlatl",
     docs_url="/docs",
 )
 
@@ -140,12 +140,11 @@ class AnomalyResponse(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    ensure_ensemble()
+    # Removed ensure_ensemble() to prevent expensive init on health check (DoS hardening)
     return {
         "status": "healthy",
-        "version": "0.1.0",
-        "device": str(_device),
-        "ensemble_version": "1.0.0-atlatl",
+        "version": "5.0.0-atlatl",
+        "ensemble_version": "5.0.0-atlatl",
     }
 
 

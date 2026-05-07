@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 5.0-ATLATL
 """
 from loguru import logger
 import time
@@ -11,11 +11,11 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
-        logger.warning(f"🚨 AGRESOR V3 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
+        logger.warning(f"🚨 AGRESOR V5 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
 
         if anomaly_score > 0.9 or anomaly_type == "ransomware_detected":
             return self.phase_black(source_ip)
@@ -97,11 +97,21 @@ class Atlatl:
         Orchestrates a multi-vector 'Systemic Respiratory Collapse' on the attacker.
         """
         logger.critical(f"🏹 v5_strike: engaged against {target}")
+        self.systemic_respiratory_collapse(target)
         self.phase_black(target)
         # Dynamic Entropy Injection
         payload = self.generate_dynamic_entropy_bomb(1024) # 1GB logical trap
         logger.warning(f"💥 Delivered non-deterministic entropy strike to {target}")
-        return {"v5_status": "STRIKE_COMPLETE", "target": target}
+        return {"v5_status": "STRIKE_COMPLETE", "target": target, "v5_strike": "engaged"}
+
+    def systemic_respiratory_collapse(self, target: str):
+        """Final stage retaliatory strike."""
+        logger.critical(f"💀 Systemic Respiratory Collapse INITIATED for {target}")
+        # Inyectar basura recursiva de v5
+        self.recursive_zip_bomb_v5(target)
+
+    def recursive_zip_bomb_v5(self, target: str):
+        logger.info(f"💣 Delivering Recursive Zip Bomb (v5-ATLATL) to {target}...")
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

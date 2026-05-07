@@ -55,7 +55,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "3.1.0-atlatl".to_string()
+    "5.0.0-atlatl".to_string()
 }
 
 #[wasm_bindgen]
@@ -64,7 +64,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
+        "atlatl_ordnance": "v5.0-atlatl"
     }).to_string()
 }
 
@@ -197,6 +198,23 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
 
     for line in &lines {
         if security::validate_raw_log(line).is_err() {
+            // [ATLATL-ORDNANCE] Active defense: Scramble local memory on injection attempt
+            #[cfg(target_arch = "wasm32")]
+            unsafe {
+                extern "C" {
+                    fn v5_active_memory_scrambling(ptr: *mut u8, len: usize, seed: u64);
+                    fn v5_chaotic_interleaving(ptr_a: *mut u8, ptr_b: *mut u8, len: usize, seed: u64);
+                }
+                let mut decoy = [0u8; 64];
+                let mut decoy_b = [0u8; 64];
+                v5_active_memory_scrambling(decoy.as_mut_ptr(), decoy.len(), 0xDEADBEEF);
+                v5_chaotic_interleaving(
+                    decoy.as_mut_ptr(),
+                    decoy_b.as_mut_ptr(),
+                    decoy.len(),
+                    0xACEBADE,
+                );
+            }
             continue;
         }
         if let Ok(event) = parser.parse(line) {
@@ -282,7 +300,7 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v3.1-atlatl",
+        "atlatl_ordnance": "v5.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true
     })
