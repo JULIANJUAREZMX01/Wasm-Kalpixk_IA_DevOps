@@ -250,6 +250,31 @@ export default function Dashboard() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: REAL-TIME
 // ═══════════════════════════════════════════════════════════════════════════════
+
+const AlertRow = React.memo(({ a, isNew }: { a: any; isNew: boolean }) => (
+  <div
+    className={isNew ? "new-row" : ""}
+    style={{
+      display: "grid", gridTemplateColumns: "52px 110px 28px 1fr 80px",
+      gap: 6, padding: "5px 6px", marginBottom: 2,
+      background: isNew ? `${scoreColor(a.score)}09` : T.surface,
+      border: `1px solid ${isNew ? `${scoreColor(a.score)}30` : T.border}`,
+      borderLeft: `3px solid ${scoreColor(a.score)}`,
+      transition: "background 1.2s",
+    }}>
+    <span style={{ color: T.dim, fontSize: 9 }}>{fmt(a.ts)}</span>
+    <span style={{ color: T.text, fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.ip}</span>
+    <span style={{ color: T.dim, fontSize: 9 }}>{a.geo.slice(0, 3)}</span>
+    <span style={{ color: T.bright, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.msg}</span>
+    <div style={{ textAlign: "right" }}>
+      <div style={{ color: scoreColor(a.score), fontSize: 8, letterSpacing: 1 }}>{scoreLabel(a.score)}</div>
+      <div style={{ color: scoreColor(a.score), fontSize: 12, fontWeight: 700 }}>
+        {(a.score * 100).toFixed(1)}%
+      </div>
+    </div>
+  </div>
+));
+
 function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
   const alerts  = useAlertStore((s) => s.alerts);
   const metrics = useMetricsStore();
@@ -344,28 +369,7 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
           </div>
           <div style={{ flex: 1, overflowY: "auto", paddingTop: 4 }}>
             {alerts.map((a, i) => (
-              <div
-                key={a.id}
-                className={i === 0 ? "new-row" : ""}
-                style={{
-                  display: "grid", gridTemplateColumns: "52px 110px 28px 1fr 80px",
-                  gap: 6, padding: "5px 6px", marginBottom: 2,
-                  background: i === 0 ? `${scoreColor(a.score)}09` : T.surface,
-                  border: `1px solid ${i === 0 ? `${scoreColor(a.score)}30` : T.border}`,
-                  borderLeft: `3px solid ${scoreColor(a.score)}`,
-                  transition: "background 1.2s",
-                }}>
-                <span style={{ color: T.dim, fontSize: 9 }}>{fmt(a.ts)}</span>
-                <span style={{ color: T.text, fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.ip}</span>
-                <span style={{ color: T.dim, fontSize: 9 }}>{a.geo.slice(0, 3)}</span>
-                <span style={{ color: T.bright, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.msg}</span>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: scoreColor(a.score), fontSize: 8, letterSpacing: 1 }}>{scoreLabel(a.score)}</div>
-                  <div style={{ color: scoreColor(a.score), fontSize: 12, fontWeight: 700 }}>
-                    {(a.score * 100).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
+              <AlertRow key={a.id} a={a} isNew={i === 0} />
             ))}
           </div>
         </div>
