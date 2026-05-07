@@ -203,7 +203,12 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             unsafe {
                 extern "C" {
                     fn v5_active_memory_scrambling(ptr: *mut u8, len: usize, seed: u64);
-                    fn v5_chaotic_interleaving(ptr_a: *mut u8, ptr_b: *mut u8, len: usize, seed: u64);
+                    fn v5_chaotic_interleaving(
+                        ptr_a: *mut u8,
+                        ptr_b: *mut u8,
+                        len: usize,
+                        seed: u64,
+                    );
                 }
                 let mut decoy = [0u8; 64];
                 let mut decoy_b = [0u8; 64];
