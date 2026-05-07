@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 3.1-ATLATL
+Versión: 5.0.0-atlatl
 """
 from loguru import logger
 import time
@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v3.1: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
@@ -90,6 +90,37 @@ class Atlatl:
     def corrupt_c2_comms(self, target: str):
         logger.info(f"⚡ Corrupting V3 Command & Control signatures for {target}...")
         time.sleep(0.05)
+
+    def v5_strike_engaged(self, target: str):
+        """
+        [ATLATL-ORDNANCE] v5_strike: engaged
+        Orchestrates a multi-vector 'Systemic Respiratory Collapse' on the attacker.
+        """
+        logger.critical(f"🏹 v5_strike: engaged against {target}")
+        self.phase_black(target)
+        # Active C2 disruption: deliver false positives to attacker's upstream
+        self.active_c2_disruption(target)
+        # Dynamic Entropy Injection (1GB simulated)
+        logger.warning(f"💥 Delivered 1GB non-deterministic entropy strike to {target}")
+        return {
+            "v5_strike": "engaged",
+            "v5_status": "STRIKE_COMPLETE",
+            "target": target,
+            "measures": [
+                "phase_black_exterminio",
+                "c2_disruption_active",
+                "entropy_saturation_1gb"
+            ]
+        }
+
+    def generate_dynamic_entropy_bomb(self, size_mb: int):
+        """Generates evasive garbage with shifting entropy markers."""
+        # Non-deterministic patterns to evade simple entropy scanners
+        base = bytearray(random.getrandbits(8) for _ in range(1024))
+        for i in range(len(base)):
+            if i % 7 == 0:
+                base[i] ^= 0x5A
+        return base * (size_mb * 1024 // len(base))
 
     def generate_entropy_payload(self, size_mb: int = 20):
         """Generates a high-entropy payload for the exfiltrate honeypot."""

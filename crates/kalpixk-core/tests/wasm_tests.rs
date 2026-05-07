@@ -233,7 +233,7 @@ fn all_features_in_unit_interval() {
         for (i, f) in features.iter().enumerate() {
             let v = f.as_f64().expect("feature must be f64");
             assert!(
-                v >= 0.0 && v <= 1.0,
+                (0.0..=1.0).contains(&v),
                 "Feature[{}]={} out of [0,1] for log '{}' (source={})",
                 i,
                 v,
@@ -289,8 +289,8 @@ fn batch_counts_match() {
     let batch = parse_batch(logs, "syslog");
 
     assert_eq!(batch["total_count"].as_u64().unwrap(), 3);
-    let parsed = batch["parsed_count"].as_u64().unwrap();
-    assert!(parsed <= 3 && parsed >= 1);
+    let parsed = batch["parsed_count"].as_u64().unwrap() as i32;
+    assert!((1..=3).contains(&parsed));
 }
 
 // ── SECURITY VALIDATION ───────────────────────────────────────────────────────

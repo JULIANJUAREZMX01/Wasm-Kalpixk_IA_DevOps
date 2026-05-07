@@ -3,64 +3,42 @@
 //! ATLATL-ORDNANCE — Security hardening for the WASM engine.
 //!
 //! Implements:
-//!   1. Input validation + injection pattern detection
-//!   2. Per-source rate limiting (prevents log flood DoS)
-//!   3. SharedArrayBuffer atomic guards (prevents SAB race conditions)
+//!   1. Input validation + Stage 2 aggressive shellcode detection
+//!   2. Per-source rate limiting
+//!   3. SharedArrayBuffer atomic guards
 //!   4. Build-hash-based memory offset obfuscation
-//!   5. Required security headers documentation
-//!
-//! All public functions are called by parsers.rs BEFORE any parsing occurs.
-//! This is the first gate — if validation fails, the log is rejected.
-#![allow(dead_code)]
-//! [ATLATL-ORDNANCE] Security Guards
-//! Input validation and memory protection for the WASM engine.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-/// Maximum allowed log line size (64 KB).
-/// Prevents memory exhaustion via crafted oversized logs.
 pub const MAX_LOG_LINE_BYTES: usize = 65_536;
-
-/// Maximum events per second per source IP / identifier.
-/// Prevents the WASM engine from being flooded by a single source.
 pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
 
-/// Maximum metadata fields per event.
-/// Prevents unbounded HashMap growth.
-pub const MAX_METADATA_FIELDS: usize = 64;
-
-/// Build hash injected by CI — used to rotate memory layout per build.
-/// Set via: BUILD_HASH=$(git rev-parse --short HEAD) wasm-pack build
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
     None => "dev-000000",
 };
 
-// ── Error types ───────────────────────────────────────────────────────────────
-
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum SecurityError {
-    #[error("Input too large: {0} bytes (max: {1})")]
-    InputTooLarge(usize, usize),
+    #[error("Input too large: {0} bytes")]
+    InputTooLarge(usize),
 
-    #[error("Injection pattern detected at byte offset {0}: pattern='{1}'")]
+    #[error("Injection pattern detected at offset {0}: {1}")]
     InjectionPattern(usize, String),
 
-    #[error("Rate limit exceeded for source '{0}': {1} events/sec (max: {2})")]
-    RateLimitExceeded(String, u32, u32),
+    #[error("Rate limit exceeded for source '{0}'")]
+    RateLimitExceeded(String),
 
-    #[error("Invalid metadata key '{0}': only alphanumeric, '_', '-' allowed")]
+    #[error("Invalid metadata key '{0}'")]
     InvalidMetadataKey(String),
 
-    #[error("Atomic buffer conflict: concurrent write detected")]
+    #[error("Atomic buffer conflict")]
     AtomicConflict,
 }
 
-// ── Input validation ──────────────────────────────────────────────────────────
+pub struct SecurityGuard;
 
 /// Validate and sanitize a raw log string before parsing.
 ///
@@ -128,13 +106,6 @@ pub fn validate_metadata_key(key: &str) -> Result<(), SecurityError> {
     Ok(())
 }
 
-// ── Rate limiter ──────────────────────────────────────────────────────────────
-
-/// Per-source sliding-window rate limiter.
-///
-/// Uses 1-second windows. When a source exceeds `MAX_EVENTS_PER_SEC_PER_SOURCE`
-/// events within the current window, subsequent events are rejected until the
-/// window resets.
 pub struct SourceRateLimiter {
     /// Map: source_id → (count_in_window, window_start_ms)
     counts: HashMap<String, (u32, u64)>,
@@ -166,6 +137,7 @@ impl SourceRateLimiter {
     /// `Ok(())` if within limit, `Err(RateLimitExceeded)` if over.
     pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
         const WINDOW_MS: u64 = 1_000;
+        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
         let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
@@ -177,11 +149,7 @@ impl SourceRateLimiter {
 
         entry.0 += 1;
         if entry.0 > self.max_eps {
-            return Err(SecurityError::RateLimitExceeded(
-                source.to_string(),
-                entry.0,
-                self.max_eps,
-            ));
+            return Err(SecurityError::RateLimitExceeded(source.to_string()));
         }
 
         Ok(())
@@ -205,20 +173,6 @@ impl Default for SourceRateLimiter {
     }
 }
 
-// ── SharedArrayBuffer atomic guard ───────────────────────────────────────────
-//
-// When the WASM engine writes feature vectors into a SharedArrayBuffer (SAB)
-// shared with the main React thread, there is a risk of the JS thread reading
-// a partially-written vector. We use an atomic version stamp to detect this.
-//
-// Protocol:
-//   1. WASM acquires lock (CAS false→true)
-//   2. Increments version stamp
-//   3. Writes feature data
-//   4. Drops lock (sets to false)
-//   5. JS reads version stamp before and after reading data — if they differ,
-//      the data was modified mid-read and must be discarded.
-
 pub struct SharedBufferGuard {
     version: Arc<AtomicU32>,
     locked: Arc<AtomicBool>,
@@ -232,10 +186,6 @@ impl SharedBufferGuard {
         }
     }
 
-    /// Attempt to acquire the write lock.
-    ///
-    /// Spins up to `max_retries` times before giving up.
-    /// In WebAssembly, spinning is acceptable for short critical sections.
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
             match self
@@ -252,12 +202,9 @@ impl SharedBufferGuard {
                 }
                 Err(_) => std::hint::spin_loop(),
             }
+            std::hint::spin_loop();
         }
         Err(SecurityError::AtomicConflict)
-    }
-
-    pub fn current_version(&self) -> u32 {
-        self.version.load(Ordering::SeqCst)
     }
 }
 
@@ -274,32 +221,12 @@ pub struct BufferWriteGuard {
     ver_at_lock: u32,
 }
 
-impl BufferWriteGuard {
-    /// Verify the buffer was not concurrently modified.
-    /// Call after writing data to confirm integrity.
-    pub fn verify_integrity(&self) -> bool {
-        self.version.load(Ordering::SeqCst) == self.ver_at_lock + 1
-    }
-}
-
 impl Drop for BufferWriteGuard {
     fn drop(&mut self) {
         self.locked.store(false, Ordering::SeqCst);
     }
 }
 
-// ── Memory offset obfuscation ─────────────────────────────────────────────────
-//
-// Each build uses a different offset seed derived from BUILD_HASH.
-// An exploit that hardcodes memory offsets from one build will fail on the next.
-// NOT a security boundary — provides friction against static analysis.
-
-/// Get the build fingerprint (unique per CI run).
-pub fn build_fingerprint() -> &'static str {
-    BUILD_HASH
-}
-
-/// Obfuscate a memory offset using the build hash as XOR seed.
 pub fn obfuscate_offset(base: usize) -> usize {
     let seed = BUILD_HASH.bytes().take(8).fold(0usize, |acc, b| {
         acc.wrapping_mul(31).wrapping_add(b as usize)
@@ -328,8 +255,6 @@ pub const REQUIRED_SECURITY_HEADERS: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // ── validate_raw_log ──────────────────────────────────────────────────────
 
     #[test]
     fn accepts_valid_syslog() {
