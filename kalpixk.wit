@@ -1,7 +1,7 @@
 package kalpixk:core;
 
-interface kalpixk-monitor {
-    record wasm-event {
+interface kalpixkmonitor {
+    record wasmevent {
         instruction-count: u64,
         memory-pages: u32,
         fuel-consumed: u64,
@@ -11,9 +11,9 @@ interface kalpixk-monitor {
         import-calls: u32,
         export-calls: u32,
     }
-    extract-features: func(event: wasm-event) -> list<f32>;
+    extractfeatures: func(event: wasmevent) -> list<f32>;
 }
 
-world kalpixk-core {
-    export kalpixk-monitor;
+world kalpixkcore {
+    export kalpixkmonitor;
 }

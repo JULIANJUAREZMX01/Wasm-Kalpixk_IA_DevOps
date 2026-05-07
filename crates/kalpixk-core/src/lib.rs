@@ -24,14 +24,14 @@ use wasm_bindgen::prelude::*;
 // Generate bindings from the WIT file
 wit_bindgen::generate!({
     path: "../../kalpixk.wit",
-    world: "kalpixk-core",
+    world: "kalpixkcore",
 });
 
 struct KalpixkCore;
 
 // Implement the exported interface
-impl exports::kalpixk::core::kalpixk_monitor::Guest for KalpixkCore {
-    fn extract_features(event: exports::kalpixk::core::kalpixk_monitor::WasmEvent) -> Vec<f32> {
+impl exports::kalpixk::core::kalpixkmonitor::Guest for KalpixkCore {
+    fn extractfeatures(event: exports::kalpixk::core::kalpixkmonitor::Wasmevent) -> Vec<f32> {
         let internal_event = WasmEventMetrics {
             instruction_count: event.instruction_count,
             memory_pages: event.memory_pages,
