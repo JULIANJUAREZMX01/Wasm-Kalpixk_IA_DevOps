@@ -39,6 +39,7 @@ pub fn get_security_telemetry() -> String {
 }
 
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn extract_features_wasm(
     instructions: u64,
     pages: u32,
