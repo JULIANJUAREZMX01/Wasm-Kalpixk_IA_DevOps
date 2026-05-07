@@ -20,37 +20,8 @@ use crate::runtime_features::extract_32_features;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use wasm_bindgen::prelude::*;
 
-// Generate bindings from the WIT file
-wit_bindgen::generate!({
-    path: "../../kalpixk.wit",
-    world: "core",
-});
-
-struct KalpixkCore;
-
-// Implement the exported interface
-impl exports::kalpixk::core::monitor::Guest for KalpixkCore {
-    fn extractfeatures(e: exports::kalpixk::core::monitor::Event) -> Vec<f32> {
-        let internal_event = WasmEventMetrics {
-            instruction_count: e.instructions,
-            memory_pages: e.pages,
-            fuel_consumed: e.fuel,
-            wall_time_ns: e.time,
-            entropy: e.entropy,
-            call_depth: e.depth,
-            import_calls: e.imports,
-            export_calls: e.exports,
-        };
-
-        extract_32_features(&internal_event)
-    }
-}
-
 // Global state for telemetry
 static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
-
-#[cfg(target_arch = "wasm32")]
-export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -65,6 +36,30 @@ pub fn get_security_telemetry() -> String {
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
         "active_mesh_nodes": defense_nodes::get_active_nodes().len()
     }).to_string()
+}
+
+#[wasm_bindgen]
+pub fn extract_features_wasm(
+    instructions: u64,
+    pages: u32,
+    fuel: u64,
+    time: u64,
+    entropy: f32,
+    depth: u32,
+    imports: u32,
+    exports: u32,
+) -> Vec<f32> {
+    let event = WasmEventMetrics {
+        instruction_count: instructions,
+        memory_pages: pages,
+        fuel_consumed: fuel,
+        wall_time_ns: time,
+        entropy,
+        call_depth: depth,
+        import_calls: imports,
+        export_calls: exports,
+    };
+    extract_32_features(&event)
 }
 
 #[wasm_bindgen]

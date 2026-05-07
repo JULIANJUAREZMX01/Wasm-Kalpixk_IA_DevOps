@@ -15,8 +15,8 @@ class WasmFeatureExtractor:
             self.store = Store(wasm_loader.engine)
             from wasmtime import WasiConfig; self.store.set_wasi(WasiConfig()) # Basic WASI config
             self.instance = self.linker.instantiate(self.store, self.module)
-            self.extract_fn = self.instance.exports(self.store).get("extractfeatures")
-            # Helper for memory access if needed, but extractfeatures returns a Vec which wasm-bindgen handles
+            self.extract_fn = self.instance.exports(self.store).get("extract_features_wasm")
+            # Helper for memory access if needed, but extract_features_wasm returns a Vec which wasm-bindgen handles
             # Actually wasm-bindgen exports usually take strings via some JS glue.
             # In wasmtime-py, we might need to handle the string allocation.
             logger.info("WasmFeatureExtractor initialized")
