@@ -44,8 +44,14 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=403, detail="Forbidden")
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=403, detail="Forbidden")
+        # In development, still require a key if one is defined
+        if expected_key:
+            if not api_key or not secrets.compare_digest(api_key, expected_key):
+                 raise HTTPException(status_code=403, detail="Forbidden")
+        else:
+            # Fallback to development_secret if KALPIXK_API_KEY is not set
+            if not api_key or not secrets.compare_digest(api_key, "development_secret"):
+                raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
 
 @asynccontextmanager
@@ -107,7 +113,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
         return response
 
+class VramPartitioningMiddleware(BaseHTTPMiddleware):
+    """
+    [ATLATL-ORDNANCE] VRAM Isolation v5
+    Simulates hardware isolation on AMD MI300X GPUs.
+    """
+    async def dispatch(self, request: Request, call_next):
+        # Simulate assigning a secure enclave partition to the request context
+        partition_id = f"secure_enclave_v5_{secrets.token_hex(4)}"
+        request.state.gpu_partition = partition_id
+        logger.debug(f"Assigning GPU Partition: {partition_id} to {request.client.host}")
+        return await call_next(request)
+
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(VramPartitioningMiddleware)
 
 detector = AnomalyDetector()
 monitor = WasmRuntimeMonitor()

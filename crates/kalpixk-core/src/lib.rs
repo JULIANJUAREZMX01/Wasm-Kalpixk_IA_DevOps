@@ -13,6 +13,7 @@ mod retaliation;
 mod runtime_features;
 mod security;
 mod severity;
+mod v5_trap;
 mod wasp;
 mod wast;
 use crate::event::KalpixkEvent;
@@ -56,6 +57,7 @@ export!(KalpixkCore);
 #[cfg(target_arch = "wasm32")]
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
+    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
 }
 
 #[wasm_bindgen]
@@ -200,20 +202,30 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-    // [ATLATL-ORDNANCE] Active Memory Scrambling v5
+    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
-        let mut decoy_buffer = [0u8; 64];
+        let mut decoy_buffer = [0u8; 128];
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+            v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
+        }
+
+        // Arm traps if critical threat count is high
+        if anomaly_count > 5 {
+            v5_trap::arm_traps();
+        }
+
+        if v5_trap::is_trap_active() {
+            v5_trap::execute_trap_sequence();
         }
     }
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() {
+        if security::validate_raw_log(line).is_err() {
             continue;
         }
         if let Ok(event) = parser.parse(line) {

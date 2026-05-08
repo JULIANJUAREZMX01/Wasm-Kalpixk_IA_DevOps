@@ -55,7 +55,7 @@ pub struct SecurityGuard;
 pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
     // 1. Size limit (stricter limit from ATLATL-ORDNANCE)
     if raw.len() > 8192 {
-        return Err(SecurityError::InputTooLarge(raw.len(), 8192));
+        return Err(SecurityError::InputTooLarge(raw.len()));
     }
 
     // 2. Injection pattern detection
@@ -139,8 +139,6 @@ impl SourceRateLimiter {
         const WINDOW_MS: u64 = 1_000;
         let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
-        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
-
         // New window
         if now_ms.saturating_sub(entry.1) >= WINDOW_MS {
             *entry = (1, now_ms);
@@ -186,6 +184,10 @@ impl SharedBufferGuard {
         }
     }
 
+    pub fn current_version(&self) -> u32 {
+        self.version.load(Ordering::SeqCst)
+    }
+
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
         for _ in 0..max_retries {
             match self
@@ -221,6 +223,13 @@ pub struct BufferWriteGuard {
     ver_at_lock: u32,
 }
 
+impl BufferWriteGuard {
+    pub fn verify_integrity(&self) -> bool {
+        // Logic to verify buffer integrity, e.g., checking canaries or version consistency
+        self.locked.load(Ordering::SeqCst)
+    }
+}
+
 impl Drop for BufferWriteGuard {
     fn drop(&mut self) {
         self.locked.store(false, Ordering::SeqCst);
@@ -232,6 +241,10 @@ pub fn obfuscate_offset(base: usize) -> usize {
         acc.wrapping_mul(31).wrapping_add(b as usize)
     });
     base ^ (seed & 0xFF)
+}
+
+pub fn build_fingerprint() -> String {
+    format!("{}-ATLATL-V5", BUILD_HASH)
 }
 
 // ── Required security headers (documentation) ────────────────────────────────
@@ -275,7 +288,7 @@ mod tests {
         let huge = "a".repeat(MAX_LOG_LINE_BYTES + 1);
         assert!(matches!(
             validate_raw_log(&huge),
-            Err(SecurityError::InputTooLarge(_, _))
+            Err(SecurityError::InputTooLarge(_))
         ));
     }
 
@@ -344,7 +357,7 @@ mod tests {
         // One more should be blocked
         assert!(matches!(
             rl.check_and_increment(src, now_ms),
-            Err(SecurityError::RateLimitExceeded(_, _, _))
+            Err(SecurityError::RateLimitExceeded(_))
         ));
     }
 

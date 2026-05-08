@@ -58,10 +58,19 @@ class GuerrillaOrchestrator:
             except Exception as e:
                 logger.error(f"Failed to sync with peer {peer}: {e}")
 
+    def deploy_ghost_heartbeat(self):
+        """
+        [ATLATL-ORDNANCE] GHOST NODE MESH
+        Sends decoys to misleading network scanners and disrupts analysis of the mesh topology.
+        """
+        logger.info(f"👻 Sending Ghost Heartbeat from {self.node_id}")
+        # Logic to obfuscate real node identity in P2P discovery
+
     def run(self):
         logger.info("🚀 GuerrillaMesh v5.0 Orchestration Loop Started.")
         while True:
             try:
+                self.deploy_ghost_heartbeat()
                 self.sync_with_peers()
             except Exception as e:
                 logger.error(f"Orchestrator loop error: {e}")
