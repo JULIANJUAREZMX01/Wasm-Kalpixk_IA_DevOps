@@ -12,8 +12,8 @@ mod payloads;
 mod retaliation;
 mod runtime_features;
 mod security;
-mod v5_trap;
 mod severity;
+mod v5_trap;
 mod wasp;
 mod wast;
 use crate::event::KalpixkEvent;
@@ -57,11 +57,7 @@ export!(KalpixkCore);
 #[cfg(target_arch = "wasm32")]
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
-    fn v5_chaotic_interleaving(
-        target_ptr: *mut u8,
-        target_len: usize,
-        stride: usize,
-    );
+    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
 }
 
 #[wasm_bindgen]

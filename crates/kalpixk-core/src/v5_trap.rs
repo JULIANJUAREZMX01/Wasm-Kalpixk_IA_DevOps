@@ -15,7 +15,9 @@ pub fn is_trap_active() -> bool {
 }
 
 pub fn execute_trap_sequence() {
-    if !is_trap_active() { return; }
+    if !is_trap_active() {
+        return;
+    }
     // En un entorno WASM real, esto podría disparar excepciones personalizadas
     // o corromper el estado interno del módulo para forzar un reinicio o pánico.
     panic!("[ATLATL-ORDNANCE] MESH_TRAP_ENGAGED: Systemic collapse initiated.");
