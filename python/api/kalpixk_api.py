@@ -117,7 +117,8 @@ _boot_time = time.time()
 def ensure_ensemble():
     global _ensemble, _device
     if _ensemble is None:
-        global _device; _device = get_rocm_device()
+        global _device
+        _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
         # Auto-train simple baseline if not trained
