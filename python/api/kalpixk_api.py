@@ -16,6 +16,7 @@ import time
 
 import msgpack
 import numpy as np
+import torch
 from fastapi import (
     Depends,
     FastAPI,
@@ -28,7 +29,7 @@ from fastapi import (
 from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -116,7 +117,7 @@ _boot_time = time.time()
 def ensure_ensemble():
     global _ensemble, _device
     if _ensemble is None:
-        _device = get_rocm_device()
+        global _device; _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
         # Auto-train simple baseline if not trained
@@ -261,7 +262,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "confidence": confidences[i],
         })
 
-    total_anomalies = sum(1 for s in scores if s > 0.5)
+    total_anomalies = sum(1 for s in scores if s > 0.6)
 
     return {
         "results": results,
@@ -273,8 +274,11 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 @app.post("/analyze", response_model=AnomalyResponse)
 @limiter.limit("60/minute")
 async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
-    if _ensemble is None:
-        raise HTTPException(503, "Modelo no inicializado")
+    ens = ensure_ensemble()
+
+    features_np = np.array(req.features, dtype=np.float32)
+    if features_np.ndim == 1:
+        features_np = features_np.reshape(1, -1)
 
     if features_np.shape[1] != 32:
         raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
@@ -283,7 +287,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _ = ens.predict(features_array)
     score = scores[0]
-    is_anomaly = score > 0.5
+    is_anomaly = score > 0.6
     latency = (time.time() - t0) * 1000
 
     severity = (
@@ -321,11 +325,10 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
 @limiter.limit("5/minute")
 async def train(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
     """Entrena el modelo con datos normales sintéticos (baseline)."""
-    if _ensemble is None:
-        raise HTTPException(503, "Modelo no inicializado")
+    ens = ensure_ensemble()
     normal_data = np.random.randn(payload.n_samples, 32).astype(np.float32)
     normal_data = np.clip(normal_data * 0.1 + 0.5, 0, 1)
-    _ensemble.fit(normal_data)
+    ens.fit(normal_data)
     return {"status": "trained", "n_samples": payload.n_samples, "device": str(_device)}
 
 
@@ -335,13 +338,23 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
     expected_key = os.getenv("KALPIXK_API_KEY")
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
 
-    # simple token check for WS
-    if (env == "production" or expected_key) and expected_key:
+    # Hardened: Mandatory API Key check for WebSockets
+    if env == "production":
+        if not expected_key:
+            # Fatal: Production environment must have an API Key configured
+            await ws.close(code=fastapi_status.WS_1011_INTERNAL_ERROR)
+            return
         if not token or not secrets.compare_digest(token, expected_key):
+            await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
+            return
+    else:
+        # Development: Only enforce if key is set
+        if expected_key and (not token or not secrets.compare_digest(token, expected_key)):
             await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
 
     await ws.accept()
+    ens = ensure_ensemble()
     _ws_clients.append(ws)
     try:
         while True:
@@ -349,8 +362,11 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             payload = msgpack.unpackb(data, raw=False)
             features = payload.get("features", [])
             if len(features) == 32:
-                arr = np.array([features], dtype=np.float32)
-                score, is_anomaly = _ensemble.predict(arr)
+                features_np = np.array([features], dtype=np.float32)
+                features_tensor = torch.from_numpy(features_np).to(_device)
+                scores, _, _ = ens.predict(features_tensor)
+                score = scores[0]
+                is_anomaly = score > 0.6
                 response = msgpack.packb({
                     "score": float(score),
                     "is_anomaly": bool(is_anomaly),

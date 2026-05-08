@@ -39,3 +39,8 @@
 **Vulnerability:** Resource exhaustion (DoS) risk on legacy GPU-intensive endpoints and syntax-driven service instability.
 **Learning:** Legacy APIs often lag behind primary entry points in security posture. Adding rate limiting to `python/api/kalpixk_api.py` was necessary to prevent attackers from bypassing newer, hardened APIs to target the same underlying compute resources. Also, small syntax errors in secondary modules (like `wms_connector.py`) can remain latent until they block audit log ingestion or other critical telemetry.
 **Prevention:** Apply a uniform security baseline (Auth, Headers, Rate Limiting, CORS) across all API entry points. Use automated syntax checks (`py_compile`) and linting to catch latent errors in auxiliary modules.
+
+## 2026-04-26 - Fail-Open WebSocket Authentication
+**Vulnerability:** WebSocket endpoint allowed unauthenticated access in production if `KALPIXK_API_KEY` was missing.
+**Learning:** Security checks that depend on environment variables should fail-securely (deny access) if the variable is missing in a production context, rather than falling back to an unauthenticated state.
+**Prevention:** Explicitly check for the presence of mandatory security credentials in production and abort the connection/request if they are not found.

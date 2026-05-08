@@ -12,6 +12,8 @@ import httpx
 import numpy as np
 import pytest
 
+from python.api.kalpixk_api import app
+
 BASE = "http://localhost:8000"
 
 
