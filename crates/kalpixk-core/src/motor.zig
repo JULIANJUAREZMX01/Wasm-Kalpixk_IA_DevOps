@@ -140,6 +140,34 @@ pub export fn v5_buffer_seal(buffer_ptr: [*]u8, buffer_len: usize, secret_key: u
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
+/// Rotates memory topology during runtime to disrupt memory analysis.
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
+    if (target_len < stride * 2 or stride == 0) return;
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + stride * 2 <= target_len) : (i += stride * 2) {
+        // Swap blocks
+        for (0..stride) |j| {
+            const temp = slice[i + j];
+            slice[i + j] = slice[i + stride + j];
+            slice[i + stride + j] = temp;
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_neural_decoy
+/// Generates fake tensor data to mislead attackers attempting to poison training.
+pub export fn v5_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*val| {
+        val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    }
+}
+
 /// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];

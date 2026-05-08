@@ -8,19 +8,19 @@ import { useMetricsStore } from "../stores/metricsStore";
 import { useWasmStore }    from "../stores/wasmStore";
 import React from 'react';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Design tokens (SAC_OS Military Grade) ──────────────────────────────────────
 const T = {
-  bg:      "#04060e",
-  panel:   "#080c1a",
-  surface: "#0c1124",
-  border:  "#162038",
-  amber:   "#f59e0b",
-  green:   "#10b981",
-  red:     "#ef4444",
-  blue:    "#3b82f6",
-  purple:  "#8b5cf6",
-  dim:     "#5a6b8c",
-  text:    "#a0b8d9",
+  bg:      "#050505", // Deepest black
+  panel:   "#0a0a0a",
+  surface: "#111111",
+  border:  "#222222",
+  amber:   "#ffaa00", // Industrial amber
+  green:   "#00ff88", // Cyber green
+  red:     "#ff0033", // Strike red
+  blue:    "#0088ff",
+  purple:  "#cc00ff",
+  dim:     "#444444",
+  text:    "#cccccc",
   bright:  "#ffffff",
   font:    "'JetBrains Mono', monospace",
   display: "'Syne', sans-serif",
@@ -94,16 +94,24 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre">("realtime");
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v5.0.0-atlatl initialized.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
   useEffect(() => { const t = setInterval(() => setScan((p) => (p + 1) % 100), 70); return () => clearInterval(t); }, []);
 
-  // Update chart when new alert arrives
+  // Update chart and terminal when new alert arrives
   useEffect(() => {
     if (alerts.length > prevLen.current && alerts[0]) {
+      const newAlert = alerts[0];
       prevLen.current = alerts.length;
-      setChart((p) => [...p.slice(1), { t: p[p.length - 1].t + 1, s: alerts[0].score }]);
+      setChart((p) => [...p.slice(1), { t: p[p.length - 1].t + 1, s: newAlert.score }]);
+
+      setTerminalOutput(prev => [
+        ...prev.slice(-20),
+        `[DETECT] src=${newAlert.ip} score=${newAlert.score.toFixed(4)} type=${newAlert.eventType}`,
+        newAlert.score > 0.8 ? `[WAR] CRITICAL THREAT: ${newAlert.msg}` : `[INFO] Monitoring ${newAlert.ip}`
+      ]);
     }
   }, [alerts]);
 
@@ -259,7 +267,7 @@ export default function Dashboard() {
 
       {/* ═══ CONTENT ═════════════════════════════════════════════════════════ */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
-        {tab === "realtime" && <RealtimeTab chart={chart} />}
+        {tab === "realtime" && <RealtimeTab chart={chart} terminalOutput={terminalOutput} />}
         {tab === "parsers"  && <ParsersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "mitre"    && <MitreTab />}
@@ -289,31 +297,8 @@ export default function Dashboard() {
 // TAB: REAL-TIME
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const AlertRow = React.memo(({ a, isNew }: { a: any; isNew: boolean }) => (
-  <div
-    className={isNew ? "new-row" : ""}
-    style={{
-      display: "grid", gridTemplateColumns: "52px 110px 28px 1fr 80px",
-      gap: 6, padding: "5px 6px", marginBottom: 2,
-      background: isNew ? `${scoreColor(a.score)}09` : T.surface,
-      border: `1px solid ${isNew ? `${scoreColor(a.score)}30` : T.border}`,
-      borderLeft: `3px solid ${scoreColor(a.score)}`,
-      transition: "background 1.2s",
-    }}>
-    <span style={{ color: T.dim, fontSize: 9 }}>{fmt(a.ts)}</span>
-    <span style={{ color: T.text, fontSize: 9, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.ip}</span>
-    <span style={{ color: T.dim, fontSize: 9 }}>{a.geo.slice(0, 3)}</span>
-    <span style={{ color: T.bright, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.msg}</span>
-    <div style={{ textAlign: "right" }}>
-      <div style={{ color: scoreColor(a.score), fontSize: 8, letterSpacing: 1 }}>{scoreLabel(a.score)}</div>
-      <div style={{ color: scoreColor(a.score), fontSize: 12, fontWeight: 700 }}>
-        {(a.score * 100).toFixed(1)}%
-      </div>
-    </div>
-  </div>
-));
 
-function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
+function RealtimeTab({ chart, terminalOutput }: { chart: { t: number; s: number }[], terminalOutput: string[] }) {
   const alerts  = useAlertStore((s) => s.alerts);
   const metrics = useMetricsStore();
 
@@ -392,11 +377,11 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
         </div>
       </div>
 
-      {/* ── COL 2: ALERT FEED + CHART ──────────────────────────────────────────── */}
+      {/* ── COL 2: ALERT FEED + TERMINAL + CHART ──────────────────────────────────── */}
       <div style={{ background: T.panel, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Alert feed */}
-        <div style={{ flex: 1, overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ height: "40%", overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", borderBottom: `1px solid ${T.border}` }}>
           <Label text="LIVE THREAT FEED" accent={T.red} />
           <div style={{
             display: "grid", gridTemplateColumns: "52px 110px 28px 1fr 80px",
@@ -410,6 +395,16 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
               <AlertRow key={a.id} a={a} isNew={i === 0} />
             ))}
           </div>
+        </div>
+
+        {/* Command Terminal (SAC_OS Style) */}
+        <div style={{ flex: 1, overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", background: "#000", borderBottom: `1px solid ${T.border}` }}>
+            <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
+            <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green }}>
+                {terminalOutput.map((line, i) => (
+                    <div key={i} style={{ marginBottom: 2 }}>{line}</div>
+                ))}
+            </div>
         </div>
 
         {/* Anomaly chart */}

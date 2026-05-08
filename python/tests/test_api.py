@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from api.kalpixk_api import app
 
 client = TestClient(app)
+client.headers = {"X-Kalpixk-Key": "development_secret"}
 
 def test_status_endpoint():
     response = client.get("/status")
