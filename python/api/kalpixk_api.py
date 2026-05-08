@@ -340,8 +340,16 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
     expected_key = os.getenv("KALPIXK_API_KEY")
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
 
-    # simple token check for WS
-    if (env == "production" or expected_key) and expected_key:
+    # Hardened fail-secure authentication for WS
+    if env == "production":
+        if not expected_key:
+            # En producción es un error crítico no tener la llave configurada
+            await ws.close(code=fastapi_status.WS_1011_INTERNAL_ERROR)
+            return
+        if not token or not secrets.compare_digest(token, expected_key):
+            await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
+            return
+    elif expected_key:
         if not token or not secrets.compare_digest(token, expected_key):
             await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
@@ -349,13 +357,19 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
     await ws.accept()
     _ws_clients.append(ws)
     try:
+        ens = ensure_ensemble()
         while True:
             data = await ws.receive_bytes()
             payload = msgpack.unpackb(data, raw=False)
             features = payload.get("features", [])
             if len(features) == 32:
                 arr = np.array([features], dtype=np.float32)
-                score, is_anomaly = _ensemble.predict(arr)
+                # Convert to tensor and fix result unpacking
+                features_array = torch.from_numpy(arr).to(_device)
+                scores, _, _ = ens.predict(features_array)
+                score = scores[0]
+                is_anomaly = score > 0.5
+
                 response = msgpack.packb({
                     "score": float(score),
                     "is_anomaly": bool(is_anomaly),
@@ -363,7 +377,11 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
                 })
                 await ws.send_bytes(response)
     except WebSocketDisconnect:
-        _ws_clients.remove(ws)
+        if ws in _ws_clients:
+            _ws_clients.remove(ws)
+    except Exception:
+        if ws in _ws_clients:
+            _ws_clients.remove(ws)
 
 
 @app.get("/features")
