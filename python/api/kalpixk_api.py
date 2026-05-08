@@ -16,6 +16,7 @@ import time
 
 import msgpack
 import numpy as np
+import torch
 from fastapi import (
     Depends,
     FastAPI,
@@ -114,7 +115,8 @@ _boot_time = time.time()
 
 
 def ensure_ensemble():
-    global _ensemble, _device
+    global _ensemble
+    global _device
     if _ensemble is None:
         _device = get_rocm_device()
         log_gpu_info(_device)
@@ -135,7 +137,7 @@ def ensure_ensemble():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
-                _ensemble.autoencoder._threshold = max(0.1, max_err * 2.0)
+                _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
     return _ensemble
 
 
@@ -273,13 +275,16 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 @app.post("/analyze", response_model=AnomalyResponse)
 @limiter.limit("60/minute")
 async def analyze(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
-    if _ensemble is None:
-        raise HTTPException(503, "Modelo no inicializado")
+    ens = ensure_ensemble()
+
+    t0 = time.time()
+    features_np = np.array(req.features, dtype=np.float32)
+    if features_np.ndim == 1:
+        features_np = features_np.reshape(1, -1)
 
     if features_np.shape[1] != 32:
         raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
 
-    t0 = time.time()
     features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _ = ens.predict(features_array)
     score = scores[0]
