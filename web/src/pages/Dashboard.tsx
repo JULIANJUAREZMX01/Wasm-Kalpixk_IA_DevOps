@@ -289,7 +289,7 @@ export default function Dashboard() {
 // TAB: REAL-TIME
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const AlertRow = React.memo(({ a, isNew }: { a: any; isNew: boolean }) => (
+const RealTimeAlertRow = React.memo(({ a, isNew }: { a: any; isNew: boolean }) => (
   <div
     className={isNew ? "new-row" : ""}
     style={{
@@ -407,7 +407,7 @@ function RealtimeTab({ chart }: { chart: { t: number; s: number }[] }) {
           </div>
           <div style={{ flex: 1, overflowY: "auto", paddingTop: 4 }}>
             {alerts.map((a, i) => (
-              <AlertRow key={a.id} a={a} isNew={i === 0} />
+              <RealTimeAlertRow key={a.id} a={a} isNew={i === 0} />
             ))}
           </div>
         </div>
