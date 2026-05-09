@@ -2,7 +2,6 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const analyze_and_retaliate: (a: number, b: number) => [number, number];
-// @ts-ignore
 export const cabi_post_kalpixk_core_kalpixkmonitor_extractfeatures: (a: number) => void;
 export const compute_ueba_features: (a: number, b: number) => [number, number];
 export const extract_features_legacy: (a: number, b: number) => [number, number];
@@ -10,7 +9,6 @@ export const get_feature_names: () => [number, number];
 export const get_global_blacklist_wasm: () => [number, number];
 export const get_security_telemetry: () => [number, number];
 export const health_check: () => [number, number];
-// @ts-ignore
 export const kalpixk_core_kalpixkmonitor_extractfeatures: (a: bigint, b: number, c: bigint, d: bigint, e: number, f: number, g: number, h: number) => number;
 export const mesh_heartbeat: (a: number, b: number) => [number, number];
 export const parse_log_line: (a: number, b: number, c: number, d: number) => [number, number];
@@ -26,6 +24,6 @@ export const __externref_table_alloc: () => number;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-export const __wbindgen_free: (a: number, b: number, c: number) => void;
-export const __externref_drop_slice: (a: number, b: number) => void;
+export const __wbindgen_free: (a: number, b: number) => void;
+export const __externref_drop_slice: (a: number) => void;
 export const __wbindgen_start: () => void;
