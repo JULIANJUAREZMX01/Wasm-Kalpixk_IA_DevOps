@@ -251,7 +251,11 @@ fn anomaly_hints_in_unit_interval() {
     let hints = batch["anomaly_hints"].as_array().unwrap();
     for h in hints {
         let v = h.as_f64().unwrap();
-        assert!((0.0..=1.0).contains(&v), "anomaly_hint={} must be in [0, 1]", v);
+        assert!(
+            (0.0..=1.0).contains(&v),
+            "anomaly_hint={} must be in [0, 1]",
+            v
+        );
     }
 }
 
