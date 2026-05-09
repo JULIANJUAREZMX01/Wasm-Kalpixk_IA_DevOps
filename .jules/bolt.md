@@ -19,3 +19,7 @@
 ## 2024-04-16 - [List Rendering Optimization with React.memo]
 **Learning:** In a real-time SIEM dashboard, rendering prepended lists with inline complex components (like alert streams) causes React to repeatedly re-render the entire list of O(N) components on every tick when a new event arrives. This creates a rendering bottleneck due to constant DOM updates for elements that have not changed.
 **Action:** Always use stable unique keys (like unique alert IDs) for frequently updated lists and extract the list item into a separate component wrapped with `React.memo()` to skip re-rendering rows that haven`t changed.
+
+## 2024-05-20 - [React.memo for Heavy Child Components with High-Frequency Intervals]
+**Learning:** When a parent component uses high-frequency intervals (e.g., `setInterval` for a clock or animation scanline running every 70ms-1000ms), it triggers continuous top-down render cascades. If heavy, static or independently-managed child components (like Dashboard tabs) are not memoized, they re-render constantly, consuming significant CPU and degrading performance.
+**Action:** Always extract and wrap heavy child components (like distinct UI regions or tabs) in `React.memo()` when their parent component utilizes high-frequency interval state updates, ensuring the render cascade stops at the memoized boundary.

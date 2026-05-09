@@ -298,7 +298,7 @@ export default function Dashboard() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 
-function RealtimeTab({ chart, terminalOutput }: { chart: { t: number; s: number }[], terminalOutput: string[] }) {
+const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: { chart: { t: number; s: number }[], terminalOutput: string[] }) {
   const alerts  = useAlertStore((s) => s.alerts);
   const metrics = useMetricsStore();
 
@@ -517,12 +517,14 @@ function RealtimeTab({ chart, terminalOutput }: { chart: { t: number; s: number 
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.chart === nextProps.chart && prevProps.terminalOutput === nextProps.terminalOutput;
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: WASM PARSERS
 // ═══════════════════════════════════════════════════════════════════════════════
-function ParsersTab() {
+const ParsersTab = React.memo(function ParsersTab() {
   const [input,  setInput]  = useState("Apr 04 03:22:11 cedis sshd[1234]: Failed password for root from 185.220.101.42 port 44321 ssh2");
   const [source, setSource] = useState("syslog");
   const [result, setResult] = useState<null | Record<string, unknown>>(null);
@@ -629,12 +631,12 @@ function ParsersTab() {
       </div>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: BENCHMARK
 // ═══════════════════════════════════════════════════════════════════════════════
-function BenchmarkTab() {
+const BenchmarkTab = React.memo(function BenchmarkTab() {
   const metrics = useMetricsStore();
 
   const rows = [
@@ -693,12 +695,12 @@ function BenchmarkTab() {
       </div>
     </div>
   );
-}
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: MITRE ATT&CK
 // ═══════════════════════════════════════════════════════════════════════════════
-function MitreTab() {
+const MitreTab = React.memo(function MitreTab() {
   const TECHNIQUES = [
     { id: "T1110",   name: "Brute Force",               tactic: "Credential Access", count: 14, severity: 0.85 },
     { id: "T1078",   name: "Valid Accounts",             tactic: "Defense Evasion",   count: 8,  severity: 0.72 },
@@ -751,4 +753,4 @@ function MitreTab() {
       </div>
     </div>
   );
-}
+});
