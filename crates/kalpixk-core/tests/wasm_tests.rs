@@ -17,7 +17,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 
 fn parse_event(raw: &str, source: &str) -> serde_json::Value {
     let result = kalpixk_core::parse_log_line(raw, source)
-        .unwrap_or_else(|_| panic!("parse_log_line should succeed for source={}", source));
+        .unwrap_or_else(|| panic!("parse_log_line should succeed for source={}", source));
     serde_json::from_str(&result).expect("result should be valid JSON")
 }
 
