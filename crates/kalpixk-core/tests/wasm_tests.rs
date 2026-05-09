@@ -16,9 +16,8 @@ wasm_bindgen_test_configure!(run_in_browser);
 // ── Helper: parse JSON result from parse_log_line ─────────────────────────────
 
 fn parse_event(raw: &str, source: &str) -> serde_json::Value {
-    let result = kalpixk_core::parse_log_line(raw, source).unwrap_or_else(|_| {
-        panic!("parse_log_line should succeed for source={}", source)
-    });
+    let result = kalpixk_core::parse_log_line(raw, source)
+        .unwrap_or_else(|_| panic!("parse_log_line should succeed for source={}", source));
     serde_json::from_str(&result).expect("result should be valid JSON")
 }
 
@@ -251,7 +250,11 @@ fn anomaly_hints_in_unit_interval() {
     let hints = batch["anomaly_hints"].as_array().unwrap();
     for h in hints {
         let v = h.as_f64().unwrap();
-        assert!((0.0..=1.0).contains(&v), "anomaly_hint={} must be in [0, 1]", v);
+        assert!(
+            (0.0..=1.0).contains(&v),
+            "anomaly_hint={} must be in [0, 1]",
+            v
+        );
     }
 }
 
