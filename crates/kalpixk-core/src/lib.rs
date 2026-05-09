@@ -225,7 +225,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     }
 
     for line in &lines {
-        if !security::validate_raw_log(line).is_ok() {
+        if security::validate_raw_log(line).is_err() {
             continue;
         }
         if let Ok(event) = parser.parse(line) {

@@ -137,7 +137,6 @@ impl SourceRateLimiter {
     /// `Ok(())` if within limit, `Err(RateLimitExceeded)` if over.
     pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
         const WINDOW_MS: u64 = 1_000;
-        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
         let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
