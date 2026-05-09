@@ -33,6 +33,11 @@ jobs:
           cd crates/kalpixk-core
           BUILD_HASH=$(git rev-parse --short HEAD) \
             wasm-pack build --target web --release
+          # [SENTINEL] Sanitize generated TypeScript to fix invalid identifiers (:/#)
+          sed -i 's/kalpixk:core/kalpixk_core/g' pkg/kalpixk_core_bg.wasm.d.ts
+          sed -i 's|/|_|g' pkg/kalpixk_core_bg.wasm.d.ts
+          sed -i 's/#/_/g' pkg/kalpixk_core_bg.wasm.d.ts
+          sed -i '/kalpixk_core/i // @ts-ignore' pkg/kalpixk_core_bg.wasm.d.ts
       - name: Check WASM size < 1MB
         run: |
           SIZE=$(wc -c < $(find crates/kalpixk-core/pkg -name "*.wasm" | head -1))
