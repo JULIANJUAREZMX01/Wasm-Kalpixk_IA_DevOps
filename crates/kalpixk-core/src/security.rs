@@ -145,7 +145,10 @@ impl SourceRateLimiter {
     pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
         const WINDOW_MS: u64 = 1_000;
 
-        let entry = self.counts.entry(source.to_string()).or_insert((0u32, now_ms));
+        let entry = self
+            .counts
+            .entry(source.to_string())
+            .or_insert((0u32, now_ms));
 
         // New window
         if now_ms.saturating_sub(entry.1) >= WINDOW_MS {
