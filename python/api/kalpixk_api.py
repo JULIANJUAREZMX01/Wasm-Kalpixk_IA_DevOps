@@ -142,12 +142,12 @@ def ensure_ensemble():
 
 
 class LogRequest(BaseModel):
-    features: list[float] | list[list[float]] = Field(...)
+    features: list[float] | list[list[float]] = Field(..., max_length=1000)
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
-    event_ids: list[str] | None = Field(None)
+    event_ids: list[str] | None = Field(None, max_length=1000)
     source_type: str | None = Field(None)
-    metadata: list[dict] | None = Field(None)
+    metadata: list[dict] | None = Field(None, max_length=1000)
 
     @field_validator("features")
     @classmethod

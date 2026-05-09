@@ -127,7 +127,11 @@ class WmsConnector:
         assert mode in ("file", "db2", "mock"), f"Invalid mode: {mode}"
         self.mode           = mode
         self.audit_log_path = audit_log_path
-        self.batch_size     = batch_size
+        # Hardened: Validate batch_size to prevent SQL injection in _stream_db2_query
+        if not isinstance(batch_size, int) or batch_size <= 0:
+            logger.warning(f"Invalid batch_size {batch_size}, defaulting to 100")
+            batch_size = 100
+        self.batch_size     = min(batch_size, 5000)
         self._connection    = None
 
         if mode == "db2":
