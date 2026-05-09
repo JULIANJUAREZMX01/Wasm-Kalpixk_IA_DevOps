@@ -94,7 +94,7 @@ class KalpixkAutoencoder:
     DEFAULT_EPOCHS      = 100
     DEFAULT_BATCH_SIZE  = 512
     DEFAULT_LR          = 1e-3
-    THRESHOLD_PERCENTILE = 95   # Top 5% error → anomaly
+    THRESHOLD_PERCENTILE = 99   # Top 1% error → anomaly
 
     # ── Init ──────────────────────────────────────────────────────────────────
 

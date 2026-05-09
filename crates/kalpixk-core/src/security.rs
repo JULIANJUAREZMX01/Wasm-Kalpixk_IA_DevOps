@@ -79,6 +79,13 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
         (b"system(", "system_call"),
         (b"base64", "obfuscation_marker"),
         (b"${jndi:", "log4shell"),
+        (b"curl ", "exfil_attempt"),
+        (b"wget ", "exfil_attempt"),
+        (b"nc -e", "reverse_shell"),
+        (b"/etc/passwd", "lfi_attempt"),
+        (b"/etc/shadow", "lfi_attempt"),
+        (b"chmod +x", "malware_staging"),
+        (b"Set-ExecutionPolicy", "powershell_hardening_bypass"),
     ];
 
     let bytes = raw.as_bytes();
@@ -137,8 +144,6 @@ impl SourceRateLimiter {
     /// `Ok(())` if within limit, `Err(RateLimitExceeded)` if over.
     pub fn check_and_increment(&mut self, source: &str, now_ms: u64) -> Result<(), SecurityError> {
         const WINDOW_MS: u64 = 1_000;
-        let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
-
         let entry = self.counts.entry(source.to_string()).or_insert((0, now_ms));
 
         // New window

@@ -234,10 +234,17 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
-                  await fetch("/api/v1/retaliate/v5_strike", {
+                  const res = await fetch("/api/v1/retaliate/v5_strike", {
                     method: "POST",
                     headers: { "X-Kalpixk-Key": apiKey }
                   });
+                  const data = await res.json();
+                  setTerminalOutput(prev => [
+                    ...prev,
+                    `[STRIKE] PHASE BLACK ENGAGED AGAINST TARGET.`,
+                    `[STRIKE] STATUS: ${data.v5_status}`,
+                    ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
+                  ]);
                   alert("PHASE BLACK ENGAGED: SYSTEMIC COLLAPSE INITIATED");
                 } catch (e) {
                   console.error("Strike failed", e);
@@ -397,13 +404,25 @@ function RealtimeTab({ chart, terminalOutput }: { chart: { t: number; s: number 
           </div>
         </div>
 
-        {/* Command Terminal (SAC_OS Style) */}
+        {/* Command Terminal (SAC_OS Style) — ATLATL-ORDNANCE v5 Hardened */}
         <div style={{ flex: 1, overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", background: "#000", borderBottom: `1px solid ${T.border}` }}>
-            <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
-            <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
+              <span style={{ color: T.red, fontSize: 8, letterSpacing: 2, fontWeight: 800 }} className="blink">
+                ● ATLATL_V5_ACTIVE
+              </span>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#020202" }}>
                 {terminalOutput.map((line, i) => (
-                    <div key={i} style={{ marginBottom: 2 }}>{line}</div>
+                    <div key={i} style={{
+                      marginBottom: 2,
+                      color: line.includes("[WAR]") || line.includes("[CRITICAL]") ? T.red :
+                             line.includes("[RETALIATE]") || line.includes("[STRIKE]") ? T.amber : T.green
+                    }}>
+                      <span style={{ opacity: 0.5 }}>{fmt(new Date())}</span> {line}
+                    </div>
                 ))}
+                <div style={{ color: T.amber, marginTop: 4 }} className="blink">_</div>
             </div>
         </div>
 
