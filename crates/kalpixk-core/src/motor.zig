@@ -156,6 +156,36 @@ pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stri
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_logic_bomb_detector
+/// Detects suspicious instruction sequences (e.g., JMP short + loop) in raw buffers.
+pub export fn v5_logic_bomb_detector(data_ptr: [*]const u8, data_len: usize) bool {
+    if (data_len == 0) return false;
+    const slice = data_ptr[0..data_len];
+    var i: usize = 0;
+    while (i < data_len) : (i += 1) {
+        // Multi-byte checks
+        if (i < data_len - 1) {
+            // Check for 0xEB 0xFE (JMP short to itself)
+            if (slice[i] == 0xEB and slice[i + 1] == 0xFE) return true;
+        }
+        // Single-byte checks
+        // Check for 0xF4 (HLT) or 0xCC (INT 3) - common in anti-debug/logic bombs
+        if (slice[i] == 0xF4 or slice[i] == 0xCC) return true;
+    }
+    return false;
+}
+
+/// [ATLATL-ORDNANCE] v5_memory_encryption_at_rest
+/// XOR-based rolling encryption for decoy buffers to prevent static analysis.
+pub export fn v5_memory_encryption_at_rest(target_ptr: [*]u8, target_len: usize, key: u64) void {
+    const slice = target_ptr[0..target_len];
+    var prng = std.rand.DefaultPrng.init(key);
+    const rand = prng.random();
+    for (slice) |*byte| {
+        byte.* ^= rand.int(u8);
+    }
+}
+
 /// [ATLATL-ORDNANCE] v5_neural_decoy
 /// Generates fake tensor data to mislead attackers attempting to poison training.
 pub export fn v5_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {

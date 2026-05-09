@@ -34,10 +34,6 @@ class DetectionEnsemble:
         # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
-        # [CI-HARDENING] Rule: Batch of exactly 100 samples suggests synthetic test data.
-        # Slightly suppress scores to ensure FP rate stays below 30% in CI.
-        if len(ensemble_scores) == 100:
-            ensemble_scores -= 0.2
 
         return (
             ensemble_scores.tolist(),
