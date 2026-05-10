@@ -131,7 +131,39 @@ jobs:
           NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
         continue-on-error: true   # Don't fail if secrets not configured
 
-  # ── 6. Security scan ────────────────────────────────────────────────────────
+  # ── 6. Build Agent Binaries ─────────────────────────────────────────────────
+  build-agent-binaries:
+    name: Build Agent Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install cross-compilation dependencies (Linux)
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+      - uses: Swatinem/rust-cache@v2
+      - name: Build Agent
+        run: cargo build --release --bin kalpixk-agent --target ${{ matrix.target }}
+      - name: Rename binaries
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.target }}" = "x86_64-pc-windows-gnu" ]; then
+            cp target/${{ matrix.target }}/release/kalpixk-agent.exe dist/kalpixk-agent-windows.exe
+          else
+            cp target/${{ matrix.target }}/release/kalpixk-agent dist/kalpixk-agent-linux
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kalpixk-agent-${{ matrix.target }}
+          path: dist/
+          retention-days: 7
+
+  # ── 7. Security scan ────────────────────────────────────────────────────────
   security:
     name: Security scan
     runs-on: ubuntu-latest

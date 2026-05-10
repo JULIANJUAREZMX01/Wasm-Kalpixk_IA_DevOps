@@ -1,0 +1,5 @@
+api_url = "http://localhost:8000"
+api_key = ""
+watch_dir = "/tmp"  # Windows: C:\\Users
+interval_secs = 2
+log_file = "kalpixk-alerts.log"
