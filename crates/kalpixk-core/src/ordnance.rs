@@ -66,10 +66,10 @@ impl MacuahuitlStrike {
         getrandom::getrandom(&mut seed).unwrap_or_default();
         let mut rng = u64::from_le_bytes(seed);
 
-        for i in 0..len {
+        for byte in buffer.iter_mut() {
             rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
             let op = (rng >> 32) % 10;
-            buffer[i] = match op {
+            *byte = match op {
                 0 => 0xEB, // JMP short
                 1 => 0xFE, // loop
                 2 => 0xF4, // HLT

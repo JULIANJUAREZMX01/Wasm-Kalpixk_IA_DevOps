@@ -102,7 +102,7 @@ mod tests {
         GhostOrchestrator::register_ghost("ALPHA", 0xABC);
         let h1 = GhostOrchestrator::generate_ghost_heartbeat("ALPHA");
         // Simulate time pass
-        let h2 = GhostOrchestrator::generate_ghost_heartbeat("ALPHA");
+        let _h2 = GhostOrchestrator::generate_ghost_heartbeat("ALPHA");
         // They might be same if called in same second, but generally should be different or at least start with prefix
         assert!(h1.starts_with("GHOST-ALPHA-"));
     }
