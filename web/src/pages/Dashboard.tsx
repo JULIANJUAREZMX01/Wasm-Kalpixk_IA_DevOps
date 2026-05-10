@@ -87,6 +87,7 @@ export default function Dashboard() {
   const alerts        = useAlertStore((s) => s.alerts);
   const criticalCount = useAlertStore((s) => s.criticalCount);
   const totalDetected = useAlertStore((s) => s.totalDetected);
+  const isConnected   = useAlertStore((s) => s.isConnected);
   const metrics       = useMetricsStore();
   const wasm          = useWasmStore();
 
@@ -189,10 +190,10 @@ export default function Dashboard() {
         {/* Stats row */}
         <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
           {[
-            { l: "DETECTED",  v: (totalDetected + 1247).toLocaleString(), c: T.amber },
+            { l: "DETECTED",  v: totalDetected.toLocaleString(), c: T.amber },
             { l: "CRITICAL",  v: criticalCount,           c: T.red   },
-            { l: "GPU LAT",   v: `${metrics.gpuLatencyMs}ms`, c: T.green },
-            { l: "THROUGHPUT",v: `${(metrics.gpuThroughput/1e6).toFixed(2)}M/s`, c: T.green },
+            { l: "GPU LAT",   v: metrics.gpuLatencyMs > 0 ? `${metrics.gpuLatencyMs}ms` : "—", c: T.green },
+            { l: "THROUGHPUT",v: metrics.gpuThroughput > 0 ? `${(metrics.gpuThroughput/1e6).toFixed(2)}M/s` : `${useWasmStore.getState?.()?.eventsPerSecond ?? 0} EPS`, c: T.green },
           ].map(({ l, v, c }) => (
             <div key={l} style={{ textAlign: "right" }}>
               <div style={{ color: T.dim, fontSize: 8, letterSpacing: 1 }}>{l}</div>
@@ -259,15 +260,29 @@ export default function Dashboard() {
               EXECUTAR: PHASE BLACK
             </button>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: wasm.isLoaded ? T.green : T.amber,
-              animation: wasm.isLoaded ? "none" : "pulse 1.5s infinite",
-            }}/>
-            <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
-              WASM {wasm.isLoaded ? `v${wasm.version}` : "v5.0.0-atlatl"}
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* WebSocket status */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: isConnected ? T.green : T.amber,
+                animation: isConnected ? "none" : "pulse 1.5s infinite",
+              }}/>
+              <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
+                {isConnected ? "BACKEND LIVE" : "DEMO MODE"}
+              </span>
+            </div>
+            {/* WASM status */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: wasm.isLoaded ? T.blue : T.dim,
+                animation: wasm.isLoaded ? "none" : "pulse 2s infinite",
+              }}/>
+              <span style={{ color: T.dim, fontSize: 9, letterSpacing: 1 }}>
+                WASM {wasm.isLoaded ? `v${wasm.version}` : "loading"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
