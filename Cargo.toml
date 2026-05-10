@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/kalpixk-core"]
+members = ["crates/kalpixk-core", "crates/kalpixk-agent"]
 resolver = "2"
 
 [workspace.package]
