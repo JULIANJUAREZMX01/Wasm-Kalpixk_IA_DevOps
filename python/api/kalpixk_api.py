@@ -51,10 +51,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # -- Security & Rate Limiting --
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
@@ -146,7 +142,8 @@ class LogRequest(BaseModel):
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
     event_ids: list[str] | None = Field(None, max_length=1000)
-    source_type: str | None = Field(None)
+    # SECURITY: Added max_length to prevent memory exhaustion via oversized string payloads
+    source_type: str | None = Field(None, max_length=100)
     metadata: list[dict] | None = Field(None, max_length=1000)
 
     @field_validator("features")
@@ -196,11 +193,11 @@ class AnomalyResponse(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    ensure_ensemble()
+    # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
         "version": "5.0.0-atlatl",
-        "device": str(_device),
+        "device": str(_device) if _device is not None else "not_initialized",
         "ensemble_version": "5.0.0-atlatl",
     }
 

@@ -39,3 +39,8 @@
 **Vulnerability:** Resource exhaustion (DoS) risk on legacy GPU-intensive endpoints and syntax-driven service instability.
 **Learning:** Legacy APIs often lag behind primary entry points in security posture. Adding rate limiting to `python/api/kalpixk_api.py` was necessary to prevent attackers from bypassing newer, hardened APIs to target the same underlying compute resources. Also, small syntax errors in secondary modules (like `wms_connector.py`) can remain latent until they block audit log ingestion or other critical telemetry.
 **Prevention:** Apply a uniform security baseline (Auth, Headers, Rate Limiting, CORS) across all API entry points. Use automated syntax checks (`py_compile`) and linting to catch latent errors in auxiliary modules.
+
+## 2026-05-10 - Health Check DoS and Binary Asset Integrity
+**Vulnerability:** Unauthenticated DoS via expensive operations in health checks and unintended modification of binary model files during testing.
+**Learning:** Health check endpoints are often exposed without authentication for monitoring purposes. If these endpoints trigger resource-intensive tasks (e.g., model initialization/training), they become an easy DoS vector. Additionally, backend integration tests that perform training may overwrite production model weights in the `models/` directory, which can lead to unverified or corrupted models being committed if not carefully managed.
+**Prevention:** Keep health checks lightweight and ensure they don't trigger state changes or heavy computation. Use `pytest` fixtures to mock model training or ensure that tests use temporary directories for any artifacts they generate to avoid polluting the codebase.
