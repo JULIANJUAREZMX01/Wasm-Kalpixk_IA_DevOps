@@ -155,6 +155,7 @@ class DetectionEnsemble:
         if model_path.exists():
             import pickle
             with open(model_path, "rb") as f:
+                # SECURITY: pickle.load is insecure if the file is untrusted.
                 logger.info(f"Cargando IsolationForest desde {model_path}")
                 return pickle.load(f)
         return None
@@ -163,7 +164,8 @@ class DetectionEnsemble:
         model_path = MODELS_DIR / "autoencoder.pt"
         if model_path.exists():
             model = _build_autoencoder().to(self.device)
-            model.load_state_dict(torch.load(model_path, map_location=self.device))
+            # Hardened: weights_only=True prevents insecure deserialization
+            model.load_state_dict(torch.load(model_path, map_location=self.device, weights_only=True))
             model.eval()
             logger.info(f"Cargando Autoencoder desde {model_path}")
             return model

@@ -39,3 +39,8 @@
 **Vulnerability:** Resource exhaustion (DoS) risk on legacy GPU-intensive endpoints and syntax-driven service instability.
 **Learning:** Legacy APIs often lag behind primary entry points in security posture. Adding rate limiting to `python/api/kalpixk_api.py` was necessary to prevent attackers from bypassing newer, hardened APIs to target the same underlying compute resources. Also, small syntax errors in secondary modules (like `wms_connector.py`) can remain latent until they block audit log ingestion or other critical telemetry.
 **Prevention:** Apply a uniform security baseline (Auth, Headers, Rate Limiting, CORS) across all API entry points. Use automated syntax checks (`py_compile`) and linting to catch latent errors in auxiliary modules.
+
+## 2026-05-10 - Insecure Deserialization in AI Models
+**Vulnerability:** Use of `pickle.load()` and `torch.load(..., weights_only=False)` for model loading.
+**Learning:** AI models are often stored in formats like Pickle or PyTorch's default format, both of which can execute arbitrary code during deserialization. While `pickle` is standard for scikit-learn, PyTorch (since 2.4+) supports a `weights_only=True` mode that significantly reduces the attack surface by only allowing a limited set of safe types.
+**Prevention:** Always use `weights_only=True` when loading PyTorch models from potentially untrusted sources. For formats like Pickle, ensure strict file system permissions and verify the integrity (e.g., via HMAC/hashes) of model files before loading.
