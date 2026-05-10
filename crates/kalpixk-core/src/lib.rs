@@ -135,7 +135,8 @@ pub fn mesh_obfuscate_v5(node_id: &str, seed: u64) -> String {
     serde_json::json!({
         "ghost_heartbeat": ghost_node::GhostOrchestrator::generate_ghost_heartbeat(node_id),
         "mesh_topology": mesh
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -232,7 +233,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
-            v5_systemic_collapse(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0xDEADBEEF);
+            v5_systemic_collapse(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0xDEADBEEF,
+            );
         }
 
         // Arm traps if critical threat count is high

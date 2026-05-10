@@ -7,9 +7,9 @@
 //! 2. Lightweight Ghost Heartbeats
 //! 3. P2P Threat Vector Propagation (Silent Sentry Mode)
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
-use serde::{Deserialize, Serialize};
 
 lazy_static::lazy_static! {
     /// Ghost Nodes Registry - Tracks hidden peers in the mesh.
@@ -30,12 +30,15 @@ impl GhostOrchestrator {
     /// Registers or updates a ghost node in the mesh.
     pub fn register_ghost(node_id: &str, seed: u64) {
         let mut registry = GHOST_REGISTRY.lock().unwrap();
-        registry.insert(node_id.to_string(), GhostNodeInfo {
-            node_id: node_id.to_string(),
-            last_seen: chrono::Utc::now().timestamp(),
-            obfuscation_seed: seed,
-            status: "GHOST_ACTIVE".to_string(),
-        });
+        registry.insert(
+            node_id.to_string(),
+            GhostNodeInfo {
+                node_id: node_id.to_string(),
+                last_seen: chrono::Utc::now().timestamp(),
+                obfuscation_seed: seed,
+                status: "GHOST_ACTIVE".to_string(),
+            },
+        );
     }
 
     /// Generates an obfuscated heartbeat signal for the node.
@@ -55,7 +58,8 @@ impl GhostOrchestrator {
     pub fn get_active_ghosts() -> Vec<String> {
         let registry = GHOST_REGISTRY.lock().unwrap();
         let now = chrono::Utc::now().timestamp();
-        registry.iter()
+        registry
+            .iter()
             .filter(|(_, info)| now - info.last_seen < 120)
             .map(|(id, _)| id.clone())
             .collect()

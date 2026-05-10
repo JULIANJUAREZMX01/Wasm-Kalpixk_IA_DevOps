@@ -251,7 +251,12 @@ impl AtomicByteGuard {
         }
     }
 
-    pub fn validate_and_swap(&self, offset: usize, expected: u8, new_val: u8) -> Result<(), SecurityError> {
+    pub fn validate_and_swap(
+        &self,
+        offset: usize,
+        expected: u8,
+        new_val: u8,
+    ) -> Result<(), SecurityError> {
         if offset >= self.buffer.len() {
             return Err(SecurityError::InputTooLarge(offset));
         }

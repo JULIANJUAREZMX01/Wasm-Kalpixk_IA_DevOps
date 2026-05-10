@@ -49,7 +49,7 @@ impl MacuahuitlStrike {
         // Recursive pointer simulation (Nested ZIP structures)
         for _ in 0..10 {
             buffer.extend_from_slice(&[0x50, 0x4b, 0x03, 0x04]); // Nested Header
-            // Fill with high-entropy garbage to prevent simple deduplication
+                                                                 // Fill with high-entropy garbage to prevent simple deduplication
             let mut junk = [0u8; 64];
             getrandom::getrandom(&mut junk).unwrap_or_default();
             buffer.extend_from_slice(&junk);
@@ -89,7 +89,9 @@ impl MacuahuitlStrike {
         let mut buffer = Vec::new();
 
         // EICAR
-        buffer.extend_from_slice(b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*");
+        buffer.extend_from_slice(
+            b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*",
+        );
 
         // Cobalt Strike Malleable C2 Markers (Conceptual)
         buffer.extend_from_slice(b"\x00\x00\x00\x01\x00\x00\x00\x02CS_BEACON_V5");
