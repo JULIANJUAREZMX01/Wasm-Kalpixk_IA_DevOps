@@ -6,7 +6,9 @@ mod defense_nodes;
 mod entropy;
 mod event;
 mod features;
+mod ghost_node;
 mod metrics;
+mod ordnance;
 mod parsers;
 mod payloads;
 mod retaliation;
@@ -58,6 +60,8 @@ export!(KalpixkCore);
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
+    fn v5_systemic_collapse(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v5_c2_poisoning(target_ptr: *mut u8, target_len: usize, offset: usize);
 }
 
 #[wasm_bindgen]
@@ -116,6 +120,22 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn wasm_strike_v5(target_id: &str) -> String {
+    let payload = ordnance::MacuahuitlStrike::orchestrate_strike_v5(target_id);
+    serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string())
+}
+
+#[wasm_bindgen]
+pub fn mesh_obfuscate_v5(node_id: &str, seed: u64) -> String {
+    ghost_node::GhostOrchestrator::register_ghost(node_id, seed);
+    let mesh = ghost_node::GhostOrchestrator::get_obfuscated_mesh();
+    serde_json::json!({
+        "ghost_heartbeat": ghost_node::GhostOrchestrator::generate_ghost_heartbeat(node_id),
+        "mesh_topology": mesh
+    }).to_string()
 }
 
 #[wasm_bindgen]
@@ -212,6 +232,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
+            v5_systemic_collapse(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0xDEADBEEF);
         }
 
         // Arm traps if critical threat count is high
@@ -313,7 +334,10 @@ pub fn health_check() -> String {
         "wit_implemented": true,
         "atlatl_ordnance": "v5.0.0-atlatl",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "ordnance_loaded": true,
+        "ghost_mesh_active": true,
+        "version_tag": security::ATLATL_V5_SIGNATURE
     })
     .to_string()
 }

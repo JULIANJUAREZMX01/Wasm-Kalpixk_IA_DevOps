@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 pub const MAX_LOG_LINE_BYTES: usize = 65_536;
 pub const MAX_EVENTS_PER_SEC_PER_SOURCE: u32 = 1_000;
+pub const ATLATL_V5_SIGNATURE: &str = "ATLATL-ORDNANCE-V5-ALPHA";
 
 const BUILD_HASH: &str = match option_env!("BUILD_HASH") {
     Some(h) => h,
@@ -86,6 +87,18 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
         (b"/etc/shadow", "lfi_attempt"),
         (b"chmod +x", "malware_staging"),
         (b"Set-ExecutionPolicy", "powershell_hardening_bypass"),
+        // [ATLATL-ORDNANCE] Stage 4 Aggressive Signatures (Exceptions for SIEM monitoring)
+        // (b"cobaltstrike", "c2_framework"),
+        // (b"meterpreter", "c2_framework"),
+        // (b"empire", "c2_framework"),
+        // (b"brute-ratel", "c2_framework"),
+        // (b"sliver", "c2_framework"),
+        (b"mimidrv", "driver_exploitation"),
+        (b"ProcDump", "lsass_dump"),
+        (b"MiniDump", "lsass_dump"),
+        (b"vssadmin delete shadows", "ransomware_prelude"),
+        (b"cipher /w", "ransomware_wipe"),
+        (b"wevtutil cl", "log_wiping"),
     ];
 
     let bytes = raw.as_bytes();
@@ -218,6 +231,47 @@ impl SharedBufferGuard {
             std::hint::spin_loop();
         }
         Err(SecurityError::AtomicConflict)
+    }
+}
+
+/// [ATLATL-ORDNANCE] AtomicByteGuard
+/// Provides byte-level atomic validation for high-security SharedArrayBuffer segments.
+pub struct AtomicByteGuard {
+    buffer: Arc<Vec<std::sync::atomic::AtomicU8>>,
+}
+
+impl AtomicByteGuard {
+    pub fn new(size: usize) -> Self {
+        let mut v = Vec::with_capacity(size);
+        for _ in 0..size {
+            v.push(std::sync::atomic::AtomicU8::new(0));
+        }
+        Self {
+            buffer: Arc::new(v),
+        }
+    }
+
+    pub fn validate_and_swap(&self, offset: usize, expected: u8, new_val: u8) -> Result<(), SecurityError> {
+        if offset >= self.buffer.len() {
+            return Err(SecurityError::InputTooLarge(offset));
+        }
+
+        match self.buffer[offset].compare_exchange(
+            expected,
+            new_val,
+            Ordering::SeqCst,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(SecurityError::AtomicConflict),
+        }
+    }
+
+    pub fn get_byte(&self, offset: usize) -> u8 {
+        if offset >= self.buffer.len() {
+            return 0;
+        }
+        self.buffer[offset].load(Ordering::Relaxed)
     }
 }
 

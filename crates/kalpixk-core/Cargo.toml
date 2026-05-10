@@ -20,6 +20,7 @@ getrandom = { version = "0.2", features = ["js"] }
 thiserror = "1.0"
 log = "0.4"
 chrono = { version = "0.4", features = ["wasmbind"] }
+hex = "0.4.3"
 
 # Solo disponible fuera de WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

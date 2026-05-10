@@ -10,17 +10,17 @@ import React from 'react';
 
 // ── Design tokens (SAC_OS Military Grade) ──────────────────────────────────────
 const T = {
-  bg:      "#050505", // Deepest black
-  panel:   "#0a0a0a",
-  surface: "#111111",
-  border:  "#222222",
-  amber:   "#ffaa00", // Industrial amber
-  green:   "#00ff88", // Cyber green
-  red:     "#ff0033", // Strike red
-  blue:    "#0088ff",
-  purple:  "#cc00ff",
-  dim:     "#444444",
-  text:    "#cccccc",
+  bg:      "#020202", // Absolute black
+  panel:   "#080808",
+  surface: "#0d0d0d",
+  border:  "#1a1a1a",
+  amber:   "#ffb800", // High-vis military amber
+  green:   "#00ffa3", // Toxic green
+  red:     "#ff0044", // Plasma red
+  blue:    "#00a3ff",
+  purple:  "#d600ff",
+  dim:     "#555555",
+  text:    "#e0e0e0",
   bright:  "#ffffff",
   font:    "'JetBrains Mono', monospace",
   display: "'Syne', sans-serif",
@@ -408,11 +408,14 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
         <div style={{ flex: 1, overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", background: "#000", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
-              <span style={{ color: T.red, fontSize: 8, letterSpacing: 2, fontWeight: 800 }} className="blink">
-                ● ATLATL_V5_ACTIVE
-              </span>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <span style={{ color: T.green, fontSize: 8, letterSpacing: 2 }}>MESH_GHOST_MODE: ENABLED</span>
+                <span style={{ color: T.red, fontSize: 8, letterSpacing: 2, fontWeight: 800 }} className="blink">
+                  ● ATLATL_V5_ACTIVE
+                </span>
+              </div>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#020202" }}>
+            <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#000000" }}>
                 {terminalOutput.map((line, i) => (
                     <div key={i} style={{
                       marginBottom: 2,

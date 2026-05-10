@@ -121,6 +121,34 @@ pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, 
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_systemic_collapse
+/// High-entropy memory flooding designed to exhaust attacker's investigative resources.
+/// Floods the target buffer with non-deterministic noise.
+pub export fn v5_systemic_collapse(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        // High entropy generation
+        byte.* = rand.int(u8) ^ @as(u8, @truncate(seed));
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_c2_poisoning
+/// Injects known-bad signatures (EICAR, Cobalt Strike) into exfiltrated buffers
+/// to trigger the attacker's own internal security alarms (EDR/AV).
+pub export fn v5_c2_poisoning(target_ptr: [*]u8, target_len: usize, offset: usize) void {
+    if (target_len < offset + 68) return;
+    const slice = target_ptr[0..target_len];
+
+    // EICAR Test File Signature
+    const eicar = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+    for (eicar, 0..) |char, i| {
+        slice[offset + i] = char;
+    }
+}
+
 /// [ATLATL-ORDNANCE] v5_buffer_seal
 /// Protects SharedArrayBuffer segments with rolling canaries.
 pub export fn v5_buffer_seal(buffer_ptr: [*]u8, buffer_len: usize, secret_key: u64) void {
