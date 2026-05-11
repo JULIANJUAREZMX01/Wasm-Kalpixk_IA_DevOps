@@ -96,6 +96,8 @@ class KalpixkIsolationForest:
             return
         try:
             with open(MODEL_PATH, "rb") as f:
+                # SECURITY: pickle.load is insecure if the file is untrusted.
+                # In production, ensure model files are protected by OS permissions.
                 state = pickle.load(f)
             self._model      = state["model"]
             self._backend    = state.get("backend", self._backend)
