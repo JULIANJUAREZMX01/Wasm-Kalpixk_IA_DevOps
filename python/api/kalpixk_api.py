@@ -39,7 +39,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
-from python.db.database import get_alerts, init_db, insert_alert
+from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
 
@@ -288,6 +288,8 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 
     results = []
     total_anomalies = 0
+    alerts_to_insert = []
+
     for i in range(len(scores)):
         score = float(scores[i])
         results.append({
@@ -315,7 +317,10 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
                 "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
                 "source": req.source or "agent"
             }
-            await insert_alert(alert_data)
+            alerts_to_insert.append(alert_data)
+
+    if alerts_to_insert:
+        await insert_alerts(alerts_to_insert)
 
     return {
         "results": results,
