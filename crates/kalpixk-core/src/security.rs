@@ -195,7 +195,9 @@ impl AtomicByteGuard {
     }
 
     pub fn validate_and_update(&self, index: usize, expected: u32, new_val: u32) -> bool {
-        if index >= 32 { return false; }
+        if index >= 32 {
+            return false;
+        }
         self.data[index]
             .compare_exchange(expected, new_val, Ordering::SeqCst, Ordering::Relaxed)
             .is_ok()
@@ -235,7 +237,10 @@ impl SharedBufferGuard {
                 Ok(_) => {
                     let ver = self.version.fetch_add(1, Ordering::SeqCst);
                     // Update integrity hash on each lock to rotate internal state
-                    let new_hash = self.integrity_hash.load(Ordering::Relaxed).wrapping_add(i + 1);
+                    let new_hash = self
+                        .integrity_hash
+                        .load(Ordering::Relaxed)
+                        .wrapping_add(i + 1);
                     self.integrity_hash.store(new_hash, Ordering::Relaxed);
 
                     return Ok(BufferWriteGuard {

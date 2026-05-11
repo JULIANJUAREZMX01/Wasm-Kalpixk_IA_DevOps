@@ -5,10 +5,11 @@ python/api/honeypot.py
 Captures detailed telemetry from suspicious sources.
 """
 
-from fastapi import APIRouter, Request, Header
-from loguru import logger
 import time
 import uuid
+
+from fastapi import APIRouter, Header, Request
+from loguru import logger
 
 router = APIRouter(prefix="/api/v1/honeypot")
 
@@ -20,19 +21,10 @@ async def trap_exfiltration(request: Request, x_atlatl_token: str = Header(None)
     """
     event_id = str(uuid.uuid4())
     client_ip = request.client.host
-    headers = dict(request.headers)
 
     logger.critical(f"🪤  TRAP TRIGGERED: IP={client_ip} EventID={event_id}")
 
     # Forensic data collection (simulation)
-    forensics = {
-        "event_id": event_id,
-        "client_ip": client_ip,
-        "timestamp": time.time(),
-        "headers": headers,
-        "user_agent": headers.get("user-agent"),
-    }
-
     # Store for analysis
     # with open(f"forensics_{event_id}.json", "w") as f:
     #     json.dump(forensics, f)

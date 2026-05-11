@@ -30,11 +30,11 @@ from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
+from python.api.honeypot import router as honeypot_router
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
-from python.api.honeypot import router as honeypot_router
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -59,7 +59,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
-async def verify_api_key(api_key: str = Security(api_key_header)):
+async def verify_api_key(request: Request, api_key: str = Security(api_key_header)):
     """
     [ATLATL-ORDNANCE] Secure constant-time API Key verification.
     Ensures fail-secure behavior in production and protects against timing attacks.
