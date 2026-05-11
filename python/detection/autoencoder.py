@@ -109,7 +109,8 @@ class KalpixkAutoencoder:
         if not MODEL_PATH.exists():
             return
         try:
-            state = torch.load(MODEL_PATH, map_location=self.device, weights_only=False)
+            # Hardened: weights_only=True prevents insecure deserialization
+            state = torch.load(MODEL_PATH, map_location=self.device, weights_only=True)
             self.net.load_state_dict(state["model_state"])
             self._threshold  = float(state.get("threshold", 0.05))
             self._is_trained = True
