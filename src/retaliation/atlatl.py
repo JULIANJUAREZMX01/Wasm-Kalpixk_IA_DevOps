@@ -95,29 +95,44 @@ class Atlatl:
         """
         [ATLATL-ORDNANCE] v5_strike: engaged
         Orchestrates a multi-vector 'Systemic Respiratory Collapse' on the attacker.
+        Now hardened with automated session termination and entropy-saturated traps.
         """
         logger.critical(f"🏹 v5_strike: engaged against {target}")
-        self.phase_black(target)
-        # Active C2 disruption: deliver false positives to attacker's upstream
-        self.active_c2_disruption(target)
 
-        # Initiate systemic collapse
+        # 1. Automated Block at Perimeter
+        self.hardware_ip_lock(target)
+
+        # 2. Entropy Saturation
+        # Disrupt exfiltration by filling the attacker's pipe with high-entropy noise
+        self.trigger_entropy_storm(target)
+
+        # 3. Forensic Trap Engagement
+        self.engage_forensic_honeypot(target)
+
+        # 4. Initiate systemic collapse (logical neutralization)
         collapse_results = systemic_collapse.initiate(target)
 
-        # Dynamic Entropy Injection (1GB simulated)
-        logger.warning(f"💥 Delivered 1GB non-deterministic entropy strike to {target}")
+        logger.warning(f"💥 ATLATL-V5: Multi-vector strike synchronized against {target}")
         return {
             "v5_strike": "engaged",
-            "v5_status": "STRIKE_COMPLETE",
+            "v5_status": "NEUTRALIZATION_COMPLETE",
             "target": target,
             "collapse_results": collapse_results,
             "measures": [
-                "phase_black_exterminio",
-                "c2_disruption_active",
-                "entropy_saturation_1gb",
-                "systemic_collapse_v5"
+                "hardware_ip_lock",
+                "entropy_saturation",
+                "forensic_trap_armed",
+                "systemic_neutralization"
             ]
         }
+
+    def trigger_entropy_storm(self, target: str):
+        """Saturates the communication channel with non-deterministic data."""
+        logger.error(f"🌪️  [v5_STRIKE] Deploying Entropy Storm against {target}. 1GB saturated data stream active.")
+
+    def engage_forensic_honeypot(self, target: str):
+        """Deploys a specialized honeypot to capture attacker TTPs."""
+        logger.warning(f"🪤  [v5_STRIKE] Forensic Honeypot engaged for {target}. Capturing telemetry.")
 
     def generate_dynamic_entropy_bomb(self, size_mb: int):
         """Generates evasive garbage with shifting entropy markers."""

@@ -34,6 +34,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
+from python.api.honeypot import router as honeypot_router
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -59,19 +60,40 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
+    """
+    [ATLATL-ORDNANCE] Secure constant-time API Key verification.
+    Ensures fail-secure behavior in production and protects against timing attacks.
+    """
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
+    development_secret = "atlatl_dev_666_unsafe"
 
-    if env == "production":
-        if not expected_key:
-            from loguru import logger
-            logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-        if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
-    else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+    # Enforce a key in production
+    if env == "production" and not expected_key:
+        from loguru import logger
+        logger.critical("🚨 SECURITY BREACH: KALPIXK_API_KEY not set in production!")
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="System hardening active: Mission aborted due to missing credentials."
+        )
+
+    # Use a dummy key for comparison if none exists to mitigate timing attacks
+    effective_expected = expected_key if expected_key else (
+        development_secret if env != "production" else secrets.token_urlsafe(32)
+    )
+
+    provided_key = api_key if api_key else ""
+
+    if not secrets.compare_digest(provided_key, effective_expected):
+        from loguru import logger
+        # Use request object to get client info if possible, otherwise use get_remote_address helper
+        client_info = f"{request.client.host if request else 'unknown'}"
+        logger.warning(f"🛡️ ATLATL-V5: Blocked unauthorized access attempt from {client_info}")
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_403_FORBIDDEN,
+            detail="Access denied. ATLATL-ORDNANCE is watching."
+        )
+
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -83,6 +105,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.include_router(honeypot_router)
 
 cors_origins_str = os.getenv("CORS_ORIGINS")
 env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))

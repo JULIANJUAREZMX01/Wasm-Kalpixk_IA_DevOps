@@ -106,16 +106,21 @@ class KalpixkAutoencoder:
         self._try_load()
 
     def _try_load(self):
+        """
+        [ATLATL-ORDNANCE] Secure Autoencoder Loading.
+        Uses weights_only=True to mitigate insecure deserialization.
+        """
         if not MODEL_PATH.exists():
             return
         try:
-            state = torch.load(MODEL_PATH, map_location=self.device, weights_only=False)
+            # [SEC-V5] Using weights_only=True for hardened loading
+            state = torch.load(MODEL_PATH, map_location=self.device, weights_only=True)
             self.net.load_state_dict(state["model_state"])
             self._threshold  = float(state.get("threshold", 0.05))
             self._is_trained = True
-            logger.info(f"Autoencoder loaded from {MODEL_PATH} (threshold={self._threshold:.4f})")
+            logger.info(f"🏹 ATLATL-V5: Autoencoder loaded from {MODEL_PATH} (threshold={self._threshold:.4f})")
         except Exception as e:
-            logger.error(f"Failed to load autoencoder: {e} — using fresh model")
+            logger.error(f"💀 ATLATL-V5: Failed to load autoencoder: {e} — using fresh model")
 
     # ── Training ─────────────────────────────────────────────────────────────
 

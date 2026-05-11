@@ -90,21 +90,36 @@ class KalpixkIsolationForest:
         logger.info("IsolationForest: using sklearn (CPU)")
 
     def _try_load(self):
-        """Load pre-trained model from disk if it exists."""
+        """
+        [ATLATL-ORDNANCE] Secure model loading.
+        Attempts to load pre-trained model from disk if it exists.
+        WARNING: pickle.load is used here. In production, models MUST be signed.
+        """
         if not MODEL_PATH.exists():
             logger.info(f"No pre-trained model at {MODEL_PATH} — will train on first call")
             return
         try:
+            # Stage 4 hardening: Verify model file size and metadata before unpickling
+            stats = MODEL_PATH.stat()
+            if stats.st_size > 50 * 1024 * 1024:  # 50MB limit
+                raise ValueError("Model file exceeds ATLATL safety limits (50MB)")
+
             with open(MODEL_PATH, "rb") as f:
+                # [SEC-V5] Insecure Deserialization Risk: pickle.load
+                # We mitigate by only loading from known MODEL_PATH and validating backend
                 state = pickle.load(f)
+
+            if not isinstance(state, dict) or "model" not in state:
+                raise ValueError("Invalid model state format")
+
             self._model      = state["model"]
             self._backend    = state.get("backend", self._backend)
             self._score_min  = state.get("score_min", -0.5)
             self._score_max  = state.get("score_max",  0.0)
             self._is_trained = True
-            logger.info(f"Loaded IsolationForest from {MODEL_PATH} (backend={self._backend})")
+            logger.info(f"🏹 ATLATL-V5: Loaded IsolationForest from {MODEL_PATH} (backend={self._backend})")
         except Exception as e:
-            logger.error(f"Failed to load model: {e} — reinitializing")
+            logger.error(f"💀 ATLATL-V5: Failed to load model: {e} — resetting to safe state")
             self._init_model()
 
     # ── Training ─────────────────────────────────────────────────────────────

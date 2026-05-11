@@ -8,19 +8,19 @@ import { useMetricsStore } from "../stores/metricsStore";
 import { useWasmStore }    from "../stores/wasmStore";
 import React from 'react';
 
-// ── Design tokens (SAC_OS Military Grade) ──────────────────────────────────────
+// ── Design tokens (SAC_OS Military Grade - ATLATL-ORDNANCE) ─────────────────────
 const T = {
-  bg:      "#050505", // Deepest black
-  panel:   "#0a0a0a",
-  surface: "#111111",
-  border:  "#222222",
-  amber:   "#ffaa00", // Industrial amber
-  green:   "#00ff88", // Cyber green
-  red:     "#ff0033", // Strike red
-  blue:    "#0088ff",
-  purple:  "#cc00ff",
-  dim:     "#444444",
-  text:    "#cccccc",
+  bg:      "#020202", // Absolute black
+  panel:   "#080808",
+  surface: "#0c0c0c",
+  border:  "#1a1a1a",
+  amber:   "#ffb800", // High-vis amber
+  green:   "#00ffa3", // Toxic green
+  red:     "#ff0044", // Plasma red
+  blue:    "#00d1ff",
+  purple:  "#bd00ff",
+  dim:     "#333333",
+  text:    "#999999",
   bright:  "#ffffff",
   font:    "'JetBrains Mono', monospace",
   display: "'Syne', sans-serif",
@@ -165,11 +165,11 @@ export default function Dashboard() {
             <span style={{ fontSize: 13 }}>🏹</span>
           </div>
           <div>
-            <div className="glow-amber" style={{ fontFamily: T.display, fontWeight: 800, fontSize: 16, letterSpacing: 4, color: threatLevel === "CRITICAL" ? T.red : T.amber }}>
+            <div className="glow-amber" style={{ fontFamily: T.display, fontWeight: 900, fontSize: 18, letterSpacing: 6, color: threatLevel === "CRITICAL" ? T.red : T.amber }}>
               ATLATL-ORDNANCE
             </div>
-            <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v5.0.0-atlatl · AMD MI300X MESH
+            <div style={{ color: T.dim, fontSize: 9, letterSpacing: 3, fontWeight: 600 }}>
+              GUERRILLA ALGORÍTMICA · v5.0.0-ATLATL · AMD MI300X MESH · GHOST_MODE: ENABLED
             </div>
           </div>
         </div>

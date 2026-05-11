@@ -108,16 +108,33 @@ pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
 /// [ATLATL-ORDNANCE] v5_active_memory_scrambling
 /// Disrupts debugger attachment by rotating memory patterns and causing
 /// non-deterministic execution in tracer contexts.
+/// Structural Hardening: Extended logic for multi-vector scrambling.
 pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
     var prng = std.rand.DefaultPrng.init(entropy_seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
-    for (slice) |*byte| {
-        // Rotate byte bits based on random seed
-        const shift = rand.int(u3) % 8;
-        byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
-        byte.* ^= rand.int(u8);
+    for (slice, 0..) |*byte, i| {
+        // Phase 1: Bit rotation
+        const shift = rand.int(u3);
+        if (shift > 0) {
+            byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
+        }
+
+        // Phase 2: Positional XOR with seeded entropy
+        byte.* ^= rand.int(u8) ^ @as(u8, @truncate(i));
+
+        // Phase 3: Non-linear transformation based on parity
+        if (i % 2 == 0) {
+            byte.* = byte.* +% rand.int(u8);
+        } else {
+            byte.* = byte.* ^% rand.int(u8);
+        }
+
+        // Phase 4: Conditional inversion
+        if (rand.boolean()) {
+            byte.* = ~byte.*;
+        }
     }
 }
 
