@@ -5,7 +5,6 @@ python/api/honeypot.py
 Captures detailed telemetry from suspicious sources.
 """
 
-import time
 import uuid
 
 from fastapi import APIRouter, Header, Request

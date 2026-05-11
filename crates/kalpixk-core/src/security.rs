@@ -188,9 +188,8 @@ pub struct AtomicByteGuard {
 
 impl AtomicByteGuard {
     pub fn new() -> Self {
-        const DEFAULT: AtomicU32 = AtomicU32::new(0);
         Self {
-            data: [DEFAULT; 32],
+            data: std::array::from_fn(|_| AtomicU32::new(0)),
         }
     }
 
