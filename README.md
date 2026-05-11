@@ -4,6 +4,16 @@
 
 Kalpixk is a high-performance Security Information and Event Management (SIEM) engine designed for the protection of critical infrastructure, specifically optimized for the **Manhattan WMS at CEDIS Cancún 427**. It leverages WebAssembly (WASM) for efficient edge parsing and AMD MI300X GPUs for massive neural inference throughput.
 
+## ⚡ Quick Install
+
+```bash
+# Linux/macOS
+curl -sL https://raw.githubusercontent.com/JULIANJUAREZMX01/Wasm-Kalpixk_IA_DevOps/main/install.sh | bash
+
+# Windows (PowerShell as Administrator)
+irm https://raw.githubusercontent.com/JULIANJUAREZMX01/Wasm-Kalpixk_IA_DevOps/main/install.ps1 | iex
+```
+
 ## 🚀 Quick Links
 - **[Live Command Center](https://julianjuarezmx01.github.io/Wasm-Kalpixk_IA_DevOps/dashboard/index.html)**: Zero-install dashboard with real-time telemetry.
 - **[Benchmark Results](BENCHMARK_RESULTS.md)**: Detailed metrics on AMD MI300X performance.
