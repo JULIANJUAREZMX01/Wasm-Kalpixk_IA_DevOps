@@ -7,16 +7,6 @@ from python.db.database import get_alerts, init_db, insert_alert
 
 DB_TEST_PATH = "./test_kalpixk_alerts.db"
 
-@pytest.fixture(autouse=True)
-async def setup_db():
-    os.environ["KALPIXK_DB_PATH"] = DB_TEST_PATH
-    if os.path.exists(DB_TEST_PATH):
-        os.remove(DB_TEST_PATH)
-    await init_db()
-    yield
-    if os.path.exists(DB_TEST_PATH):
-        os.remove(DB_TEST_PATH)
-
 @pytest.mark.asyncio
 async def test_init_db_creates_table():
     async with aiosqlite.connect(DB_TEST_PATH) as db:
