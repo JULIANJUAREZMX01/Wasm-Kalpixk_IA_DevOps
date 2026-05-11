@@ -34,8 +34,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
+from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
@@ -63,11 +63,6 @@ app = FastAPI(
     docs_url="/docs",
     lifespan=lifespan,
 )
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# -- Security & Rate Limiting --
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
