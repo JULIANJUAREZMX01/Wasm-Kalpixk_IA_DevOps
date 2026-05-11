@@ -1,7 +1,9 @@
 import json
 import os
-import aiosqlite
 from datetime import datetime
+
+import aiosqlite
+
 
 def get_db_path():
     return os.getenv("KALPIXK_DB_PATH", "./kalpixk_alerts.db")

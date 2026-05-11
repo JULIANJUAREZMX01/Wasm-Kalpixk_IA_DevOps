@@ -1,7 +1,9 @@
 import os
-import pytest
+
 import aiosqlite
-from python.db.database import init_db, insert_alert, get_alerts
+import pytest
+
+from python.db.database import get_alerts, init_db, insert_alert
 
 DB_TEST_PATH = "./test_kalpixk_alerts.db"
 

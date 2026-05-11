@@ -13,6 +13,7 @@ import os
 import secrets
 import sys
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import msgpack
@@ -34,14 +35,13 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from contextlib import asynccontextmanager
 from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
+from python.db.database import get_alerts, init_db, insert_alert
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
-from python.db.database import init_db, insert_alert, get_alerts
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -63,6 +63,11 @@ app = FastAPI(
     docs_url="/docs",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# -- Security & Rate Limiting --
+limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
