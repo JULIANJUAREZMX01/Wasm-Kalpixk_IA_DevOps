@@ -1,0 +1,92 @@
+import json
+import os
+from datetime import datetime
+
+import aiosqlite
+
+
+def get_db_path():
+    return os.getenv("KALPIXK_DB_PATH", "./kalpixk_alerts.db")
+
+async def init_db():
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS alerts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              ts TEXT NOT NULL,           -- ISO8601 timestamp
+              ip TEXT,
+              anomaly_score REAL NOT NULL,
+              event_type TEXT,
+              severity TEXT,              -- LOW / HIGH / CRITICAL
+              technique TEXT,
+              confidence REAL,
+              features_json TEXT,         -- JSON array of 32 floats (optional, for forensics)
+              source TEXT DEFAULT 'agent' -- 'agent' or 'browser'
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts DESC)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity)")
+        await db.commit()
+
+async def insert_alert(alert_dict):
+    async with aiosqlite.connect(get_db_path()) as db:
+        # Convert features_json if it is a list
+        features = alert_dict.get("features_json")
+        if isinstance(features, list):
+            alert_dict["features_json"] = json.dumps(features)
+
+        # Ensure timestamp if not provided
+        if "ts" not in alert_dict:
+            alert_dict["ts"] = datetime.utcnow().isoformat()
+
+        columns = ", ".join(alert_dict.keys())
+        placeholders = ", ".join([":" + k for k in alert_dict.keys()])
+        query = f"INSERT INTO alerts ({columns}) VALUES ({placeholders})"
+
+        await db.execute(query, alert_dict)
+        await db.commit()
+
+async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    db_path = get_db_path()
+    query = "SELECT * FROM alerts WHERE 1=1"
+    params = []
+
+    if severity_filter:
+        query += " AND severity = ?"
+        params.append(severity_filter)
+
+    if since_ts:
+        query += " AND ts >= ?"
+        params.append(since_ts)
+
+    query += " ORDER BY ts DESC LIMIT ?"
+    params.append(limit)
+
+    async with aiosqlite.connect(db_path) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(query, params) as cursor:
+            rows = await cursor.fetchall()
+            alerts = []
+            for row in rows:
+                alert = dict(row)
+                if alert.get("features_json"):
+                    try:
+                        alert["features_json"] = json.loads(alert["features_json"])
+                    except Exception:
+                        pass
+                alerts.append(alert)
+
+            # Get total count
+            count_query = "SELECT COUNT(*) FROM alerts WHERE 1=1"
+            count_params = []
+            if severity_filter:
+                count_query += " AND severity = ?"
+                count_params.append(severity_filter)
+            if since_ts:
+                count_query += " AND ts >= ?"
+                count_params.append(since_ts)
+
+            async with db.execute(count_query, count_params) as count_cursor:
+                total = (await count_cursor.fetchone())[0]
+
+            return alerts, total

@@ -13,6 +13,8 @@ import os
 import secrets
 import sys
 import time
+from contextlib import asynccontextmanager
+from datetime import datetime
 
 import msgpack
 import numpy as np
@@ -37,15 +39,29 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
+from python.db.database import get_alerts, init_db, insert_alert
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
 
 limiter = Limiter(key_func=get_remote_address)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        await init_db()
+    except Exception as e:
+        from loguru import logger
+        logger.error(f"Failed to initialize database: {e}")
+    yield
+    # Shutdown
+
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
     version="5.0.0-atlatl",
     docs_url="/docs",
+    lifespan=lifespan,
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -230,6 +246,22 @@ async def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
     }
 
 
+@app.get("/api/alerts")
+@limiter.limit("30/minute")
+async def get_kalpixk_alerts(
+    request: Request,
+    limit: int = 100,
+    severity: str | None = None,
+    since: str | None = None,
+    api_key: str = Depends(verify_api_key)
+):
+    if limit > 500:
+        limit = 500
+
+    alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
+    return {"alerts": alerts, "total": total}
+
+
 @app.post("/api/detect")
 @limiter.limit("60/minute")
 async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depends(verify_api_key)):
@@ -255,15 +287,35 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
     latency = (time.time() - t0) * 1000
 
     results = []
+    total_anomalies = 0
     for i in range(len(scores)):
-        score = scores[i]
+        score = float(scores[i])
         results.append({
             "anomaly_score": score,
             "technique": techniques[i],
-            "confidence": confidences[i],
+            "confidence": float(confidences[i]),
         })
 
-    total_anomalies = sum(1 for s in scores if s > 0.5)
+        if score > 0.5:
+            total_anomalies += 1
+            severity = (
+                "CRITICAL" if score > 0.8
+                else "HIGH" if score > 0.6
+                else "LOW"
+            )
+            # Persist alert
+            alert_data = {
+                "ts": datetime.utcnow().isoformat(),
+                "ip": request.client.host if request.client else "unknown",
+                "anomaly_score": score,
+                "event_type": req.source_type,
+                "severity": severity,
+                "technique": techniques[i],
+                "confidence": float(confidences[i]),
+                "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
+                "source": req.source or "agent"
+            }
+            await insert_alert(alert_data)
 
     return {
         "results": results,
@@ -297,6 +349,20 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
         else "MEDIUM" if score > 0.4
         else "LOW"
     )
+
+    # Persist alert if anomaly
+    if is_anomaly:
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": float(score),
+            "event_type": req.source_type,
+            "severity": severity,
+            "technique": "unknown", # /analyze endpoint doesn't return technique currently
+            "features_json": req.features,
+            "source": req.source or "agent"
+        }
+        await insert_alert(alert_data)
 
     # Broadcast a clientes WebSocket conectados
     if _ws_clients and is_anomaly:
@@ -367,13 +433,26 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
                 # Convert to tensor and fix result unpacking
                 features_array = torch.from_numpy(arr).to(_device)
                 scores, _, _ = ens.predict(features_array)
-                score = scores[0]
+                score = float(scores[0])
                 is_anomaly = score > 0.5
+                severity = "HIGH" if score > 0.6 else "LOW"
+
+                if is_anomaly:
+                    alert_data = {
+                        "ts": datetime.utcnow().isoformat(),
+                        "ip": ws.client.host if ws.client else "unknown",
+                        "anomaly_score": score,
+                        "event_type": "websocket_stream",
+                        "severity": severity,
+                        "features_json": features,
+                        "source": "agent"
+                    }
+                    await insert_alert(alert_data)
 
                 response = msgpack.packb({
-                    "score": float(score),
+                    "score": score,
                     "is_anomaly": bool(is_anomaly),
-                    "severity": "HIGH" if score > 0.6 else "LOW",
+                    "severity": severity,
                 })
                 await ws.send_bytes(response)
     except WebSocketDisconnect:
