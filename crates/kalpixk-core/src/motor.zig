@@ -186,6 +186,32 @@ pub export fn v5_memory_encryption_at_rest(target_ptr: [*]u8, target_len: usize,
     }
 }
 
+/// [ATLATL-ORDNANCE] v6_polymorphic_memory_shield
+/// Rotates memory signatures and obfuscates internal pointers via
+/// non-deterministic XOR cascades. This breaks pattern matching in debuggers.
+pub export fn v6_polymorphic_memory_shield(target_ptr: [*]u8, target_len: usize, drift: u64) void {
+    if (target_len == 0) return;
+    const slice = target_ptr[0..target_len];
+    var prng = std.rand.DefaultPrng.init(drift);
+    const rand = prng.random();
+
+    // Stage 1: Cascade XOR
+    var cascade: u8 = @truncate(drift);
+    for (slice) |*byte| {
+        cascade = cascade ^ byte.* ^ rand.int(u8);
+        byte.* = cascade;
+    }
+
+    // Stage 2: Bitwise Rotation with dynamic stride
+    const stride = (rand.int(u8) % 4) + 1;
+    for (slice, 0..) |*byte, i| {
+        if (i % stride == 0) {
+            const rot = rand.int(u3);
+            byte.* = (byte.* << @intCast(rot)) | (byte.* >> @intCast(8 - rot));
+        }
+    }
+}
+
 /// [ATLATL-ORDNANCE] v5_neural_decoy
 /// Generates fake tensor data to mislead attackers attempting to poison training.
 pub export fn v5_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {

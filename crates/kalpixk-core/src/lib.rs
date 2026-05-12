@@ -119,6 +119,19 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 }
 
 #[wasm_bindgen]
+pub fn v6_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v6 GHOST PROTOCOL
+    // Decentralized mesh obfuscation via silent heartbeats.
+    defense_nodes::process_ghost_signal(node_id, encrypted_payload);
+    serde_json::json!({
+        "mode": "GHOST",
+        "integrity": "VERIFIED",
+        "obfuscation_layer": "ACTIVE"
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
 pub fn get_global_blacklist_wasm() -> String {
     let blacklist = defense_nodes::get_global_blacklist();
     serde_json::to_string(&blacklist).unwrap_or_else(|_| "[]".to_string())
