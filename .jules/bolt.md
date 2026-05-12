@@ -23,3 +23,6 @@
 ## 2024-05-20 - [React.memo for Heavy Child Components with High-Frequency Intervals]
 **Learning:** When a parent component uses high-frequency intervals (e.g., `setInterval` for a clock or animation scanline running every 70ms-1000ms), it triggers continuous top-down render cascades. If heavy, static or independently-managed child components (like Dashboard tabs) are not memoized, they re-render constantly, consuming significant CPU and degrading performance.
 **Action:** Always extract and wrap heavy child components (like distinct UI regions or tabs) in `React.memo()` when their parent component utilizes high-frequency interval state updates, ensuring the render cascade stops at the memoized boundary.
+## 2024-05-21 - [Optimize API insertions with bulk executemany]
+**Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
+**Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.

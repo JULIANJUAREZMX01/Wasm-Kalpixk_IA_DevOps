@@ -90,3 +90,26 @@ async def get_alerts(limit=100, severity_filter=None, since_ts=None):
                 total = (await count_cursor.fetchone())[0]
 
             return alerts, total
+
+
+async def insert_alerts(alerts_list):
+    if not alerts_list:
+        return
+
+    db_path = get_db_path()
+    async with aiosqlite.connect(db_path) as db:
+        for alert_dict in alerts_list:
+            features = alert_dict.get("features_json")
+            if isinstance(features, list):
+                alert_dict["features_json"] = json.dumps(features)
+            if "ts" not in alert_dict:
+                alert_dict["ts"] = datetime.utcnow().isoformat()
+
+        # Assuming all dicts have the same keys (which is the case for batch insertion)
+        first_alert = alerts_list[0]
+        columns = ", ".join(first_alert.keys())
+        placeholders = ", ".join([":" + k for k in first_alert.keys()])
+        query = f"INSERT INTO alerts ({columns}) VALUES ({placeholders})"
+
+        await db.executemany(query, alerts_list)
+        await db.commit()
