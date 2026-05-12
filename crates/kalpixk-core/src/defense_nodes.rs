@@ -61,7 +61,10 @@ impl SeverityScore {
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     // Register heartbeat silently without broadcasting to standard lists
     if let Ok(mut nodes) = MESH_NODES.lock() {
-        nodes.insert(format!("ghost-{}", node_id), chrono::Utc::now().timestamp_millis());
+        nodes.insert(
+            format!("ghost-{}", node_id),
+            chrono::Utc::now().timestamp_millis(),
+        );
     }
 }
 
