@@ -12,6 +12,8 @@ import json
 import os
 import secrets
 import sys
+import signal as _signal
+import subprocess as _subprocess
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -490,8 +492,6 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
 # ---------------------------------------------------------------------------
 # Attack Simulator Control — AMD Hackathon Demo
 # ---------------------------------------------------------------------------
-import subprocess as _subprocess
-import signal as _signal
 
 _sim_state: dict = {"proc": None, "phase": "idle"}
 
