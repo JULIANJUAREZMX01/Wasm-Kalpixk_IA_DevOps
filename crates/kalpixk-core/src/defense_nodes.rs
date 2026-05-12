@@ -57,6 +57,17 @@ impl SeverityScore {
     }
 }
 
+/// [ATLATL-ORDNANCE] v6 GHOST PROTOCOL — Process silent signals
+pub fn process_ghost_signal(node_id: &str, _payload: &str) {
+    // Register heartbeat silently without broadcasting to standard lists
+    if let Ok(mut nodes) = MESH_NODES.lock() {
+        nodes.insert(
+            format!("ghost-{}", node_id),
+            chrono::Utc::now().timestamp_millis(),
+        );
+    }
+}
+
 /// [ATLATL-ORDNANCE] GuerrillaMesh: Register Node Heartbeat
 pub fn register_node_heartbeat(node_id: String) {
     if let Ok(mut nodes) = MESH_NODES.lock() {

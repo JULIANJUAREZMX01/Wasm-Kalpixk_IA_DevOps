@@ -10,17 +10,17 @@ import React from 'react';
 
 // ── Design tokens (SAC_OS Military Grade) ──────────────────────────────────────
 const T = {
-  bg:      "#050505", // Deepest black
-  panel:   "#0a0a0a",
-  surface: "#111111",
-  border:  "#222222",
-  amber:   "#ffaa00", // Industrial amber
-  green:   "#00ff88", // Cyber green
-  red:     "#ff0033", // Strike red
-  blue:    "#0088ff",
-  purple:  "#cc00ff",
-  dim:     "#444444",
-  text:    "#cccccc",
+  bg:      "#020202", // Absolute black
+  panel:   "#080808",
+  surface: "#0c0c0c",
+  border:  "#1a1a1a",
+  amber:   "#ffb800", // High-vis amber
+  green:   "#00ffa3", // Toxic green
+  red:     "#ff0044", // Plasma red
+  blue:    "#00e1ff",
+  purple:  "#bc00ff",
+  dim:     "#333333",
+  text:    "#e0e0e0",
   bright:  "#ffffff",
   font:    "'JetBrains Mono', monospace",
   display: "'Syne', sans-serif",
@@ -94,8 +94,8 @@ export default function Dashboard() {
   const [clock, setClock]     = useState(new Date());
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
-  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v5.0.0-atlatl initialized.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom">("realtime");
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v6.0.0-guerrilla initialized.", "[SYSTEM] Mesh operating in GHOST MODE.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -219,6 +219,7 @@ export default function Dashboard() {
           ["parsers",   "⚙ WASM Parsers"],
           ["benchmark", "📊 Benchmark"],
           ["mitre",     "🛡 MITRE ATT&CK"],
+          ["warroom",   "💀 War Room"],
         ] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
             background: "transparent", border: "none", cursor: "pointer",
@@ -293,6 +294,7 @@ export default function Dashboard() {
         {tab === "parsers"  && <ParsersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "mitre"    && <MitreTab />}
+        {tab === "warroom"  && <WarRoomTab terminalOutput={terminalOutput} />}
       </div>
 
       {/* ═══ FOOTER / TRANSCRIPT STREAM ══════════════════════════════════════ */}
@@ -660,6 +662,87 @@ const ParsersTab = React.memo(function ParsersTab() {
                 {" "}{f}
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: WAR ROOM (v6.0-GUERRILLA)
+// ═══════════════════════════════════════════════════════════════════════════════
+const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminalOutput: string[] }) {
+  const alerts = useAlertStore((s) => s.alerts);
+  const strikes = terminalOutput.filter(l => l.includes("[STRIKE]") || l.includes("[GUILLOTINE]"));
+
+  return (
+    <div style={{ flex: 1, padding: 20, overflow: "auto", background: "#000" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24, borderBottom: `2px solid ${T.red}`, paddingBottom: 10 }}>
+          <div>
+            <h2 style={{ fontFamily: T.display, color: T.red, fontSize: 32, fontWeight: 900, letterSpacing: 8 }}>
+              WAR ROOM
+            </h2>
+            <p style={{ color: T.dim, fontSize: 10, letterSpacing: 4 }}>
+              SYSTEMIC COLLAPSE ORCHESTRATION · PHASE BLACK
+            </p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_STRIKE_ACTIVE</div>
+            <div style={{ color: T.dim, fontSize: 9 }}>MESH_GHOST_MODE: ENABLED</div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 350px", gap: 20 }}>
+          {/* Active Strikes Feed */}
+          <div>
+            <Label text="ACTIVE RETALIATION STRIKES" accent={T.red} />
+            <div style={{ background: `${T.red}05`, border: `1px solid ${T.red}33`, padding: 15, minHeight: 400 }}>
+              {strikes.length === 0 ? (
+                <div style={{ color: T.dim, textAlign: "center", paddingTop: 100, fontSize: 12, letterSpacing: 2 }}>
+                  NO ACTIVE STRIKES IN PROGRESS
+                </div>
+              ) : (
+                strikes.map((s, i) => (
+                  <div key={i} style={{
+                    padding: "10px 15px", marginBottom: 10, background: "#050000",
+                    border: `1px solid ${T.red}66`, borderLeft: `4px solid ${T.red}`,
+                    animation: "fadeIn 0.5s ease"
+                  }}>
+                    <div style={{ color: T.red, fontWeight: 800, fontSize: 12, marginBottom: 4 }}>{s}</div>
+                    <div style={{ display: "flex", gap: 20 }}>
+                      <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: ALGORITHMIC_GUILLOTINE</div>
+                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: CRITICAL</div>
+                      <div style={{ color: T.green, fontSize: 9 }}>STATUS: EXECUTING</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Targeted Infrastructure */}
+          <div>
+            <Label text="TARGETED INFRASTRUCTURE" accent={T.amber} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {alerts.filter(a => a.score > 0.8).slice(0, 5).map((a) => (
+                <div key={a.id} style={{
+                  padding: 12, background: T.surface, border: `1px solid ${T.border}`,
+                  position: "relative", overflow: "hidden"
+                }}>
+                  <div style={{ position: "absolute", top: 0, right: 0, padding: "2px 6px", background: T.red, color: "#fff", fontSize: 8, fontWeight: 800 }}>
+                    TARGET
+                  </div>
+                  <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{a.ip}</div>
+                  <div style={{ color: T.dim, fontSize: 9, marginBottom: 8 }}>Type: {a.eventType} | Score: {a.score.toFixed(4)}</div>
+                  <div style={{ height: 4, background: T.dim, borderRadius: 2 }}>
+                    <div style={{ width: "85%", height: "100%", background: T.red }} className="blink" />
+                  </div>
+                  <div style={{ color: T.red, fontSize: 8, marginTop: 4, textAlign: "right" }}>COLLAPSE IN PROGRESS</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
