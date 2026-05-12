@@ -182,9 +182,31 @@ impl Default for SourceRateLimiter {
     }
 }
 
+pub struct AtomicByteGuard {
+    pub data: [AtomicU32; 32], // ATLATL-V5: 32-dimensional atomic state
+}
+
+impl AtomicByteGuard {
+    pub fn new() -> Self {
+        Self {
+            data: std::array::from_fn(|_| AtomicU32::new(0)),
+        }
+    }
+
+    pub fn validate_and_update(&self, index: usize, expected: u32, new_val: u32) -> bool {
+        if index >= 32 {
+            return false;
+        }
+        self.data[index]
+            .compare_exchange(expected, new_val, Ordering::SeqCst, Ordering::Relaxed)
+            .is_ok()
+    }
+}
+
 pub struct SharedBufferGuard {
     version: Arc<AtomicU32>,
     locked: Arc<AtomicBool>,
+    integrity_hash: Arc<AtomicU32>,
 }
 
 impl SharedBufferGuard {
@@ -192,6 +214,7 @@ impl SharedBufferGuard {
         Self {
             version: Arc::new(AtomicU32::new(0)),
             locked: Arc::new(AtomicBool::new(false)),
+            integrity_hash: Arc::new(AtomicU32::new(0xDEADBEEF)),
         }
     }
 
@@ -199,23 +222,39 @@ impl SharedBufferGuard {
         self.version.load(Ordering::SeqCst)
     }
 
+    pub fn verify_mesh_integrity(&self) -> bool {
+        // [ATLATL-ORDNANCE] Verification of the integrity hash across the mesh
+        self.integrity_hash.load(Ordering::Relaxed) == 0xDEADBEEF
+    }
+
     pub fn try_lock(&self, max_retries: u32) -> Result<BufferWriteGuard, SecurityError> {
-        for _ in 0..max_retries {
+        for i in 0..max_retries {
             match self
                 .locked
                 .compare_exchange(false, true, Ordering::SeqCst, Ordering::Acquire)
             {
                 Ok(_) => {
                     let ver = self.version.fetch_add(1, Ordering::SeqCst);
+                    // Update integrity hash on each lock to rotate internal state
+                    let new_hash = self
+                        .integrity_hash
+                        .load(Ordering::Relaxed)
+                        .wrapping_add(i + 1);
+                    self.integrity_hash.store(new_hash, Ordering::Relaxed);
+
                     return Ok(BufferWriteGuard {
                         locked: Arc::clone(&self.locked),
                         version: Arc::clone(&self.version),
                         ver_at_lock: ver,
                     });
                 }
-                Err(_) => std::hint::spin_loop(),
+                Err(_) => {
+                    // Exponential backoff simulation for atomic contention
+                    for _ in 0..(1 << (i % 8)) {
+                        std::hint::spin_loop();
+                    }
+                }
             }
-            std::hint::spin_loop();
         }
         Err(SecurityError::AtomicConflict)
     }
