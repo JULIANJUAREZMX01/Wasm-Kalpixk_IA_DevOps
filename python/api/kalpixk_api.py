@@ -162,7 +162,7 @@ class LogRequest(BaseModel):
     raw_log: str | None = Field(None, max_length=1000)
     source: str | None = Field("unknown", max_length=100)
     event_ids: list[str] | None = Field(None, max_length=1000)
-    source_type: str | None = Field(None)
+    source_type: str | None = Field(None, max_length=100)
     metadata: list[dict] | None = Field(None, max_length=1000)
 
     @field_validator("features")

@@ -3,6 +3,13 @@ import os
 from datetime import datetime
 
 import aiosqlite
+from loguru import logger
+
+# Whitelist of allowed columns for the alerts table to prevent SQL Injection
+ALLOWED_COLUMNS = {
+    "ts", "ip", "anomaly_score", "event_type", "severity",
+    "technique", "confidence", "features_json", "source"
+}
 
 
 def get_db_path():
@@ -30,20 +37,32 @@ async def init_db():
 
 async def insert_alert(alert_dict):
     async with aiosqlite.connect(get_db_path()) as db:
+        # Filter input against whitelist to prevent SQL Injection in column names
+        filtered_data = {}
+        for k, v in alert_dict.items():
+            if k in ALLOWED_COLUMNS:
+                filtered_data[k] = v
+            else:
+                logger.warning(f"Skipping invalid alert field: {k}")
+
+        if not filtered_data and alert_dict:
+            logger.error("Attempted to insert alert with only invalid fields")
+            return
+
         # Convert features_json if it is a list
-        features = alert_dict.get("features_json")
+        features = filtered_data.get("features_json")
         if isinstance(features, list):
-            alert_dict["features_json"] = json.dumps(features)
+            filtered_data["features_json"] = json.dumps(features)
 
         # Ensure timestamp if not provided
-        if "ts" not in alert_dict:
-            alert_dict["ts"] = datetime.utcnow().isoformat()
+        if "ts" not in filtered_data:
+            filtered_data["ts"] = datetime.utcnow().isoformat()
 
-        columns = ", ".join(alert_dict.keys())
-        placeholders = ", ".join([":" + k for k in alert_dict.keys()])
+        columns = ", ".join(filtered_data.keys())
+        placeholders = ", ".join([":" + k for k in filtered_data.keys()])
         query = f"INSERT INTO alerts ({columns}) VALUES ({placeholders})"
 
-        await db.execute(query, alert_dict)
+        await db.execute(query, filtered_data)
         await db.commit()
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):

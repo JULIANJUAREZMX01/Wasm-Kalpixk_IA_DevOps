@@ -44,3 +44,8 @@
 **Vulnerability:** Use of `pickle.load()` and `torch.load(..., weights_only=False)` for model loading.
 **Learning:** AI models are often stored in formats like Pickle or PyTorch's default format, both of which can execute arbitrary code during deserialization. While `pickle` is standard for scikit-learn, PyTorch (since 2.4+) supports a `weights_only=True` mode that significantly reduces the attack surface by only allowing a limited set of safe types.
 **Prevention:** Always use `weights_only=True` when loading PyTorch models from potentially untrusted sources. For formats like Pickle, ensure strict file system permissions and verify the integrity (e.g., via HMAC/hashes) of model files before loading.
+
+## 2026-05-12 - SQL Injection via Dictionary Keys in Query Construction
+**Vulnerability:** Dynamic SQL query construction using unvalidated dictionary keys in `insert_alert`.
+**Learning:** Even when using parameterized values, SQL injection is possible if the structure of the query (e.g., column names) is built from untrusted dictionary keys. An attacker providing a malicious dictionary could manipulate the SQL statement to bypass logic or corrupt the database.
+**Prevention:** Always validate and filter dynamic components of a SQL query (like column names) against a strict whitelist of allowed identifiers. Never trust dictionary keys or object attributes directly when building SQL strings.
