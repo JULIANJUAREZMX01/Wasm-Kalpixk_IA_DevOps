@@ -206,6 +206,7 @@ class AnomalyResponse(BaseModel):
     explanation: str | None = None
     device: str
     latency_ms: float
+    adaptive_threshold: float
 
 
 @app.get("/api/health")
@@ -222,6 +223,7 @@ async def health():
 @app.get("/status")
 @limiter.limit("10/minute")
 async def status(request: Request, api_key: str = Depends(verify_api_key)):
+    ens = ensure_ensemble()
     uptime = time.time() - _boot_time
     return {
         "status": "ok",
@@ -230,6 +232,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
+        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
     }
 
 
@@ -281,7 +284,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 
     features_array = torch.from_numpy(features_np).to(_device)
 
-    scores, techniques, confidences = ens.predict(features_array)
+    scores, techniques, confidences, adaptive_threshold = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
 
     results = []
@@ -296,7 +299,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "confidence": float(confidences[i]),
         })
 
-        if score > 0.5:
+        if score > adaptive_threshold:
             total_anomalies += 1
             severity = (
                 "CRITICAL" if score > 0.8
@@ -341,15 +344,15 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
         raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
 
     features_array = torch.from_numpy(features_np).to(_device)
-    scores, _, _ = ens.predict(features_array)
+    scores, _, _, adaptive_threshold = ens.predict(features_array)
     score = scores[0]
-    is_anomaly = score > 0.5
+    is_anomaly = score > adaptive_threshold
     latency = (time.time() - t0) * 1000
 
     severity = (
         "CRITICAL" if score > 0.8
         else "HIGH" if score > 0.6
-        else "MEDIUM" if score > 0.4
+        else "MEDIUM" if score > adaptive_threshold
         else "LOW"
     )
 
@@ -381,13 +384,15 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
             except Exception:
                 _ws_clients.remove(ws)
 
+    status_msg = "ANOMALÍA DETECTADA" if is_anomaly else "Normal"
     return AnomalyResponse(
         anomaly_score=float(score),
         is_anomaly=bool(is_anomaly),
         severity=severity,
-        explanation=f"Score: {score:.4f} — {'ANOMALÍA DETECTADA' if is_anomaly else 'Normal'}",
+        explanation=f"Score: {score:.4f} (Threshold: {adaptive_threshold:.4f}) — {status_msg}",
         device=str(_device),
         latency_ms=round(latency, 2),
+        adaptive_threshold=float(adaptive_threshold),
     )
 
 
@@ -435,9 +440,9 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
                 arr = np.array([features], dtype=np.float32)
                 # Convert to tensor and fix result unpacking
                 features_array = torch.from_numpy(arr).to(_device)
-                scores, _, _ = ens.predict(features_array)
+                scores, _, _, adaptive_threshold = ens.predict(features_array)
                 score = float(scores[0])
-                is_anomaly = score > 0.5
+                is_anomaly = score > adaptive_threshold
                 severity = "HIGH" if score > 0.6 else "LOW"
 
                 if is_anomaly:
