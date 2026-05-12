@@ -485,3 +485,60 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
         ]
     }
 
+
+
+# ---------------------------------------------------------------------------
+# Attack Simulator Control — AMD Hackathon Demo
+# ---------------------------------------------------------------------------
+import subprocess as _subprocess
+import signal as _signal
+
+_sim_state: dict = {"proc": None, "phase": "idle"}
+
+
+@app.post("/api/simulate/start")
+@limiter.limit("5/minute")
+async def simulate_start(request: Request) -> dict:
+    """Launch the ransomware simulator as a background subprocess."""
+    if _sim_state["proc"] and _sim_state["proc"].poll() is None:
+        return {"status": "already_running", "phase": _sim_state["phase"]}
+
+    sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
+    sim_script = os.path.abspath(sim_script)
+    backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+
+    proc = _subprocess.Popen(  # noqa: S603
+        [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],
+        stdout=_subprocess.DEVNULL,
+        stderr=_subprocess.DEVNULL,
+    )
+    _sim_state["proc"] = proc
+    _sim_state["phase"] = "normal"
+    return {"status": "started", "pid": proc.pid, "phase": "normal"}
+
+
+@app.post("/api/simulate/stop")
+@limiter.limit("10/minute")
+async def simulate_stop(request: Request) -> dict:
+    """Kill the running simulator process."""
+    proc = _sim_state.get("proc")
+    if proc and proc.poll() is None:
+        proc.send_signal(_signal.SIGTERM)
+        try:
+            proc.wait(timeout=3)
+        except _subprocess.TimeoutExpired:
+            proc.kill()
+    _sim_state["proc"] = None
+    _sim_state["phase"] = "idle"
+    return {"status": "stopped", "phase": "idle"}
+
+
+@app.get("/api/simulate/status")
+async def simulate_status() -> dict:
+    """Return current simulator state."""
+    proc = _sim_state.get("proc")
+    if proc is None or proc.poll() is not None:
+        _sim_state["phase"] = "idle"
+        _sim_state["proc"] = None
+        return {"running": False, "phase": "idle"}
+    return {"running": True, "phase": _sim_state["phase"]}
