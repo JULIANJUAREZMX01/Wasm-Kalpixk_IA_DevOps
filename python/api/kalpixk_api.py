@@ -67,10 +67,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # -- Security & Rate Limiting --
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
@@ -212,11 +208,11 @@ class AnomalyResponse(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    ensure_ensemble()
+    # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
         "version": "5.0.0-atlatl",
-        "device": str(_device),
+        "device": str(_device) if _device is not None else "not_initialized",
         "ensemble_version": "5.0.0-atlatl",
     }
 
@@ -488,3 +484,4 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
             "composite_risk_1", "composite_risk_2",
         ]
     }
+
