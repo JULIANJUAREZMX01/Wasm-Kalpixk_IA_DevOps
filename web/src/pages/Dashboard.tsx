@@ -7,6 +7,7 @@ import { useAlertStore, KalpixkAlert } from "../stores/alertStore";
 import { useMetricsStore } from "../stores/metricsStore";
 import { useWasmStore }    from "../stores/wasmStore";
 import React from 'react';
+import AttackSimulator from '../components/AttackSimulator';
 
 // ── Design tokens (SAC_OS Military Grade) ──────────────────────────────────────
 const T = {
@@ -94,7 +95,7 @@ export default function Dashboard() {
   const [clock, setClock]     = useState(new Date());
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
-  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom">("realtime");
+  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
   const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v6.0.0-guerrilla initialized.", "[SYSTEM] Mesh operating in GHOST MODE.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
@@ -220,6 +221,7 @@ export default function Dashboard() {
           ["benchmark", "📊 Benchmark"],
           ["mitre",     "🛡 MITRE ATT&CK"],
           ["warroom",   "💀 War Room"],
+          ["simulacion","🎯 Simulación"],
         ] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
             background: "transparent", border: "none", cursor: "pointer",
@@ -295,6 +297,7 @@ export default function Dashboard() {
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "mitre"    && <MitreTab />}
         {tab === "warroom"  && <WarRoomTab terminalOutput={terminalOutput} />}
+        {tab === "simulacion" && <AttackSimulator />}
       </div>
 
       {/* ═══ FOOTER / TRANSCRIPT STREAM ══════════════════════════════════════ */}
