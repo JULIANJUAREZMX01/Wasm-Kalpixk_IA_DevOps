@@ -100,7 +100,7 @@ fn generate_zip_bomb_header(intensity: f64) -> String {
 fn generate_poison_payload(target: &str) -> String {
     let mut buffer = format!("ATLATL_EXETERMINIO_{}", target).into_bytes();
     // Inyectamos secuencias de salto infinito (EB FE)
-    for i in 0..16 {
+    for _ in 0..16 {
         buffer.push(0xEB);
         buffer.push(0xFE);
     }

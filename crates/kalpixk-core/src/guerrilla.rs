@@ -8,7 +8,6 @@
 
 use crate::defense_nodes::{register_threat_signature, ThreatSignature};
 use crate::event::KalpixkEvent;
-use crate::severity::RetaliationType;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -129,7 +128,7 @@ pub fn process_guerrilla_signal(json_event: &str, score: f64) -> String {
 
 /// [ATLATL-ORDNANCE] Ghost Protocol v7: Heartbeat Ofuscado
 pub fn ghost_heartbeat_v7(node_id: &str) -> String {
-    let mut orch = ORCHESTRATOR.lock().unwrap();
+    let orch = ORCHESTRATOR.lock().unwrap();
     if !orch.ghost_mode {
         return "{\"status\": \"GHOST_MODE_DISABLED\"}".to_string();
     }
