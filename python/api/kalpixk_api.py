@@ -498,7 +498,7 @@ _sim_state: dict = {"proc": None, "phase": "idle"}
 
 @app.post("/api/simulate/start")
 @limiter.limit("5/minute")
-async def simulate_start(request: Request) -> dict:
+async def simulate_start(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Launch the ransomware simulator as a background subprocess."""
     if _sim_state["proc"] and _sim_state["proc"].poll() is None:
         return {"status": "already_running", "phase": _sim_state["phase"]}
@@ -519,7 +519,7 @@ async def simulate_start(request: Request) -> dict:
 
 @app.post("/api/simulate/stop")
 @limiter.limit("10/minute")
-async def simulate_stop(request: Request) -> dict:
+async def simulate_stop(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Kill the running simulator process."""
     proc = _sim_state.get("proc")
     if proc and proc.poll() is None:
@@ -534,7 +534,8 @@ async def simulate_stop(request: Request) -> dict:
 
 
 @app.get("/api/simulate/status")
-async def simulate_status() -> dict:
+@limiter.limit("30/minute")
+async def simulate_status(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Return current simulator state."""
     proc = _sim_state.get("proc")
     if proc is None or proc.poll() is not None:
