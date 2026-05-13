@@ -9,10 +9,10 @@
 use crate::defense_nodes::{register_threat_signature, ThreatSignature};
 use crate::event::KalpixkEvent;
 use crate::severity::RetaliationType;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
-use chrono::Utc;
 
 lazy_static::lazy_static! {
     /// Orquestador global de guerrilla para el nodo actual
@@ -30,9 +30,9 @@ pub struct AggressorVector {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum GuerrillaPhase {
-    Monitor,    // Fase inicial, observación pasiva
+    Monitor,      // Fase inicial, observación pasiva
     Interdiction, // Bloqueo activo de conexiones
-    PhaseBlack, // Exterminio: Guillotina Algorítmica activada
+    PhaseBlack,   // Exterminio: Guillotina Algorítmica activada
 }
 
 pub struct GuerrillaOrchestrator {
@@ -55,13 +55,16 @@ impl GuerrillaOrchestrator {
     /// Evalúa un evento y actualiza el estado de guerrilla del agresor
     pub fn evaluate_agression(&mut self, event: &KalpixkEvent, score: f64) -> GuerrillaPhase {
         let now = Utc::now().timestamp();
-        let vector = self.aggressors.entry(event.source.clone()).or_insert(AggressorVector {
-            ip: event.source.clone(),
-            cumulative_score: 0.0,
-            event_count: 0,
-            last_seen: now,
-            phase: GuerrillaPhase::Monitor,
-        });
+        let vector = self
+            .aggressors
+            .entry(event.source.clone())
+            .or_insert(AggressorVector {
+                ip: event.source.clone(),
+                cumulative_score: 0.0,
+                event_count: 0,
+                last_seen: now,
+                phase: GuerrillaPhase::Monitor,
+            });
 
         vector.cumulative_score += score;
         vector.event_count += 1;
@@ -120,7 +123,8 @@ pub fn process_guerrilla_signal(json_event: &str, score: f64) -> String {
         },
         "retaliation_recommended": phase == GuerrillaPhase::PhaseBlack,
         "timestamp": Utc::now().timestamp_millis()
-    }).to_string()
+    })
+    .to_string()
 }
 
 /// [ATLATL-ORDNANCE] Ghost Protocol v7: Heartbeat Ofuscado
@@ -131,7 +135,9 @@ pub fn ghost_heartbeat_v7(node_id: &str) -> String {
     }
 
     // El heartbeat v7 no solo confirma vida, sincroniza el estado de la guillotina
-    let active_strikes: Vec<String> = orch.aggressors.iter()
+    let active_strikes: Vec<String> = orch
+        .aggressors
+        .iter()
         .filter(|(_, v)| v.phase == GuerrillaPhase::PhaseBlack)
         .map(|(ip, _)| ip.clone())
         .collect();
@@ -142,7 +148,8 @@ pub fn ghost_heartbeat_v7(node_id: &str) -> String {
         "integrity": "ARMED",
         "active_strikes": active_strikes,
         "sync_ts": Utc::now().timestamp_millis()
-    }).to_string()
+    })
+    .to_string()
 }
 
 pub fn get_guerrilla_status() -> String {

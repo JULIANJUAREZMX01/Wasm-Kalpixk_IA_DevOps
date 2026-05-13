@@ -10,12 +10,14 @@ ATLATL-ORDNANCE: "Inutilización del Atacante via Algorithmic Guillotine."
 
 from __future__ import annotations
 
-import logging
 import collections
+import logging
+
 import numpy as np
 from loguru import logger as loguru_logger
 
 logger = logging.getLogger("kalpixk.detection.adaptive_threshold")
+
 
 class AdversarialDriftGuard:
     """
@@ -33,7 +35,7 @@ class AdversarialDriftGuard:
     WINDOW_SIZE = 1000
     CALIBRATION_PERCENTILE = 99.0
     MAX_THRESHOLD_DRIFT = 0.15  # 15% max change per recalibration
-    VOLATILITY_LIMIT = 3.0      # Z-score limit
+    VOLATILITY_LIMIT = 3.0  # Z-score limit
 
     def __init__(self, initial_threshold: float = 0.5):
         self._current_threshold = initial_threshold
@@ -42,7 +44,9 @@ class AdversarialDriftGuard:
         self._locked = False
         self._drift_detected = False
 
-        loguru_logger.info(f"AdversarialDriftGuard v{self.VERSION} ARMED. Initial threshold: {initial_threshold}")
+        loguru_logger.info(
+            f"AdversarialDriftGuard v{self.VERSION} ARMED. Initial threshold: {initial_threshold}"
+        )
 
     def add_benign_scores(self, scores: list[float] | np.ndarray):
         """Register new scores confirmed as benign to the sliding window."""
@@ -86,11 +90,15 @@ class AdversarialDriftGuard:
             z_score = abs(candidate - historical_avg) / (thresh_std + 1e-9)
 
             if z_score > self.VOLATILITY_LIMIT:
-                loguru_logger.error(f"SYSTEMIC VOLATILITY DETECTED: Z-score {z_score:.2f}. Rejecting calibration.")
+                loguru_logger.error(
+                    f"SYSTEMIC VOLATILITY DETECTED: Z-score {z_score:.2f}. Rejecting calibration."
+                )
                 return self._current_threshold
 
         # [ATLATL-ORDNANCE] STAGE 3: COMMIT & LOG
-        loguru_logger.debug(f"Threshold recalibrated: {self._current_threshold:.4f} -> {candidate:.4f}")
+        loguru_logger.debug(
+            f"Threshold recalibrated: {self._current_threshold:.4f} -> {candidate:.4f}"
+        )
         self._current_threshold = candidate
         self._threshold_history.append(candidate)
 
@@ -114,11 +122,13 @@ class AdversarialDriftGuard:
         self._threshold_history = [self._current_threshold]
         loguru_logger.info("AdversarialDriftGuard reset by operator.")
 
+
 class GuillotineThreshold:
     """
     Specialized threshold for the 'Algorithmic Guillotine'.
     When scores exceed this, retaliation is no longer a choice, it is a certainty.
     """
+
     def __init__(self, base_threshold: float):
         self.critical = base_threshold * 1.5
         self.exterminio = base_threshold * 1.9  # 95% scaling for extermination

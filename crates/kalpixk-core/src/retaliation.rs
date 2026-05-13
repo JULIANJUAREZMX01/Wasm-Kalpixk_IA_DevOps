@@ -66,12 +66,8 @@ pub fn execute_retaliation(
 
     // [ATLATL-ORDNANCE] v7 POLYMORPHIC PAYLOAD GENERATION
     let payload = match state.retaliation {
-        RetaliationType::RecursiveZipBomb => {
-            Some(generate_zip_bomb_header(state.score))
-        },
-        RetaliationType::PoisonPointers => {
-            Some(generate_poison_payload(&state.ip))
-        },
+        RetaliationType::RecursiveZipBomb => Some(generate_zip_bomb_header(state.score)),
+        RetaliationType::PoisonPointers => Some(generate_poison_payload(&state.ip)),
         _ => None,
     };
 

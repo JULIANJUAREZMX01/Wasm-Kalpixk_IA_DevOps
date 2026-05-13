@@ -34,7 +34,6 @@ class DetectionEnsemble:
         # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
-
         return (
             ensemble_scores.tolist(),
             methods,
