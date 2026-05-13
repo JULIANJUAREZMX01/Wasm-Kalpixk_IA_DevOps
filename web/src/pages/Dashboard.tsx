@@ -238,18 +238,24 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/retaliate/v5_strike", {
+                  const targetIp = alerts[0]?.ip || "unknown";
+                  const res = await fetch("/api/v1/retaliate/guillotine", {
                     method: "POST",
-                    headers: { "X-Kalpixk-Key": apiKey }
+                    headers: {
+                      "X-Kalpixk-Key": apiKey,
+                      "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ target_ip: targetIp, action: "ALGORITHMIC_GUILLOTINE" })
                   });
                   const data = await res.json();
                   setTerminalOutput(prev => [
                     ...prev,
-                    `[STRIKE] PHASE BLACK ENGAGED AGAINST TARGET.`,
-                    `[STRIKE] STATUS: ${data.v5_status}`,
-                    ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
+                    `[STRIKE] 💀 PHASE BLACK ENGAGED AGAINST ${targetIp}.`,
+                    `[STRIKE] STRIKE_ID: ${data.strike_id}`,
+                    `[STRIKE] VECTOR: ${data.payload_type.toUpperCase()}`,
+                    `[GUILLOTINE] STATUS: ${data.guillotine_status.toUpperCase()}`
                   ]);
-                  alert("PHASE BLACK ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  alert(`PHASE BLACK ENGAGED: ALGORITHMIC GUILLOTINE INITIATED AGAINST ${targetIp}`);
                 } catch (e) {
                   console.error("Strike failed", e);
                 }
@@ -692,15 +698,15 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
             </p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_STRIKE_ACTIVE</div>
-            <div style={{ color: T.dim, fontSize: 9 }}>MESH_GHOST_MODE: ENABLED</div>
+            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_v7_GUILLOTINE_ARMED</div>
+            <div style={{ color: T.dim, fontSize: 9 }}>MESH_GHOST_MODE: v7_ENABLED</div>
           </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 350px", gap: 20 }}>
           {/* Active Strikes Feed */}
           <div>
-            <Label text="ACTIVE RETALIATION STRIKES" accent={T.red} />
+            <Label text="ACTIVE RETALIATION STRIKES (V7_ALPHA)" accent={T.red} />
             <div style={{ background: `${T.red}05`, border: `1px solid ${T.red}33`, padding: 15, minHeight: 400 }}>
               {strikes.length === 0 ? (
                 <div style={{ color: T.dim, textAlign: "center", paddingTop: 100, fontSize: 12, letterSpacing: 2 }}>
@@ -716,8 +722,8 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
                     <div style={{ color: T.red, fontWeight: 800, fontSize: 12, marginBottom: 4 }}>{s}</div>
                     <div style={{ display: "flex", gap: 20 }}>
                       <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: ALGORITHMIC_GUILLOTINE</div>
-                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: CRITICAL</div>
-                      <div style={{ color: T.green, fontSize: 9 }}>STATUS: EXECUTING</div>
+                      <div style={{ color: T.dim, fontSize: 9 }}>INTENSITY: 0.95 (MAX)</div>
+                      <div style={{ color: T.green, fontSize: 9 }}>STATUS: PHASE_BLACK_EXECUTING</div>
                     </div>
                   </div>
                 ))
@@ -727,7 +733,7 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
 
           {/* Targeted Infrastructure */}
           <div>
-            <Label text="TARGETED INFRASTRUCTURE" accent={T.amber} />
+            <Label text="TARGETED INFRASTRUCTURE (v7_SCAN)" accent={T.amber} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {alerts.filter(a => a.score > 0.8).slice(0, 5).map((a) => (
                 <div key={a.id} style={{

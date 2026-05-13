@@ -5,6 +5,7 @@
 
 use crate::event::KalpixkEvent;
 use crate::severity::{get_redteam_mapping, OffenseLevel, RetaliationType};
+use base64::{engine::general_purpose, Engine as _};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -63,6 +64,17 @@ pub fn execute_retaliation(
 
     let action = format!("{:?}", state.retaliation);
 
+    // [ATLATL-ORDNANCE] v7 POLYMORPHIC PAYLOAD GENERATION
+    let payload = match state.retaliation {
+        RetaliationType::RecursiveZipBomb => {
+            Some(generate_zip_bomb_header(state.score))
+        },
+        RetaliationType::PoisonPointers => {
+            Some(generate_poison_payload(&state.ip))
+        },
+        _ => None,
+    };
+
     // Simular generación de payload (en WASM esto se pasaría al host JS)
     let result = serde_json::json!({
         "target": state.ip,
@@ -71,10 +83,36 @@ pub fn execute_retaliation(
         "retaliation_action": action,
         "node": state.last_node,
         "threat_count": state.threat_count,
+        "payload_armored": payload,
         "timestamp": chrono::Utc::now().timestamp_millis(),
     });
 
     Some(result.to_string())
+}
+
+/// [ATLATL-ORDNANCE] Genera un encabezado de Zip Bomb polimórfico
+fn generate_zip_bomb_header(intensity: f64) -> String {
+    let mut header = vec![0x50, 0x4B, 0x03, 0x04]; // PK ZIP magic
+    let size = (intensity * 1024.0) as usize;
+    for i in 0..size.min(256) {
+        header.push((i % 255) as u8);
+    }
+    base64_encode(&header)
+}
+
+/// [ATLATL-ORDNANCE] Genera un payload de Pointer Poisoning para C2 remotos
+fn generate_poison_payload(target: &str) -> String {
+    let mut buffer = format!("ATLATL_EXETERMINIO_{}", target).into_bytes();
+    // Inyectamos secuencias de salto infinito (EB FE)
+    for i in 0..16 {
+        buffer.push(0xEB);
+        buffer.push(0xFE);
+    }
+    base64_encode(&buffer)
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    general_purpose::STANDARD.encode(data)
 }
 
 /// Limpia el registro de agresores (usado en tests)

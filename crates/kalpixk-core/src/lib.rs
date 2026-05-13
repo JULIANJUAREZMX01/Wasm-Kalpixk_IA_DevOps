@@ -6,6 +6,7 @@ mod defense_nodes;
 mod entropy;
 mod event;
 mod features;
+mod guerrilla;
 mod metrics;
 mod parsers;
 mod payloads;
@@ -58,6 +59,8 @@ export!(KalpixkCore);
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
+    fn v7_tensor_integrity_check(data_ptr: *const f32, count: usize) -> bool;
+    fn v7_bit_parity_scan(buffer: *const u8, len: usize) -> u32;
 }
 
 #[wasm_bindgen]
@@ -116,6 +119,34 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v7_guerrilla_process(json_event: &str, score: f64) -> String {
+    guerrilla::process_guerrilla_signal(json_event, score)
+}
+
+#[wasm_bindgen]
+pub fn v7_ghost_heartbeat(node_id: &str) -> String {
+    guerrilla::ghost_heartbeat_v7(node_id)
+}
+
+#[wasm_bindgen]
+pub fn v7_get_guerrilla_status() -> String {
+    guerrilla::get_guerrilla_status()
+}
+
+#[wasm_bindgen]
+pub fn v7_audit_tensor(features: Vec<f32>) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        unsafe { v7_tensor_integrity_check(features.as_ptr(), features.len()) }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // En modo nativo/test usamos la lógica de validación mínima o bridge
+        features.len() == 32
+    }
 }
 
 #[wasm_bindgen]

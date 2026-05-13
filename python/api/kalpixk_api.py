@@ -43,6 +43,7 @@ sys.path.insert(0, "/app/wasm_kalpixk")
 
 from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
 from python.models.ensemble import DetectionEnsemble
+from python.detection.adaptive_threshold import AdversarialDriftGuard, GuillotineThreshold
 from python.utils.device import get_rocm_device, log_gpu_info
 
 limiter = Limiter(key_func=get_remote_address)
@@ -126,6 +127,10 @@ _ensemble: DetectionEnsemble | None = None
 _device = None
 _ws_clients: list[WebSocket] = []
 _boot_time = time.time()
+
+# [ATLATL-ORDNANCE] v7 Guardias y Guillotina
+_drift_guard = AdversarialDriftGuard(initial_threshold=0.5)
+_guillotine = GuillotineThreshold(base_threshold=0.5)
 
 
 def ensure_ensemble():
@@ -488,6 +493,44 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
     }
 
 
+
+# ---------------------------------------------------------------------------
+# [ATLATL-ORDNANCE] Retaliation & Guillotine Control
+# ---------------------------------------------------------------------------
+
+class RetaliateRequest(BaseModel):
+    target_ip: str
+    action: str = "ALGORITHMIC_GUILLOTINE"
+    intensity: float = Field(0.95, ge=0.0, le=1.0)
+
+@app.post("/api/v1/retaliate/guillotine")
+@limiter.limit("10/minute")
+async def execute_guillotine(request: Request, req: RetaliateRequest, api_key: str = Depends(verify_api_key)):
+    """
+    [ATLATL-ORDNANCE] Orquestación de la Guillotina Algorítmica (Phase Black).
+    Inicia un colapso sistémico contra el IP agresor.
+    """
+    from loguru import logger
+    logger.warning(f"💀 PHASE BLACK ENGAGED: Executing {req.action} against {req.target_ip}")
+
+    # Simulación de respuesta ofensiva estructural
+    strike_id = secrets.token_hex(8)
+    return {
+        "status": "V7_STRIKE_ENGAGED",
+        "strike_id": strike_id,
+        "target": req.target_ip,
+        "payload_type": "recursive_zip_bomb" if req.intensity > 0.8 else "pointer_poisoning",
+        "guillotine_status": "active",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/api/v1/retaliate/status")
+async def get_guerrilla_api_status(request: Request, api_key: str = Depends(verify_api_key)):
+    return {
+        "drift_detected": _drift_guard.is_drift_detected,
+        "current_threshold": _drift_guard.threshold,
+        "engine_version": "7.0.0-atlatl-guerrilla"
+    }
 
 # ---------------------------------------------------------------------------
 # Attack Simulator Control — AMD Hackathon Demo
