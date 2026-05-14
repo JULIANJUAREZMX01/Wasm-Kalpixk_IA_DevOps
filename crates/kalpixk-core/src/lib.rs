@@ -3,10 +3,10 @@
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
-mod guerrilla;
 mod entropy;
 mod event;
 mod features;
+mod guerrilla;
 mod metrics;
 mod parsers;
 mod payloads;
@@ -145,10 +145,12 @@ pub fn v7_audit_tensor_wasm(features: Vec<f32>) -> f32 {
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Simple fallback/simulation for non-wasm targets
-        if features.len() < 2 { return 0.0; }
+        if features.len() < 2 {
+            return 0.0;
+        }
         let mut r = 0.0;
-        for i in 0..features.len()-1 {
-            r += (features[i] - features[i+1]).abs();
+        for i in 0..features.len() - 1 {
+            r += (features[i] - features[i + 1]).abs();
         }
         r / features.len() as f32
     }
@@ -161,14 +163,21 @@ pub fn v7_guerrilla_process(logs_json: &str, source_type: &str) -> String {
     let result = process_batch(logs_json, source_type);
 
     // Integration with GuerrillaOrchestrator
-    let orchestration = guerrilla::GuerrillaOrchestrator::orchestrate_v7("WASM_CORE_V7", "ALPHA_INIT");
+    let orchestration =
+        guerrilla::GuerrillaOrchestrator::orchestrate_v7("WASM_CORE_V7", "ALPHA_INIT");
 
     // In v7, we add an extra layer of structural verification
     let mut res_val: serde_json::Value = serde_json::from_str(&result).unwrap_or_default();
     if let Some(obj) = res_val.as_object_mut() {
-        obj.insert("v7_orchestration".to_string(), serde_json::json!("ALPHA_STACK_ACTIVE"));
+        obj.insert(
+            "v7_orchestration".to_string(),
+            serde_json::json!("ALPHA_STACK_ACTIVE"),
+        );
         obj.insert("guillotine_state".to_string(), serde_json::json!("ARMED"));
-        obj.insert("orchestrator_signal".to_string(), serde_json::json!(orchestration));
+        obj.insert(
+            "orchestrator_signal".to_string(),
+            serde_json::json!(orchestration),
+        );
     }
 
     res_val.to_string()

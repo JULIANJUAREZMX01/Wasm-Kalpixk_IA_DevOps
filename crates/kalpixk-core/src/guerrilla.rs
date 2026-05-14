@@ -15,7 +15,8 @@ impl GuerrillaOrchestrator {
             "status": "v7_ORCHESTRATED",
             "stack": "ALPHA",
             "guillotine": "ARMED"
-        }).to_string()
+        })
+        .to_string()
     }
 
     pub fn execute_algorithmic_guillotine(target: &str) -> String {
@@ -26,6 +27,7 @@ impl GuerrillaOrchestrator {
             "target": target,
             "impact": "TOTAL_COLLAPSE",
             "v7_vector": "active_entropy_saturation"
-        }).to_string()
+        })
+        .to_string()
     }
 }
