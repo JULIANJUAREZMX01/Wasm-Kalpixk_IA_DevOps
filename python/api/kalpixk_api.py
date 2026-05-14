@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 import msgpack
 import numpy as np
@@ -305,7 +305,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(timezone.utc).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -356,7 +356,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(timezone.utc).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -442,7 +442,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(timezone.utc).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -498,7 +498,7 @@ _sim_state: dict = {"proc": None, "phase": "idle"}
 
 @app.post("/api/simulate/start")
 @limiter.limit("5/minute")
-async def simulate_start(request: Request) -> dict:
+async def simulate_start(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Launch the ransomware simulator as a background subprocess."""
     if _sim_state["proc"] and _sim_state["proc"].poll() is None:
         return {"status": "already_running", "phase": _sim_state["phase"]}
@@ -519,7 +519,7 @@ async def simulate_start(request: Request) -> dict:
 
 @app.post("/api/simulate/stop")
 @limiter.limit("10/minute")
-async def simulate_stop(request: Request) -> dict:
+async def simulate_stop(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Kill the running simulator process."""
     proc = _sim_state.get("proc")
     if proc and proc.poll() is None:
@@ -534,7 +534,8 @@ async def simulate_stop(request: Request) -> dict:
 
 
 @app.get("/api/simulate/status")
-async def simulate_status() -> dict:
+@limiter.limit("10/minute")
+async def simulate_status(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Return current simulator state."""
     proc = _sim_state.get("proc")
     if proc is None or proc.poll() is not None:
