@@ -490,6 +490,21 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
 
 
 # ---------------------------------------------------------------------------
+# ATLATL-ORDNANCE v7.0-ALPHA Guerrilla Orchestration
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/guerrilla/v7/strike")
+@limiter.limit("2/minute")
+async def guerrilla_v7_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v7 ALGORITHMIC GUILLOTINE: High-performance military orchestration."""
+    source_ip = request.client.host
+    from src.retaliation.atlatl import atlatl
+    from loguru import logger
+    logger.critical(f"🗡️  v7 ALGORITHMIC GUILLOTINE (ALPHA) ENGAGED AGAINST {source_ip}")
+    result = atlatl.v7_algorithmic_guillotine(source_ip)
+    return result
+
+# ---------------------------------------------------------------------------
 # Attack Simulator Control — AMD Hackathon Demo
 # ---------------------------------------------------------------------------
 

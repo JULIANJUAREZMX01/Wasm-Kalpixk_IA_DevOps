@@ -242,7 +242,16 @@ async def node_sync(request: Request, report: ThreatReport, api_key: str = Depen
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 
-# [ATLATL-ORDNANCE] Offensive v5 Strike & Honeypots
+# [ATLATL-ORDNANCE] Offensive v7 Strike & Honeypots
+@app.post("/api/v1/retaliate/v7_guillotine")
+@limiter.limit("2/minute")
+async def v7_guillotine(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v7 ALGORITHMIC GUILLOTINE: Total Infrastructure Collapse."""
+    source_ip = request.client.host
+    logger.critical(f"🗡️  v7 ALGORITHMIC GUILLOTINE TRIGGERED BY OPERATOR AGAINST {source_ip}")
+    result = atlatl.v7_algorithmic_guillotine(source_ip)
+    return result
+
 @app.post("/api/v1/retaliate/v5_strike")
 @limiter.limit("5/minute")
 async def v5_strike(request: Request, api_key: str = Depends(verify_api_key)):

@@ -224,6 +224,75 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
     return false;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// v7.0-ALPHA GUERRILLA ALGORÍTMICA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// [ATLATL-ORDNANCE] v7_audit_tensor
+/// Detects adversarial "roughness" (sudden spikes or noise) in feature vectors.
+pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) f32 {
+    if (data_len < 2) return 0.0;
+    const slice = data_ptr[0..data_len];
+    var roughness: f32 = 0.0;
+    var i: usize = 0;
+    while (i < data_len - 1) : (i += 1) {
+        const diff = @abs(slice[i] - slice[i + 1]);
+        roughness += diff;
+    }
+    return roughness / @as(f32, @floatFromInt(data_len));
+}
+
+/// [ATLATL-ORDNANCE] v7_nan_inf_shield
+/// Bit-level shield against NaN/Inf injection attacks in tensors.
+pub export fn v7_nan_inf_shield(data_ptr: [*]f32, data_len: usize) void {
+    const slice = data_ptr[0..data_len];
+    for (slice) |*val| {
+        if (std.math.isNan(val.*) or std.math.isInf(val.*)) {
+            val.* = 0.0;
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v7_guerrilla_memory_rotation
+/// Non-deterministic memory topology rotation to break debugger pattern matching.
+pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
+    if (target_len < 4) return;
+    var prng = std.rand.DefaultPrng.init(entropy_seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    // Chaotic shift
+    const shift = rand.int(usize) % (target_len / 2);
+    if (shift > 0) {
+        var i: usize = 0;
+        while (i < shift) : (i += 1) {
+            const tmp = slice[i];
+            slice[i] = slice[target_len - 1 - i];
+            slice[target_len - 1 - i] = tmp;
+        }
+    }
+
+    // Bit-level non-deterministic rotation
+    for (slice) |*byte| {
+        const r = rand.int(u3);
+        byte.* = (byte.* << @intCast(r)) | (byte.* >> @intCast(8 - r));
+        byte.* ^= 0xA5; // v7 salt
+    }
+}
+
+test "v7 audit tensor detects roughness" {
+    const data = [_]f32{ 0.1, 0.9, 0.1, 0.9 };
+    const r = v7_audit_tensor(&data, data.len);
+    try std.testing.expect(r > 0.5);
+}
+
+test "v7 nan inf shield cleans data" {
+    var data = [_]f32{ 0.5, std.math.nan(f32), std.math.inf(f32) };
+    v7_nan_inf_shield(&data, data.len);
+    try std.testing.expect(data[1] == 0.0);
+    try std.testing.expect(data[2] == 0.0);
+}
+
 test "v5 stealth poisoning is non-zero" {
     var buffer: [512]u8 = undefined;
     @memset(&buffer, 0);

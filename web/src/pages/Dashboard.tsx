@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v6.0.0-guerrilla initialized.", "[SYSTEM] Mesh operating in GHOST MODE.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v7.0.0-ALPHA initialized.", "[SYSTEM] Alpha Stack (Zig/Rust/WASM) synchronization complete.", "[SYSTEM] GHOST PROTOCOL v7 active.", "[SYSTEM] ALGORITHMIC GUILLOTINE ARMED."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -167,10 +167,10 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="glow-amber" style={{ fontFamily: T.display, fontWeight: 800, fontSize: 16, letterSpacing: 4, color: threatLevel === "CRITICAL" ? T.red : T.amber }}>
-              ATLATL-ORDNANCE
+              ATLATL-ORDNANCE (ALPHA)
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v5.0.0-atlatl · AMD MI300X MESH
+              GUERRILLA ALGORÍTMICA · v7.0.0-ALPHA · Alpha Stack (WASM/Zig/Rust)
             </div>
           </div>
         </div>
@@ -234,34 +234,63 @@ export default function Dashboard() {
         {/* WASM status pill */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 12, gap: 16 }}>
           {threatLevel === "CRITICAL" && (
-            <button
-              onClick={async () => {
-                try {
-                  const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/retaliate/v5_strike", {
-                    method: "POST",
-                    headers: { "X-Kalpixk-Key": apiKey }
-                  });
-                  const data = await res.json();
-                  setTerminalOutput(prev => [
-                    ...prev,
-                    `[STRIKE] PHASE BLACK ENGAGED AGAINST TARGET.`,
-                    `[STRIKE] STATUS: ${data.v5_status}`,
-                    ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
-                  ]);
-                  alert("PHASE BLACK ENGAGED: SYSTEMIC COLLAPSE INITIATED");
-                } catch (e) {
-                  console.error("Strike failed", e);
-                }
-              }}
-              style={{
-                background: T.red, color: "white", border: "none",
-                padding: "4px 12px", fontSize: 9, fontWeight: 800,
-                letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
-                boxShadow: `0 0 10px ${T.red}`,
-              }}>
-              EXECUTAR: PHASE BLACK
-            </button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
+                    const res = await fetch("/api/v1/retaliate/v7_guillotine", {
+                      method: "POST",
+                      headers: { "X-Kalpixk-Key": apiKey }
+                    });
+                    const data = await res.json();
+                    setTerminalOutput(prev => [
+                      ...prev,
+                      `[v7-GUILLOTINE] ALGORITHMIC_GUILLOTINE ENGAGED AGAINST TARGET.`,
+                      `[v7-GUILLOTINE] ORCHESTRATION: ${data.orchestration}`,
+                      `[v7-GUILLOTINE] IMPACT: ${data.impact}`
+                    ]);
+                    alert("ALGORITHMIC GUILLOTINE EXECUTED: TOTAL INFRASTRUCTURE COLLAPSE");
+                  } catch (e) {
+                    console.error("Guillotine failed", e);
+                  }
+                }}
+                style={{
+                  background: T.red, color: "white", border: "none",
+                  padding: "4px 12px", fontSize: 9, fontWeight: 800,
+                  letterSpacing: 2, cursor: "pointer", animation: "pulse 0.5s infinite",
+                  boxShadow: `0 0 15px ${T.red}`,
+                }}>
+                V7: GUILLOTINA ALGORÍTMICA
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
+                    const res = await fetch("/api/v1/retaliate/v5_strike", {
+                      method: "POST",
+                      headers: { "X-Kalpixk-Key": apiKey }
+                    });
+                    const data = await res.json();
+                    setTerminalOutput(prev => [
+                      ...prev,
+                      `[STRIKE] PHASE BLACK ENGAGED AGAINST TARGET.`,
+                      `[STRIKE] STATUS: ${data.v5_status}`,
+                      ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
+                    ]);
+                    alert("PHASE BLACK ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  } catch (e) {
+                    console.error("Strike failed", e);
+                  }
+                }}
+                style={{
+                  background: T.amber, color: "black", border: "none",
+                  padding: "4px 12px", fontSize: 9, fontWeight: 800,
+                  letterSpacing: 2, cursor: "pointer",
+                }}>
+                PHASE BLACK
+              </button>
+            </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* WebSocket status */}

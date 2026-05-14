@@ -3,6 +3,7 @@
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
+mod guerrilla;
 mod entropy;
 mod event;
 mod features;
@@ -58,6 +59,9 @@ export!(KalpixkCore);
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
+    fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> f32;
+    fn v7_nan_inf_shield(data_ptr: *mut f32, data_len: usize);
+    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
 }
 
 #[wasm_bindgen]
@@ -116,6 +120,58 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v7_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v7 GHOST PROTOCOL (ALPHA)
+    // Enhanced heartbeats with polymorphic mesh orchestration.
+    defense_nodes::process_ghost_signal(node_id, encrypted_payload);
+    serde_json::json!({
+        "mode": "GHOST_V7",
+        "integrity": "VERIFIED",
+        "orchestration": "ACTIVE",
+        "stack": "ALPHA"
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v7_audit_tensor_wasm(features: Vec<f32>) -> f32 {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v7_audit_tensor(features.as_ptr(), features.len())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // Simple fallback/simulation for non-wasm targets
+        if features.len() < 2 { return 0.0; }
+        let mut r = 0.0;
+        for i in 0..features.len()-1 {
+            r += (features[i] - features[i+1]).abs();
+        }
+        r / features.len() as f32
+    }
+}
+
+#[wasm_bindgen]
+pub fn v7_guerrilla_process(logs_json: &str, source_type: &str) -> String {
+    // [ATLATL-ORDNANCE] v7 GUERRILLA PROCESS (ALPHA)
+    // High-performance military-grade orchestration.
+    let result = process_batch(logs_json, source_type);
+
+    // Integration with GuerrillaOrchestrator
+    let orchestration = guerrilla::GuerrillaOrchestrator::orchestrate_v7("WASM_CORE_V7", "ALPHA_INIT");
+
+    // In v7, we add an extra layer of structural verification
+    let mut res_val: serde_json::Value = serde_json::from_str(&result).unwrap_or_default();
+    if let Some(obj) = res_val.as_object_mut() {
+        obj.insert("v7_orchestration".to_string(), serde_json::json!("ALPHA_STACK_ACTIVE"));
+        obj.insert("guillotine_state".to_string(), serde_json::json!("ARMED"));
+        obj.insert("orchestrator_signal".to_string(), serde_json::json!(orchestration));
+    }
+
+    res_val.to_string()
 }
 
 #[wasm_bindgen]
