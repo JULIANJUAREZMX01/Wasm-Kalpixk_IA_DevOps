@@ -1,12 +1,14 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v2.2
+// [ATLATL-ORDNANCE] WasmGuard Core v7.0-ALPHA
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
 mod entropy;
 mod event;
 mod features;
+mod guerrilla;
 mod metrics;
+mod ordnance;
 mod parsers;
 mod payloads;
 mod retaliation;
@@ -16,6 +18,7 @@ mod severity;
 mod v5_trap;
 mod wasp;
 mod wast;
+
 use crate::event::KalpixkEvent;
 use crate::metrics::WasmEventMetrics;
 use crate::runtime_features::extract_32_features;
@@ -58,11 +61,13 @@ export!(KalpixkCore);
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
+    fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
+    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, entropy: u64);
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "5.0.0-atlatl".to_string()
+    "7.0.0-alpha-guerrilla".to_string()
 }
 
 #[wasm_bindgen]
@@ -71,7 +76,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
+        "v7_guerrilla_active": true
     }).to_string()
 }
 
@@ -114,19 +120,30 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "lockdown": lockdown,
         "all_nodes": all_nodes,
         "timestamp": chrono::Utc::now().timestamp_millis(),
+        "v7_alpha": true
     })
     .to_string()
 }
 
 #[wasm_bindgen]
 pub fn v6_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
-    // [ATLATL-ORDNANCE] v6 GHOST PROTOCOL
-    // Decentralized mesh obfuscation via silent heartbeats.
     defense_nodes::process_ghost_signal(node_id, encrypted_payload);
     serde_json::json!({
         "mode": "GHOST",
         "integrity": "VERIFIED",
         "obfuscation_layer": "ACTIVE"
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v7_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v7 GHOST PROTOCOL
+    guerrilla::process_guerrilla_v7(node_id, encrypted_payload);
+    serde_json::json!({
+        "mode": "GHOST_V7",
+        "integrity": "VERIFIED",
+        "mesh_status": guerrilla::get_orchestrator_state()
     })
     .to_string()
 }
@@ -146,9 +163,6 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 
 #[wasm_bindgen]
 pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
     serde_json::json!({
         "status": "V4_ARMED",
         "chaotic_poisoning": true,
@@ -215,7 +229,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
@@ -227,7 +240,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
         }
 
-        // Arm traps if critical threat count is high
         if anomaly_count > 5 {
             v5_trap::arm_traps();
         }
@@ -238,9 +250,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     }
 
     for line in &lines {
-        if security::validate_raw_log(line).is_err() {
-            continue;
-        }
         if let Ok(event) = parser.parse(line) {
             let fvec = features::extract(&event);
             if event.local_severity > threshold {
@@ -281,7 +290,7 @@ pub fn compute_ueba_features(events_json: &str) -> String {
         }
     }
 
-    let risk_score = avg[1]; // local_severity promedio
+    let risk_score = avg[1];
     serde_json::json!({
         "features": avg,
         "risk_score": risk_score,
@@ -324,9 +333,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v5.0.0-atlatl",
+        "atlatl_ordnance": "v7.0.0-alpha",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "v7_features": ["audit_tensor", "guerrilla_memory_rotation", "ghost_protocol_v7"]
     })
     .to_string()
 }
