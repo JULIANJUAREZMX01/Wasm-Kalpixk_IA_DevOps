@@ -5,8 +5,10 @@ AdversarialDriftGuard — Dynamic threshold recalibration.
 Protects against normalization attacks and statistical drift.
 """
 
-import numpy as np
 from collections import deque
+
+import numpy as np
+
 
 class AdversarialDriftGuard:
     def __init__(self, window_size: int = 500, sigma: float = 3.0):
@@ -31,8 +33,10 @@ class AdversarialDriftGuard:
     def get_threshold(self) -> float:
         return self.current_threshold
 
+
 class AdaptiveThreshold:
     """Wrapper for integration with the detection ensemble."""
+
     def __init__(self):
         self.guard = AdversarialDriftGuard()
 

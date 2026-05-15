@@ -4,9 +4,9 @@
 //!
 //! Orchestrates the Ghost Protocol v7 and polymorphic mesh signaling.
 
-use std::sync::Mutex;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+use std::sync::Mutex;
 
 lazy_static::lazy_static! {
     static ref ORCHESTRATOR: Mutex<GuerrillaOrchestrator> = Mutex::new(GuerrillaOrchestrator::new());

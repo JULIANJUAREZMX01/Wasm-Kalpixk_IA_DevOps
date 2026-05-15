@@ -33,7 +33,9 @@ impl OrdnanceFactory {
     /// Generates C2 disruption payloads with polymorphic malware signatures.
     pub fn generate_v7_c2_disruption() -> Vec<u8> {
         let mut payload = Vec::new();
-        payload.extend_from_slice(b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*");
+        payload.extend_from_slice(
+            b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*",
+        );
         payload.extend_from_slice(b"v7_guerrilla_strike_signature");
         payload
     }

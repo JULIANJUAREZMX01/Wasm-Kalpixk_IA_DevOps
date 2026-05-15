@@ -1,11 +1,14 @@
 import logging
+
 import numpy as np
 import torch
+
+from python.detection.adaptive_threshold import AdaptiveThreshold
 from python.detection.autoencoder import KalpixkAutoencoder
 from python.detection.isolation_forest import KalpixkIsolationForest
-from python.detection.adaptive_threshold import AdaptiveThreshold
 
 logger = logging.getLogger("kalpixk.models.ensemble")
+
 
 class DetectionEnsemble:
     def __init__(self, device: torch.device):
@@ -38,9 +41,4 @@ class DetectionEnsemble:
         is_anomalies = [float(s) > threshold for s in ensemble_scores]
         self.adaptive_threshold.recalibrate(ensemble_scores.tolist(), is_anomalies)
 
-        return (
-            ensemble_scores.tolist(),
-            methods,
-            confidences,
-            self.adaptive_threshold.value
-        )
+        return (ensemble_scores.tolist(), methods, confidences, self.adaptive_threshold.value)
