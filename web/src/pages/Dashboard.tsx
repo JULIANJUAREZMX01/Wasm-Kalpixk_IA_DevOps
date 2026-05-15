@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v6.0.0-guerrilla initialized.", "[SYSTEM] Mesh operating in GHOST MODE.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v7.0.0-alpha-guerrilla initialized.", "[SYSTEM] Mesh operating in GHOST_V7 MODE.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -167,10 +167,10 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="glow-amber" style={{ fontFamily: T.display, fontWeight: 800, fontSize: 16, letterSpacing: 4, color: threatLevel === "CRITICAL" ? T.red : T.amber }}>
-              ATLATL-ORDNANCE
+              ATLATL-ORDNANCE 🏹
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v5.0.0-atlatl · AMD MI300X MESH
+              GUERRILLA ALGORÍTMICA · v7.0.0-ALPHA · AMD MI300X MESH
             </div>
           </div>
         </div>
@@ -238,18 +238,18 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = import.meta.env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/retaliate/v5_strike", {
+                  const res = await fetch("/api/v1/retaliate/v7_guillotine", {
                     method: "POST",
                     headers: { "X-Kalpixk-Key": apiKey }
                   });
                   const data = await res.json();
                   setTerminalOutput(prev => [
                     ...prev,
-                    `[STRIKE] PHASE BLACK ENGAGED AGAINST TARGET.`,
-                    `[STRIKE] STATUS: ${data.v5_status}`,
-                    ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
+                    `[STRIKE] v7 ALGORITHMIC_GUILLOTINE ENGAGED against target infrastructure.`,
+                    `[STRIKE] STATUS: ${data.status}`,
+                    `[STRIKE] IMPACT: ${data.impact}`
                   ]);
-                  alert("PHASE BLACK ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  alert("v7 ALGORITHMIC_GUILLOTINE ENGAGED: SYSTEMIC RESPIRATORY COLLAPSE INITIATED");
                 } catch (e) {
                   console.error("Strike failed", e);
                 }

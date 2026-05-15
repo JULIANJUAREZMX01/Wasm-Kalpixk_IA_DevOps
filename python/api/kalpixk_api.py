@@ -44,6 +44,7 @@ sys.path.insert(0, "/app/wasm_kalpixk")
 from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
+from src.retaliation.atlatl import atlatl
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -61,7 +62,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="5.0.0-atlatl",
+    version="7.0.0-alpha",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -213,9 +214,10 @@ async def health():
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "5.0.0-atlatl",
+        "version": "7.0.0-alpha",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "5.0.0-atlatl",
+        "ensemble_version": "7.0.0-alpha",
+        "v7_guerrilla": "active"
     }
 
 
@@ -281,7 +283,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 
     features_array = torch.from_numpy(features_np).to(_device)
 
-    scores, techniques, confidences = ens.predict(features_array)
+    scores, techniques, confidences, threshold = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
 
     results = []
@@ -294,12 +296,13 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
+            "adaptive_threshold": threshold
         })
 
-        if score > 0.5:
+        if score > threshold:
             total_anomalies += 1
             severity = (
-                "CRITICAL" if score > 0.8
+                "CRITICAL" if score > 0.85
                 else "HIGH" if score > 0.6
                 else "LOW"
             )
@@ -341,13 +344,13 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
         raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
 
     features_array = torch.from_numpy(features_np).to(_device)
-    scores, _, _ = ens.predict(features_array)
+    scores, _, _, threshold = ens.predict(features_array)
     score = scores[0]
-    is_anomaly = score > 0.5
+    is_anomaly = score > threshold
     latency = (time.time() - t0) * 1000
 
     severity = (
-        "CRITICAL" if score > 0.8
+        "CRITICAL" if score > 0.85
         else "HIGH" if score > 0.6
         else "MEDIUM" if score > 0.4
         else "LOW"
@@ -435,9 +438,9 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
                 arr = np.array([features], dtype=np.float32)
                 # Convert to tensor and fix result unpacking
                 features_array = torch.from_numpy(arr).to(_device)
-                scores, _, _ = ens.predict(features_array)
+                scores, _, _, threshold = ens.predict(features_array)
                 score = float(scores[0])
-                is_anomaly = score > 0.5
+                is_anomaly = score > threshold
                 severity = "HIGH" if score > 0.6 else "LOW"
 
                 if is_anomaly:
@@ -488,6 +491,26 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
     }
 
 
+
+# ---------------------------------------------------------------------------
+# ATLATL-ORDNANCE v7.0 Retaliatory Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/retaliate/v7_guillotine")
+@limiter.limit("5/minute")
+async def v7_guillotine(request: Request, api_key: str = Depends(verify_api_key)):
+    """Triggers the v7 Algorithmic Guillotine against a detected threat."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v7_algorithmic_guillotine(target)
+    return result
+
+@app.post("/api/v1/guerrilla/v7/strike")
+@limiter.limit("5/minute")
+async def v7_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """Orchestrates a v7 Guerrilla Strike."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v7_strike_engaged(target)
+    return result
 
 # ---------------------------------------------------------------------------
 # Attack Simulator Control — AMD Hackathon Demo
