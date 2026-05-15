@@ -1,8 +1,9 @@
 
-import pytest
-from fastapi.testclient import TestClient
-from python.api.kalpixk_api import app
 import os
+
+from fastapi.testclient import TestClient
+
+from python.api.kalpixk_api import app
 
 client = TestClient(app)
 
