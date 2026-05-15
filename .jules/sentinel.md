@@ -49,3 +49,8 @@
 **Vulnerability:** Dynamic SQL query construction using unvalidated dictionary keys in `insert_alert`.
 **Learning:** Even when using parameterized values, SQL injection is possible if the structure of the query (e.g., column names) is built from untrusted dictionary keys. An attacker providing a malicious dictionary could manipulate the SQL statement to bypass logic or corrupt the database.
 **Prevention:** Always validate and filter dynamic components of a SQL query (like column names) against a strict whitelist of allowed identifiers. Never trust dictionary keys or object attributes directly when building SQL strings.
+
+## 2026-05-15 - Simulation Endpoint Auth and Batch SQLi Hardening
+**Vulnerability:** Unauthenticated attack simulation endpoints and fragile batch SQL insertion.
+**Learning:** Simulation and demo endpoints are often overlooked during security audits but can be abused to trigger resource-intensive background processes or manipulate system state. Additionally, batch database insertions using `executemany` are prone to both SQL injection (via keys) and runtime errors if input dictionaries are not structurally uniform.
+**Prevention:** Always apply the same security dependencies (Auth, Rate Limiting) to demo/simulation endpoints. In database layers, use strict whitelists for column names and implement key-consistency padding for batch operations to ensure fail-secure behavior.

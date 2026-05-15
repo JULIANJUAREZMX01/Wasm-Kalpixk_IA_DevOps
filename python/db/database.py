@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 import aiosqlite
 from loguru import logger
@@ -56,7 +56,7 @@ async def insert_alert(alert_dict):
 
         # Ensure timestamp if not provided
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         columns = ", ".join(filtered_data.keys())
         placeholders = ", ".join([":" + k for k in filtered_data.keys()])
@@ -117,18 +117,47 @@ async def insert_alerts(alerts_list):
 
     db_path = get_db_path()
     async with aiosqlite.connect(db_path) as db:
+        processed_alerts = []
         for alert_dict in alerts_list:
-            features = alert_dict.get("features_json")
-            if isinstance(features, list):
-                alert_dict["features_json"] = json.dumps(features)
-            if "ts" not in alert_dict:
-                alert_dict["ts"] = datetime.utcnow().isoformat()
+            # Filter input against whitelist to prevent SQL Injection in column names
+            filtered_data = {}
+            for k, v in alert_dict.items():
+                if k in ALLOWED_COLUMNS:
+                    filtered_data[k] = v
+                else:
+                    logger.warning(f"Skipping invalid alert field in batch: {k}")
 
-        # Assuming all dicts have the same keys (which is the case for batch insertion)
-        first_alert = alerts_list[0]
-        columns = ", ".join(first_alert.keys())
-        placeholders = ", ".join([":" + k for k in first_alert.keys()])
+            if not filtered_data:
+                continue
+
+            # Convert features_json if it is a list
+            features = filtered_data.get("features_json")
+            if isinstance(features, list):
+                filtered_data["features_json"] = json.dumps(features)
+
+            # Ensure timestamp if not provided
+            if "ts" not in filtered_data:
+                filtered_data["ts"] = datetime.now(UTC).isoformat()
+
+            processed_alerts.append(filtered_data)
+
+        if not processed_alerts:
+            return
+
+        # Harden batch insertion: ensure all dicts have the same keys by padding with None
+        # This prevents executemany() from failing if dictionaries have different structures.
+        all_keys = set()
+        for alert in processed_alerts:
+            all_keys.update(alert.keys())
+
+        for alert in processed_alerts:
+            for key in all_keys:
+                if key not in alert:
+                    alert[key] = None
+
+        columns = ", ".join(all_keys)
+        placeholders = ", ".join([":" + k for k in all_keys])
         query = f"INSERT INTO alerts ({columns}) VALUES ({placeholders})"
 
-        await db.executemany(query, alerts_list)
+        await db.executemany(query, processed_alerts)
         await db.commit()
