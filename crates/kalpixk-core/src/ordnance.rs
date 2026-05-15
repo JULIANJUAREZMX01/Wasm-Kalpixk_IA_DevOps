@@ -12,7 +12,7 @@ impl OrdnanceFactory {
         // [ATLATL-ORDNANCE] Recursive Structure v7
         let mut header = vec![0x50, 0x4B, 0x03, 0x04]; // PK ZIP header
         header.extend_from_slice(b"ATLATL-V7-MACUAHUITL");
-        header.extend(std::iter::repeat(0x00).take(64));
+        header.extend(std::iter::repeat_n(0x00, 64));
         header
     }
 
