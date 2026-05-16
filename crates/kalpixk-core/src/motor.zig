@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 5.0-ATLATL (Guerrilla Algorítmica)
+// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -55,10 +55,10 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
     return ptr.load(.Monotonic) == expected;
 }
 
-/// [ATLATL-ORDNANCE] v5_stealth_poisoning
+/// [ATLATL-ORDNANCE] v7_stealth_poisoning
 /// Genera secuencias de salto no deterministas basadas en el drift del reloj y entropia local.
 /// Diseñado para romper el rastreo de ejecución en entornos virtualizados o sandboxed.
-pub export fn v5_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+pub export fn v7_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
@@ -192,9 +192,9 @@ pub export fn v5_logic_bomb_detector(data_ptr: [*]const u8, data_len: usize) boo
     return false;
 }
 
-/// [ATLATL-ORDNANCE] v5_memory_encryption_at_rest
+/// [ATLATL-ORDNANCE] v7_memory_encryption_at_rest
 /// XOR-based rolling encryption for decoy buffers to prevent static analysis.
-pub export fn v5_memory_encryption_at_rest(target_ptr: [*]u8, target_len: usize, key: u64) void {
+pub export fn v7_memory_encryption_at_rest(target_ptr: [*]u8, target_len: usize, key: u64) void {
     const slice = target_ptr[0..target_len];
     var prng = std.rand.DefaultPrng.init(key);
     const rand = prng.random();
@@ -203,9 +203,49 @@ pub export fn v5_memory_encryption_at_rest(target_ptr: [*]u8, target_len: usize,
     }
 }
 
-/// [ATLATL-ORDNANCE] v5_neural_decoy
+/// [ATLATL-ORDNANCE] v7_audit_tensor
+/// Bit-level adversarial roughness detection and NaN/Inf shielding.
+/// Prevents tensor-based evasion by validating numeric stability and roughness.
+pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) bool {
+    if (data_len == 0) return true;
+    const slice = data_ptr[0..data_len];
+
+    var prev: f32 = slice[0];
+    for (slice) |val| {
+        // NaN/Inf Shielding
+        if (!std.math.isFinite(val)) return false;
+
+        // Adversarial Roughness: Detect extreme local variance indicative of PGD/FGSM
+        const diff = @abs(val - prev);
+        if (diff > 10.0) return false;
+        prev = val;
+    }
+    return true;
+}
+
+/// [ATLATL-ORDNANCE] v7_guerrilla_memory_rotation
+/// Non-deterministic memory address obfuscation via stride-based rotation.
+/// Disrupts automated memory dump analysis and pointer tracing.
+pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 16) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+
+    const stride = (rand.int(usize) % (target_len / 4)) + 1;
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i + stride < target_len) : (i += stride) {
+        const j = (i + stride) % target_len;
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v7_neural_decoy
 /// Generates fake tensor data to mislead attackers attempting to poison training.
-pub export fn v5_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {
+pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];

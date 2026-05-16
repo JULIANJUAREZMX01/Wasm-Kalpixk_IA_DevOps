@@ -57,12 +57,12 @@ impl SeverityScore {
     }
 }
 
-/// [ATLATL-ORDNANCE] v6 GHOST PROTOCOL — Process silent signals
+/// [ATLATL-ORDNANCE] v7 GHOST PROTOCOL — Process silent signals
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     // Register heartbeat silently without broadcasting to standard lists
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("ghost-{}", node_id),
+            format!("v7-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
@@ -525,11 +525,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
         // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-ATLATL".to_string(),
-            technique: "TA-DETECTION".to_string(),
+            node_id: "WASM-CORE-ATLATL-V7".to_string(),
+            technique: "TA-DETECTION-V7".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: None,
+            signature: Some("V7_ALPHA_SIG".to_string()),
         });
         return true;
     }
