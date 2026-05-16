@@ -26,6 +26,7 @@ const PHASE_CONFIG: Record<SimPhase, { label: string; classes: string; dot: stri
 };
 
 const BASE_URL = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_URL ?? "";
+const API_KEY  = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_KEY ?? "";
 
 export default function AttackSimulator() {
   const [status, setStatus] = useState<SimStatus>({ running: false, phase: "idle" });
@@ -34,7 +35,9 @@ export default function AttackSimulator() {
 
   const pollStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/simulate/status`);
+      const res = await fetch(`${BASE_URL}/api/simulate/status`, {
+        headers: { "X-Kalpixk-Key": API_KEY }
+      });
       if (res.ok) {
         const data: SimStatus = await res.json();
         setStatus(data);
@@ -51,7 +54,10 @@ export default function AttackSimulator() {
     setLoading("start");
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/api/simulate/start`, { method: "POST" });
+      const res = await fetch(`${BASE_URL}/api/simulate/start`, {
+        method: "POST",
+        headers: { "X-Kalpixk-Key": API_KEY }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setStatus({ running: true, phase: "normal" });
       setTimeout(pollStatus, 2000);
@@ -66,7 +72,10 @@ export default function AttackSimulator() {
     setLoading("stop");
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/api/simulate/stop`, { method: "POST" });
+      const res = await fetch(`${BASE_URL}/api/simulate/stop`, {
+        method: "POST",
+        headers: { "X-Kalpixk-Key": API_KEY }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setStatus({ running: false, phase: "idle" });
     } catch (err) {

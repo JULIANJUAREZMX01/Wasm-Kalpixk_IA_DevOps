@@ -132,7 +132,7 @@ export function useKalpixkEngine() {
     try {
       const res = await fetch(`${API_BASE}/api/detect`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+        headers: { "Content-Type": "application/json", "X-Kalpixk-Key": API_KEY },
         body: JSON.stringify({ features: [features] }),
         signal: AbortSignal.timeout(4_000),
       });

@@ -49,3 +49,8 @@
 **Vulnerability:** Dynamic SQL query construction using unvalidated dictionary keys in `insert_alert`.
 **Learning:** Even when using parameterized values, SQL injection is possible if the structure of the query (e.g., column names) is built from untrusted dictionary keys. An attacker providing a malicious dictionary could manipulate the SQL statement to bypass logic or corrupt the database.
 **Prevention:** Always validate and filter dynamic components of a SQL query (like column names) against a strict whitelist of allowed identifiers. Never trust dictionary keys or object attributes directly when building SQL strings.
+
+## 2026-05-15 - Heterogeneous Batch SQL Hardening
+**Vulnerability:** SQL Injection in batch alerts via unvalidated dictionary keys and `executemany` failures.
+**Learning:** Hardening batch insertions (`executemany`) requires more than just value parameterization; it requires ensuring all dictionaries in the batch have an identical set of keys if using named placeholders. If keys are heterogeneous (even after whitelisting), some database drivers will fail with a `ProgrammingError`.
+**Prevention:** When performing batch inserts with dynamic columns, first filter all inputs against a strict whitelist, then calculate the union of all allowed keys present in the batch and pad every dictionary with `None` for missing keys to ensure structural uniformity before execution.
