@@ -41,6 +41,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
+from src.retaliation.atlatl import atlatl
+
 from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
@@ -213,9 +215,9 @@ async def health():
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "5.0.0-atlatl",
+        "version": "7.0.0-atlatl-alpha",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "5.0.0-atlatl",
+        "ensemble_version": "7.0.0-atlatl-alpha",
     }
 
 
@@ -281,7 +283,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 
     features_array = torch.from_numpy(features_np).to(_device)
 
-    scores, techniques, confidences = ens.predict(features_array)
+    scores, techniques, confidences, threshold = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
 
     results = []
@@ -294,9 +296,10 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
+            "adaptive_threshold": threshold
         })
 
-        if score > 0.5:
+        if score > threshold:
             total_anomalies += 1
             severity = (
                 "CRITICAL" if score > 0.8
@@ -341,9 +344,9 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
         raise HTTPException(status_code=422, detail=f"Expected 32 features, got {features_np.shape[1]}")
 
     features_array = torch.from_numpy(features_np).to(_device)
-    scores, _, _ = ens.predict(features_array)
+    scores, _, _, threshold = ens.predict(features_array)
     score = scores[0]
-    is_anomaly = score > 0.5
+    is_anomaly = score > threshold
     latency = (time.time() - t0) * 1000
 
     severity = (
@@ -435,10 +438,10 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
                 arr = np.array([features], dtype=np.float32)
                 # Convert to tensor and fix result unpacking
                 features_array = torch.from_numpy(arr).to(_device)
-                scores, _, _ = ens.predict(features_array)
+                scores, _, _, threshold = ens.predict(features_array)
                 score = float(scores[0])
-                is_anomaly = score > 0.5
-                severity = "HIGH" if score > 0.6 else "LOW"
+                is_anomaly = score > threshold
+                severity = "HIGH" if score > (threshold + 0.1) else "LOW"
 
                 if is_anomaly:
                     alert_data = {
@@ -542,3 +545,11 @@ async def simulate_status() -> dict:
         _sim_state["proc"] = None
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
+
+@app.post("/api/v1/guerrilla/v7/strike")
+@limiter.limit("2/minute")
+async def v7_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v7 Algorithmic Guillotine trigger."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v7_algorithmic_guillotine(target)
+    return result
