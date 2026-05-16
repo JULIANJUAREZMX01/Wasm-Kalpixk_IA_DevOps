@@ -139,14 +139,15 @@ pub fn v7_guerrilla_process(payload_json: &str) -> String {
     // High-performance military-grade orchestration between host and WASM sandbox.
     let guard = wasp::validate_ffi_call("v7_guerrilla_process", 1);
     if !guard.passed {
-         return serde_json::json!({"error": guard.reason}).to_string();
+        return serde_json::json!({"error": guard.reason}).to_string();
     }
 
     serde_json::json!({
         "status": "PROCESSED",
         "v7_orchestration": "ACTIVE",
         "payload_len": payload_json.len()
-    }).to_string()
+    })
+    .to_string()
 }
 
 #[wasm_bindgen]
@@ -264,7 +265,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
-            v7_guerrilla_memory_rotation(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0xDEADBEEF);
+            v7_guerrilla_memory_rotation(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0xDEADBEEF,
+            );
         }
 
         // Arm traps if critical threat count is high

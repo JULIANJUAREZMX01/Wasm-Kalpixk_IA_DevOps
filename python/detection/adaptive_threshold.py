@@ -1,6 +1,7 @@
 import numpy as np
 from loguru import logger
 
+
 class AdversarialDriftGuard:
     """
     [ATLATL-ORDNANCE] Adversarial Drift Guard v7.0
