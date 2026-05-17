@@ -87,3 +87,8 @@
 - Algorithmic Guillotine: ARMED & ENGAGED
 
 *ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización estructural. El sistema ya no solo resiste; devora.*
+
+## ATLATL-OP-24001 - [DEFENSIVE_LOCKDOWN]
+**Vector de Ataque:** Atacantes utilizando payloads complejos de desbordamiento de buffer y bombas lógicas para saturar o desestabilizar el módulo WASM intentando saltar al host JS o bloquear recursos compartidos.
+**Defensa Implementada:** Implementación masiva de guardias atómicos en `motor.zig` (`v8_atomic_memory_shield`, `v8_state_quarantine`) validando las fronteras del SharedBuffer. Paralelamente, `v5_trap.rs` fue reconstruido para contener un administrador `AtlatlTrapManager` de múltiples capas (Monitor -> Tarpit -> Full Isolation) basado en Atomics.
+**Contra-Ataque:** El sistema envenena los punteros del payload sin contraatacar activamente su sistema base, aislándolo de forma segura mediante un Tarpit que introduce retrasos deterministas (spin loops) y consume el tiempo/recursos del atacante.

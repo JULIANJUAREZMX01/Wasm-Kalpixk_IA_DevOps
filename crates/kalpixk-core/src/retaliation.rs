@@ -5,6 +5,7 @@
 
 use crate::event::KalpixkEvent;
 use crate::severity::{get_redteam_mapping, OffenseLevel, RetaliationType};
+use crate::v5_trap::GLOBAL_TRAP_MANAGER;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -55,8 +56,15 @@ pub fn execute_retaliation(
         m.recommended_retaliation.clone()
     } else {
         match level {
-            OffenseLevel::Exterminio => RetaliationType::RecursiveZipBomb,
-            OffenseLevel::Critical => RetaliationType::PoisonPointers,
+            OffenseLevel::Exterminio => {
+                GLOBAL_TRAP_MANAGER.escalate_lockdown(3);
+                GLOBAL_TRAP_MANAGER.execute_tarpit();
+                RetaliationType::Block // Replace offensive types with Block/Defensive tarpit
+            }
+            OffenseLevel::Critical => {
+                GLOBAL_TRAP_MANAGER.escalate_lockdown(2);
+                RetaliationType::Block
+            }
             _ => RetaliationType::Block,
         }
     };

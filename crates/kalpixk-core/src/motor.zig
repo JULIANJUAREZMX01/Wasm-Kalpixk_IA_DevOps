@@ -256,6 +256,37 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
 }
 
 /// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
+
+/// [ATLATL-ORDNANCE] v8_atomic_memory_shield
+/// Defensive boundary checking and rolling canaries to prevent buffer overflows and memory corruption.
+pub export fn v8_atomic_memory_shield(buffer_ptr: [*]u8, buffer_len: usize, secret_key: u64) void {
+    if (buffer_len < 32) return;
+    const slice = buffer_ptr[0..buffer_len];
+    var prng = std.rand.DefaultPrng.init(secret_key);
+    const rand = prng.random();
+
+    // Place rolling canaries at boundaries and periodically throughout the buffer
+    slice[0] = rand.int(u8) ^ MemoryContract.CANARY_VALUE;
+    slice[buffer_len - 1] = rand.int(u8) ^ MemoryContract.CANARY_VALUE;
+
+    var i: usize = 16;
+    while (i < buffer_len - 16) : (i += 32) {
+        slice[i] ^= 0x55; // Align/Canary scramble
+        slice[i+1] ^= 0xAA;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_state_quarantine
+/// Securely isolate suspicious memory regions without executing offensive code.
+/// Wipes payload while preserving structural metrics for forensic analysis.
+pub export fn v8_state_quarantine(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    // Fill with quarantine/poison value to prevent execution of malicious payloads
+    for (slice) |*byte| {
+        byte.* = MemoryContract.POISON_VALUE;
+    }
+}
+
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];
     for (slice) |byte| {

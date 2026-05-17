@@ -8,6 +8,7 @@
 //! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
 
 use crate::event::KalpixkEvent;
+use crate::v5_trap::GLOBAL_TRAP_MANAGER;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
@@ -531,6 +532,8 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: Some("V7_ALPHA_SIG".to_string()),
         });
+        GLOBAL_TRAP_MANAGER.escalate_lockdown(2);
+        GLOBAL_TRAP_MANAGER.execute_tarpit();
         return true;
     }
 
