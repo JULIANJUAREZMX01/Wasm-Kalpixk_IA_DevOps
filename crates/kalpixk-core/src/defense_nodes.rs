@@ -10,6 +10,7 @@
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use crate::v5_trap::GLOBAL_TRAP_MANAGER;
 use std::sync::Mutex;
 
 /// [ATLATL-ORDNANCE] Global Threat Data Structure
@@ -531,6 +532,8 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: Some("V7_ALPHA_SIG".to_string()),
         });
+        GLOBAL_TRAP_MANAGER.escalate_lockdown(2);
+        GLOBAL_TRAP_MANAGER.execute_tarpit();
         return true;
     }
 
