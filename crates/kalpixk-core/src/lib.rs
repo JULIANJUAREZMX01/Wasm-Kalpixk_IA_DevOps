@@ -59,6 +59,8 @@ extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v7_fragmentation_shield(data_ptr: *const u8, data_len: usize) -> bool;
+    fn v7_pointer_trap_grid(target_ptr: *mut u8, target_len: usize, expected_canary: u8) -> bool;
 }
 
 #[wasm_bindgen]
@@ -148,6 +150,33 @@ pub fn v7_guerrilla_process(payload_json: &str) -> String {
         "payload_len": payload_json.len()
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v7_fragmentation_shield_wasm(data: &[u8]) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v7_fragmentation_shield(data.as_ptr(), data.len())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = data;
+        false
+    }
+}
+
+#[wasm_bindgen]
+pub fn v7_pointer_trap_grid_wasm(data: &mut [u8], canary: u8) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v7_pointer_trap_grid(data.as_mut_ptr(), data.len(), canary)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = data;
+        let _ = canary;
+        false
+    }
 }
 
 #[wasm_bindgen]

@@ -86,6 +86,9 @@ pub fn validate_raw_log(raw: &str) -> Result<&str, SecurityError> {
         (b"/etc/shadow", "lfi_attempt"),
         (b"chmod +x", "malware_staging"),
         (b"Set-ExecutionPolicy", "powershell_hardening_bypass"),
+        (b"\x48\x31\xc0\x48\x31\xff", "xor_rax_rax_xor_rdi_rdi"), // Shellcode pattern
+        (b"\xcd\x80", "int_80_sys_call"),
+        (b"\x0f\x05", "syscall_instr"),
     ];
 
     let bytes = raw.as_bytes();
@@ -471,4 +474,15 @@ mod tests {
     fn build_fingerprint_not_empty() {
         assert!(!build_fingerprint().is_empty());
     }
+}
+
+#[test]
+fn test_security_v7_patterns() {
+    // We use raw byte slices for validation, but for string literals in tests,
+    // we need to be careful with Unicode. validate_raw_log accepts &str.
+    // Let's use a safe subset or check via byte windows as the implementation does.
+
+    // Pattern: \x0f\x05 (syscall)
+    let syscall_log = unsafe { std::str::from_utf8_unchecked(&[0x0f, 0x05]) };
+    assert!(validate_raw_log(syscall_log).is_err());
 }

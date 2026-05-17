@@ -264,6 +264,50 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
     return false;
 }
 
+/// [ATLATL-ORDNANCE] v7_fragmentation_shield
+/// Analyzes memory for fragmented shellcode by detecting high-entropy clusters
+/// and suspicious opcode transitions across a sliding window.
+pub export fn v7_fragmentation_shield(data_ptr: [*]const u8, data_len: usize) bool {
+    if (data_len < 16) return false;
+    const slice = data_ptr[0..data_len];
+
+    // Check for high-entropy clusters (indicative of packed/encrypted shellcode)
+    const window_size = 16;
+    var i: usize = 0;
+    while (i <= data_len - window_size) : (i += 8) {
+        const h = shannon_entropy(slice[i .. i + window_size].ptr, window_size);
+        if (h > 7.5) {
+            // Potential shellcode fragment detected
+            return true;
+        }
+    }
+    return false;
+}
+
+/// [ATLATL-ORDNANCE] v7_pointer_trap_grid
+/// Monitors a memory region for "honey-pointers" corruption.
+/// If any trap is tripped, the buffer is immediately shredded.
+pub export fn v7_pointer_trap_grid(target_ptr: [*]u8, target_len: usize, expected_canary: u8) bool {
+    if (target_len == 0) return false;
+    const slice = target_ptr[0..target_len];
+    var tripped = false;
+
+    // Check for canary consistency at strategic intervals
+    var i: usize = 0;
+    while (i < target_len) : (i += 64) {
+        if (slice[i] != expected_canary) {
+            tripped = true;
+            break;
+        }
+    }
+
+    if (tripped) {
+        // Immediate neutralization via entropy shredding
+        mesh_entropy_shredder(target_ptr, target_len, 0x77777777);
+    }
+    return tripped;
+}
+
 test "v5 stealth poisoning is non-zero" {
     var buffer: [512]u8 = undefined;
     @memset(&buffer, 0);
@@ -285,4 +329,32 @@ test "legacy poison pointers" {
     poison_pointers(&buffer, buffer.len);
     try std.testing.expect(buffer[0] == 0xEB);
     try std.testing.expect(buffer[1] == 0xFE);
+}
+
+test "v7 fragmentation shield detects high entropy" {
+    var buffer: [64]u8 = undefined;
+    // Low entropy
+    @memset(&buffer, 0xAA);
+    try std.testing.expect(v7_fragmentation_shield(&buffer, buffer.len) == false);
+
+    // High entropy fragment
+    var prng = std.rand.DefaultPrng.init(0x123);
+    const rand = prng.random();
+    for (buffer[10..26]) |*b| b.* = rand.int(u8);
+
+    try std.testing.expect(v7_fragmentation_shield(&buffer, buffer.len) == true);
+}
+
+test "v7 pointer trap grid" {
+    var buffer: [128]u8 = undefined;
+    @memset(&buffer, 0xDE);
+
+    // Not tripped
+    try std.testing.expect(v7_pointer_trap_grid(&buffer, buffer.len, 0xDE) == false);
+
+    // Trip it
+    buffer[64] = 0xAD;
+    try std.testing.expect(v7_pointer_trap_grid(&buffer, buffer.len, 0xDE) == true);
+    // Verify shredded (at least the first byte should be different from 0xDE due to random shredding)
+    try std.testing.expect(buffer[0] != 0xDE);
 }

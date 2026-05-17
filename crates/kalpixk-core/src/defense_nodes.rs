@@ -508,7 +508,34 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
+        detect_decentralized_guerrilla(event, &raw_lower),
     ]
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NODE 8: DECENTRALIZED_GUERRILLA DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_decentralized_guerrilla(event: &KalpixkEvent, raw_lower: &str) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "guerrilla_node" {
+        score += 0.2; // Baseline for untrusted guerrilla nodes
+    }
+
+    if raw_lower.contains("v7_strike") || raw_lower.contains("guillotine_executed") {
+        score += 0.5;
+        techniques.push("T1562".to_string()); // Impair Defenses
+    }
+
+    NodeResult {
+        node: "NODE-8: GUERRILLA".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Decentralized guerrilla mesh coordination analysis".to_string(),
+    }
 }
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
