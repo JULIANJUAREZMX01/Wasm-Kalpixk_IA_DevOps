@@ -336,6 +336,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
     { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "MACUAHUITL", desc: "v7 Retaliation",   load: 100, port: 8087, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [
@@ -727,6 +728,23 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
 
           {/* Targeted Infrastructure */}
           <div>
+            <div style={{ marginBottom: 20 }}>
+              <Label text="WASM POINTER TRAPS" accent={T.blue} />
+              <div style={{ background: "#000", border: `1px solid ${T.blue}33`, padding: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                  <span style={{ color: T.blue, fontSize: 9 }}>FRAGMENTATION_SHIELD</span>
+                  <span style={{ color: T.green, fontSize: 9 }}>ARMED</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                  <span style={{ color: T.blue, fontSize: 9 }}>POINTER_TRAP_GRID</span>
+                  <span style={{ color: T.green, fontSize: 9 }}>ACTIVE</span>
+                </div>
+                <div style={{ height: 2, background: T.dim, marginTop: 5 }}>
+                  <div style={{ width: "100%", height: "100%", background: T.blue }} className="blink" />
+                </div>
+              </div>
+            </div>
+
             <Label text="TARGETED INFRASTRUCTURE" accent={T.amber} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {alerts.filter(a => a.score > 0.8).slice(0, 5).map((a) => (

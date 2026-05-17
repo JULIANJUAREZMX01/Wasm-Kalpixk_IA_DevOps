@@ -78,3 +78,20 @@ fn test_lateral_poisoning() {
         "timestamp should be present"
     );
 }
+
+#[test]
+fn test_v7_guerrilla_node() {
+    let raw = "v7_strike triggered by guerrilla_node_427";
+    let event_json = parse_log_line(raw, "syslog").expect("Failed to parse log");
+
+    let result_json = analyze_and_retaliate(&event_json);
+    let v: Value = serde_json::from_str(&result_json).unwrap();
+
+    // NODE-8: GUERRILLA should detect the v7_strike keyword
+    assert!(
+        v["node"].as_str().unwrap_or("").contains("GUERRILLA"),
+        "Expected GUERRILLA node, got: {}",
+        v["node"]
+    );
+    assert!(v["score"].as_f64().unwrap_or(0.0) >= 0.5);
+}
