@@ -72,6 +72,13 @@ class Atlatl:
     def corrupt_c2_comms(self, target: str):
         logger.info(f"⚡ Corrupting v7 Command & Control signatures for {target}...")
 
+    def stream_entropy_payload(self, size_mb: int = 1024):
+        """Yields high entropy garbage to slow down attackers."""
+        import os
+        chunk_size = 1024 * 1024
+        for _ in range(size_mb):
+            yield os.urandom(chunk_size)
+
     def v7_algorithmic_guillotine(self, target: str):
         """
         [ATLATL-ORDNANCE] v7 ALGORITHMIC_GUILLOTINE

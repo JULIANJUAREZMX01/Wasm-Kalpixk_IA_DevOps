@@ -57,7 +57,7 @@ class AnomalyDetector:
             X_scaled = X
 
         X_tensor = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
-        scores, methods, confidences = self.ensemble.predict(X_tensor)
+        scores, methods, confidences, threshold = self.ensemble.predict(X_tensor)
 
         # Threshold at 0.6 for ensemble anomaly
         anomalies = [float(s) > 0.6 for s in scores]
