@@ -86,7 +86,9 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
+        # Fail-closed: require development_secret if KALPIXK_API_KEY is not set
+        key_to_check = expected_key if expected_key else "development_secret"
+        if not api_key or not secrets.compare_digest(api_key, key_to_check):
              raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
@@ -421,8 +423,10 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
         if not token or not secrets.compare_digest(token, expected_key):
             await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
-    elif expected_key:
-        if not token or not secrets.compare_digest(token, expected_key):
+    else:
+        # Fail-closed: require development_secret if KALPIXK_API_KEY is not set
+        key_to_check = expected_key if expected_key else "development_secret"
+        if not token or not secrets.compare_digest(token, key_to_check):
             await ws.close(code=fastapi_status.WS_1008_POLICY_VIOLATION)
             return
 
