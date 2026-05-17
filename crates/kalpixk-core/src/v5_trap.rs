@@ -65,7 +65,7 @@ impl AtlatlTrapManager {
     /// Complete isolation of the module.
     pub fn enforce_isolation(&self) {
         if self.lockdown_stage.load(Ordering::Acquire) >= 3 {
-             panic!("[ATLATL-ORDNANCE] DEFENSIVE_ISOLATION_ENGAGED: System safely halted to prevent memory compromise.");
+            panic!("[ATLATL-ORDNANCE] DEFENSIVE_ISOLATION_ENGAGED: System safely halted to prevent memory compromise.");
         }
     }
 
@@ -129,7 +129,10 @@ pub struct DefensiveShield {
 
 impl DefensiveShield {
     pub fn new() -> Self {
-        Self { active: false, level: 0 }
+        Self {
+            active: false,
+            level: 0,
+        }
     }
 
     pub fn activate(&mut self, level: u8) {

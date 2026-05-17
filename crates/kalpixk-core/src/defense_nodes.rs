@@ -8,9 +8,9 @@
 //! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
 
 use crate::event::KalpixkEvent;
+use crate::v5_trap::GLOBAL_TRAP_MANAGER;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use crate::v5_trap::GLOBAL_TRAP_MANAGER;
 use std::sync::Mutex;
 
 /// [ATLATL-ORDNANCE] Global Threat Data Structure

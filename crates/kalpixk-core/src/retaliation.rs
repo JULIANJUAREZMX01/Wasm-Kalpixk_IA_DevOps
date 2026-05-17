@@ -60,11 +60,11 @@ pub fn execute_retaliation(
                 GLOBAL_TRAP_MANAGER.escalate_lockdown(3);
                 GLOBAL_TRAP_MANAGER.execute_tarpit();
                 RetaliationType::Block // Replace offensive types with Block/Defensive tarpit
-            },
+            }
             OffenseLevel::Critical => {
                 GLOBAL_TRAP_MANAGER.escalate_lockdown(2);
                 RetaliationType::Block
-            },
+            }
             _ => RetaliationType::Block,
         }
     };
