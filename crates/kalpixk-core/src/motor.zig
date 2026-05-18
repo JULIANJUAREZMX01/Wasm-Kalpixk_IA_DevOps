@@ -255,6 +255,73 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
     }
 }
 
+/// [ATLATL-ORDNANCE] v7_fragmentation_shield
+/// Detects rolling entropy patterns characteristic of polymorphic shellcode and
+/// fragmented exfiltration packets.
+/// Analyzes the buffer in sliding windows to find local entropy spikes.
+pub export fn v7_fragmentation_shield(data_ptr: [*]const u8, data_len: usize, window_size: usize) bool {
+    if (data_len < window_size or window_size < 16) return false;
+
+    const slice = data_ptr[0..data_len];
+    var i: usize = 0;
+    while (i <= data_len - window_size) : (i += window_size / 2) {
+        const window = slice[i .. i + window_size];
+        const h = shannon_entropy(window.ptr, window.len);
+
+        // Polimorfismo detectado: Alta entropia local persistente (> 7.6)
+        if (h > 7.6) return true;
+
+        // Detectar "NOP Sleds" camuflados (entropia extremadamente baja en bloques especificos)
+        if (h < 0.2) return true;
+    }
+    return false;
+}
+
+/// [ATLATL-ORDNANCE] v7_pointer_trap_grid
+/// Monitors SharedArrayBuffer for illegal access patterns.
+/// If suspicious pointer alignment or non-deterministic access is detected,
+/// it triggers "Memory Shredding" by filling the buffer with high-entropy noise.
+pub export fn v7_pointer_trap_grid(target_ptr: [*]u8, target_len: usize, canary_ptr: [*]const u8, canary_len: usize) bool {
+    if (target_len < 64) return false;
+
+    // 1. Audit Canary Integrity
+    if (detect_memory_corruption(canary_ptr, canary_len, MemoryContract.CANARY_VALUE)) {
+        // TRAP TRIGGERED: Shred the target buffer immediately
+        mesh_entropy_shredder(target_ptr, target_len, 0xACE_BEEF_DEAD_BEEF);
+        return true;
+    }
+
+    // 2. Audit Pointer Alignment (Stage 7 Check)
+    // Attackers often use misaligned pointers for OOB (Out-of-Bounds) access
+    const addr = @intFromPtr(target_ptr);
+    if (addr % 8 != 0) {
+        // Non-standard alignment detected in a sensitive buffer context
+        v7_guerrilla_memory_rotation(target_ptr, target_len, addr);
+        return true;
+    }
+
+    // 3. Logic Bomb Presence
+    if (v5_logic_bomb_detector(target_ptr, target_len)) {
+        v7_stealth_poisoning(target_ptr, target_len, 0xBAD_C0DE_BAD_C0DE);
+        return true;
+    }
+
+    return false;
+}
+
+/// [ATLATL-ORDNANCE] v7_pointer_trap_grid_wasm
+/// WASM-compatible wrapper for the pointer trap grid.
+pub export fn v7_pointer_trap_grid_wasm(target_ptr: [*]u8, target_len: usize) bool {
+    const dummy_canary = [_]u8{MemoryContract.CANARY_VALUE} ** 16;
+    return v7_pointer_trap_grid(target_ptr, target_len, &dummy_canary, dummy_canary.len);
+}
+
+/// [ATLATL-ORDNANCE] v7_fragmentation_shield_wasm
+/// WASM-compatible wrapper for the fragmentation shield.
+pub export fn v7_fragmentation_shield_wasm(data_ptr: [*]const u8, data_len: usize) bool {
+    return v7_fragmentation_shield(data_ptr, data_len, 64);
+}
+
 /// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
 pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
     const slice = ptr[0..len];

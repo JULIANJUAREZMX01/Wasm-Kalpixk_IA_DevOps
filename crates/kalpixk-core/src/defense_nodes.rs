@@ -488,7 +488,49 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 7 nodes
+// NODE 8: DECENTRALIZED_GUERRILLA (v7.0-ALPHA)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_guerrilla_threat(
+    _event: &KalpixkEvent,
+    raw_lower: &str,
+    _user_lower: &str,
+    _source_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = raw_lower;
+
+    // Detect attempts to bypass WASM sandboxing or SharedArrayBuffer tampering
+    if raw.contains("sharedarraybuffer") || raw.contains("atomic.compareexchange") {
+        if raw.contains("oob") || raw.contains("race") || raw.contains("overflow") {
+            score += 0.85;
+            techniques.push("T1611".to_string()); // Escape to Host
+        }
+    }
+
+    if raw.contains("fragmentation") || raw.contains("polymorphic") {
+        score += 0.7;
+        techniques.push("T1027".to_string()); // Obfuscated Files or Information
+    }
+
+    // MACUAHUITL: Stage 7 Retaliation Trigger
+    if raw.contains("atlatl") || raw.contains("guillotine") {
+        score += 0.99;
+        techniques.push("TA0040".to_string()); // Impact
+    }
+
+    NodeResult {
+        node: "NODE-8: GUERRILLA".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Decentralized guerrilla threat detection".to_string(),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// COMPLETE ANALYSIS — Run all 8 nodes
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
@@ -508,6 +550,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
+        detect_guerrilla_threat(event, &raw_lower, &user_lower, &source_lower),
     ]
 }
 

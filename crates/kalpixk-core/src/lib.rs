@@ -59,6 +59,36 @@ extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
+    #[link_name = "v7_fragmentation_shield_wasm"]
+    fn v7_fragmentation_shield_low_level(data_ptr: *const u8, data_len: usize) -> bool;
+    #[link_name = "v7_pointer_trap_grid_wasm"]
+    fn v7_pointer_trap_grid_low_level(target_ptr: *mut u8, target_len: usize) -> bool;
+}
+
+#[wasm_bindgen]
+pub fn v7_fragmentation_shield_wasm(data: &[u8]) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v7_fragmentation_shield_low_level(data.as_ptr(), data.len())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = data;
+        false
+    }
+}
+
+#[wasm_bindgen]
+pub fn v7_pointer_trap_grid_wasm(data: &mut [u8]) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v7_pointer_trap_grid_low_level(data.as_mut_ptr(), data.len())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = data;
+        false
+    }
 }
 
 #[wasm_bindgen]
