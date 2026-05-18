@@ -296,7 +296,7 @@ export default function Dashboard() {
         {tab === "parsers"  && <ParsersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "mitre"    && <MitreTab />}
-        {tab === "warroom"  && <WarRoomTab terminalOutput={terminalOutput} />}
+        {tab === "warroom"  && <WarRoomTab terminalOutput={terminalOutput} wasm={wasm} />}
         {tab === "simulacion" && <AttackSimulator />}
       </div>
 
@@ -675,7 +675,7 @@ const ParsersTab = React.memo(function ParsersTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: WAR ROOM (v7.0-ALPHA)
 // ═══════════════════════════════════════════════════════════════════════════════
-const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminalOutput: string[] }) {
+const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput, wasm }: { terminalOutput: string[], wasm: any }) {
   const alerts = useAlertStore((s) => s.alerts);
   const strikes = terminalOutput.filter(l => l.includes("[STRIKE]") || l.includes("[GUILLOTINE]"));
 
@@ -727,6 +727,22 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
 
           {/* Targeted Infrastructure */}
           <div>
+            <Label text="WASM POINTER TRAPS" accent={T.blue} />
+            <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: 12, marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: T.dim, fontSize: 9 }}>FRAGMENTATION SHIELD</span>
+                <span style={{ color: T.green, fontSize: 9, fontWeight: 700 }}>ACTIVE</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: T.dim, fontSize: 9 }}>POINTER TRAP GRID</span>
+                <span style={{ color: T.green, fontSize: 9, fontWeight: 700 }}>ARMED</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: T.dim, fontSize: 9 }}>MEMORY SHREDDER</span>
+                <span style={{ color: T.amber, fontSize: 9, fontWeight: 700 }}>STANDBY</span>
+              </div>
+            </div>
+
             <Label text="TARGETED INFRASTRUCTURE" accent={T.amber} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {alerts.filter(a => a.score > 0.8).slice(0, 5).map((a) => (
@@ -745,6 +761,16 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
                   <div style={{ color: T.red, fontSize: 8, marginTop: 4, textAlign: "right" }}>COLLAPSE IN PROGRESS</div>
                 </div>
               ))}
+              <div style={{
+                padding: 12, background: `${T.red}12`, border: `1px solid ${T.red}`,
+                marginTop: 10, display: "flex", alignItems: "center", gap: 10
+              }}>
+                <div style={{ fontSize: 18 }}>💀</div>
+                <div>
+                  <div style={{ color: T.red, fontWeight: 800, fontSize: 10, letterSpacing: 1 }}>MACUAHUITL NODE</div>
+                  <div style={{ color: T.dim, fontSize: 8 }}>STAGE 7 RETALIATION COORDINATOR</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
