@@ -502,11 +502,11 @@ pub fn detect_guerrilla_threat(
     let raw = raw_lower;
 
     // Detect attempts to bypass WASM sandboxing or SharedArrayBuffer tampering
-    if raw.contains("sharedarraybuffer") || raw.contains("atomic.compareexchange") {
-        if raw.contains("oob") || raw.contains("race") || raw.contains("overflow") {
-            score += 0.85;
-            techniques.push("T1611".to_string()); // Escape to Host
-        }
+    if (raw.contains("sharedarraybuffer") || raw.contains("atomic.compareexchange"))
+        && (raw.contains("oob") || raw.contains("race") || raw.contains("overflow"))
+    {
+        score += 0.85;
+        techniques.push("T1611".to_string()); // Escape to Host
     }
 
     if raw.contains("fragmentation") || raw.contains("polymorphic") {
