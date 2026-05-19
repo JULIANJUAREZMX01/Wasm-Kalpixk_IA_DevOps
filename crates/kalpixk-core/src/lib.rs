@@ -124,6 +124,7 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 
 #[wasm_bindgen]
 pub fn v8_guerrilla_jit_shield_wasm(target_len: usize, seed: u64) -> Vec<u8> {
+    #[allow(unused_mut)]
     let mut buffer = vec![0u8; target_len];
     #[cfg(target_arch = "wasm32")]
     unsafe {
@@ -138,6 +139,7 @@ pub fn v8_guerrilla_jit_shield_wasm(target_len: usize, seed: u64) -> Vec<u8> {
 
 #[wasm_bindgen]
 pub fn v8_quantum_entropy_wasm(target_len: usize, initial_x: f64) -> Vec<u8> {
+    #[allow(unused_mut)]
     let mut buffer = vec![0u8; target_len];
     #[cfg(target_arch = "wasm32")]
     unsafe {
