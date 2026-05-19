@@ -66,6 +66,15 @@ async def insert_alert(alert_dict):
         await db.commit()
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    # SECURITY: Defensive check to ensure limit is a positive integer.
+    # SQLite treats LIMIT -1 as "no limit", which could be used for DoS.
+    try:
+        limit = int(limit)
+        if limit < 1:
+            limit = 1
+    except (ValueError, TypeError):
+        limit = 100
+
     db_path = get_db_path()
     query = "SELECT * FROM alerts WHERE 1=1"
     params = []

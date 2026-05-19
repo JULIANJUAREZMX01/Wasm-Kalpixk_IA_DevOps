@@ -54,3 +54,8 @@
 **Vulnerability:** SQL Injection in batch alerts via unvalidated dictionary keys and `executemany` failures.
 **Learning:** Hardening batch insertions (`executemany`) requires more than just value parameterization; it requires ensuring all dictionaries in the batch have an identical set of keys if using named placeholders. If keys are heterogeneous (even after whitelisting), some database drivers will fail with a `ProgrammingError`.
 **Prevention:** When performing batch inserts with dynamic columns, first filter all inputs against a strict whitelist, then calculate the union of all allowed keys present in the batch and pad every dictionary with `None` for missing keys to ensure structural uniformity before execution.
+
+## 2026-05-20 - DoS via SQLite LIMIT Bypass
+**Vulnerability:** Use of unvalidated negative `limit` parameters in SQLite queries.
+**Learning:** SQLite treats `LIMIT -1` (and other negative values) as "no limit". If an API passes an unvalidated user-supplied `limit` directly to a SQLite query, an attacker can bypass intended result capping to fetch the entire database, potentially causing a Denial of Service (DoS) or memory exhaustion.
+**Prevention:** Always enforce strict positive bounds (e.g., `max(1, min(limit, max_allowed))`) on any result-limiting parameters at both the API and database utility layers.
