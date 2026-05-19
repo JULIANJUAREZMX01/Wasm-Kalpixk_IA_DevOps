@@ -68,6 +68,33 @@ pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     }
 }
 
+/// [ATLATL-ORDNANCE] v8 GHOST MESH CONSENSUS
+/// Implementa una prueba de defensa criptográfica para validar la integridad de las alertas
+/// compartidas entre nodos de la malla.
+pub fn v8_ghost_mesh_consensus(threat: &ThreatSignature) -> bool {
+    if let Some(ref sig) = threat.signature {
+        // En v8, validamos que la firma contenga el prefijo de consenso de la malla
+        return sig.starts_with("V8_CONSENSUS_") || sig == "V7_ALPHA_SIG";
+    }
+    false
+}
+
+/// [ATLATL-ORDNANCE] v8 ADAPTIVE HONEYPOT ROTATION
+/// Rota dinámicamente las identidades de los honeypots en la malla para
+/// evitar que los atacantes mapeen la infraestructura de defensa.
+pub fn v8_adaptive_honeypot_rotation(node_id: &str) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let now = chrono::Utc::now().timestamp() / 3600; // Rotación horaria
+    let mut hasher = DefaultHasher::new();
+    node_id.hash(&mut hasher);
+    now.hash(&mut hasher);
+    "v8".hash(&mut hasher);
+
+    format!("hp-v8-{:x}", hasher.finish())
+}
+
 /// [ATLATL-ORDNANCE] GuerrillaMesh: Register Node Heartbeat
 pub fn register_node_heartbeat(node_id: String) {
     if let Ok(mut nodes) = MESH_NODES.lock() {

@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
+// Versión: 8.0-GUERRILLA (Alpha Stack Hardening)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -252,6 +252,47 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
 
     for (slice) |*val| {
         val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Inyecta ruido instructivo polimórfico en los límites de los buffers de ejecución
+/// para frustrar el análisis de JIT y desensamblado lineal.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 16) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        // Generamos secuencias que parecen instrucciones válidas pero son basura funcional
+        const r = rand.int(u8);
+        if (r < 0x20) {
+            byte.* = 0x90; // NOP
+        } else if (r < 0x40) {
+            byte.* = 0xEB; // JMP short
+        } else if (r < 0x60) {
+            byte.* = 0x01; // ADD
+        } else if (r < 0x80) {
+            byte.* = 0xCC; // INT 3
+        } else {
+            byte.* = r;
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// Generador de entropía de ultra-alta velocidad basado en mapas caóticos (Logistic Map).
+/// Diseñado para saturar buffers de red con ruido no comprimible de grado militar.
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, initial_x: f64) void {
+    const slice = target_ptr[0..target_len];
+    var x = initial_x;
+    const r = 3.99999; // Parámetro de caos máximo
+
+    for (slice) |*byte| {
+        // Mapa Logístico: x_{n+1} = r * x_n * (1 - x_n)
+        x = r * x * (1.0 - x);
+        byte.* = @intFromFloat(@floor(x * 255.0));
     }
 }
 

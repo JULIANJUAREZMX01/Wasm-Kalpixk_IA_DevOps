@@ -59,11 +59,13 @@ extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "7.0.0-atlatl-alpha".to_string()
+    "8.0.0-guerrilla-alpha".to_string()
 }
 
 #[wasm_bindgen]
@@ -118,6 +120,39 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
         "timestamp": chrono::Utc::now().timestamp_millis(),
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v8_guerrilla_jit_shield_wasm(target_len: usize, seed: u64) -> Vec<u8> {
+    let mut buffer = vec![0u8; target_len];
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v8_guerrilla_jit_shield(buffer.as_mut_ptr(), buffer.len(), seed);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = seed;
+    }
+    buffer
+}
+
+#[wasm_bindgen]
+pub fn v8_quantum_entropy_wasm(target_len: usize, initial_x: f64) -> Vec<u8> {
+    let mut buffer = vec![0u8; target_len];
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v8_quantum_entropy_shredder(buffer.as_mut_ptr(), buffer.len(), initial_x);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = initial_x;
+    }
+    buffer
+}
+
+#[wasm_bindgen]
+pub fn v8_get_adaptive_honeypot_id(node_id: &str) -> String {
+    defense_nodes::v8_adaptive_honeypot_rotation(node_id)
 }
 
 #[wasm_bindgen]
@@ -369,10 +404,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v7.0.0-atlatl-alpha",
+        "atlatl_ordnance": "v8.0.0-guerrilla-alpha",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
-        "v7_alpha": true
+        "v8_alpha": true
     })
     .to_string()
 }
