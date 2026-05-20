@@ -4,7 +4,6 @@ Mide throughput del detector en la GPU
 """
 import torch
 import time
-import numpy as np
 from loguru import logger
 
 def benchmark_detector(n_samples=10000, input_dim=10, runs=5):

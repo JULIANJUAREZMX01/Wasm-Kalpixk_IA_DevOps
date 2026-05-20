@@ -1,6 +1,5 @@
 """Telegram bot integration for Nanobot with Agent Loop"""
 
-import asyncio
 from typing import Optional
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes

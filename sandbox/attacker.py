@@ -3,7 +3,15 @@ Kalpixk — Attacker Simulator
 Genera ataques REALES dentro del sandbox Docker aislado.
 NO sale de la red Docker. Produce eventos reales que el sensor captura.
 """
-import os, time, socket, json, struct, hashlib, logging, random, sys
+import os
+import time
+import socket
+import json
+import struct
+import hashlib
+import logging
+import random
+import sys
 from pathlib import Path
 from datetime import datetime
 

@@ -1,4 +1,3 @@
-import numpy as np
 from src.runtime.fallback import fallback_extractor
 
 def test_entropy_low():

@@ -1,5 +1,3 @@
-import pytest
-import asyncio
 from fastapi.testclient import TestClient
 from src.api.main import app
 from src.retaliation.atlatl import atlatl

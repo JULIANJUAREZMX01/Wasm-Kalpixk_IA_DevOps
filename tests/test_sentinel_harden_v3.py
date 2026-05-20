@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 import os
 import json
 import importlib
-import sys
 import time
 
 # Mocking env before import

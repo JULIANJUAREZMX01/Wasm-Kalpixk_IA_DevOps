@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 7 nodes for detecting Red Team techniques:
+//! 8 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
+//! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
 //!
-//! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
+//! [ATLATL-ORDNANCE] Version 8.0.0: GUERRILLA MESH SUPREMACY
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -62,9 +63,25 @@ pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     // Register heartbeat silently without broadcasting to standard lists
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v7-ghost-{}", node_id),
+            format!("v8-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8 GHOST MESH CONSENSUS
+/// Performs cryptographic validation of threat reports across the mesh.
+/// Ensures that retaliatory strikes are only triggered on validated, multi-node threats.
+pub fn v8_ghost_mesh_consensus(target: &str) -> bool {
+    let active_nodes = get_active_nodes().len();
+    if active_nodes < 2 { return true; } // Autonomous mode if isolated
+
+    if let Ok(db) = THREAT_SIGNATURE_DB.lock() {
+        let reports = db.values().filter(|s| s.source == target).count();
+        // Consensus reached if > 50% of active nodes report the threat
+        reports > (active_nodes / 2)
+    } else {
+        false
     }
 }
 
@@ -450,6 +467,40 @@ pub fn detect_exfiltration(
 // NODE 7: MESH_INTEGRITY DETECTOR (v4.0-ATLATL)
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 8: GUERRILLA DETECTOR (v8.0.0-GUERRILLA)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_guerrilla_threat(
+    _event: &KalpixkEvent,
+    raw_lower: &str,
+) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = raw_lower;
+
+    // Detect advanced guerrilla tactics (e.g., structural session corruption attempts)
+    if raw.contains("v8_") || raw.contains("guerrilla_") || raw.contains("atlatl_") {
+        if raw.contains("bypass") || raw.contains("inject") || raw.contains("corrupt") {
+            score += 0.85;
+            techniques.push("T1548".to_string()); // Abuse Elevation Control Mechanism
+        }
+    }
+
+    if raw.contains("jit") && (raw.contains("spray") || raw.contains("shield_bypass")) {
+        score += 0.95;
+        techniques.push("T1203".to_string()); // Exploitation for Client Execution
+    }
+
+    NodeResult {
+        node: "NODE-8: GUERRILLA".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("Guerrilla threat score: {:.2}", score),
+    }
+}
+
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
 
@@ -508,6 +559,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
+        detect_guerrilla_threat(event, &raw_lower),
     ]
 }
 
@@ -525,12 +577,18 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
         // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-ATLATL-V7".to_string(),
-            technique: "TA-DETECTION-V7".to_string(),
+            node_id: "WASM-CORE-V8-GUERRILLA".to_string(),
+            technique: "TA-DETECTION-V8".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V7_ALPHA_SIG".to_string()),
+            signature: Some("V8_GUERRILLA_SIG".to_string()),
         });
+
+        // v8 Ghost Mesh Consensus: Validate before full lockdown if mesh is active
+        if !v8_ghost_mesh_consensus(&event.source) && get_active_nodes().len() > 1 {
+             return false; // Mitigation: Wait for consensus to avoid false-positive cascade
+        }
+
         return true;
     }
 

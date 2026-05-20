@@ -4,12 +4,15 @@ Skill: kalpixk_status
 Reporte completo del estado del sistema Kalpixk
 Uso: python skills/kalpixk_status.py [--json]
 """
-import sys, os, json
+import sys
+import os
+import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run():
-    import torch, psutil
-    from src.ui import KalpixkTheme, ANSI
+    import torch
+    import psutil
+    from src.ui import KalpixkTheme
 
     data = {}
 

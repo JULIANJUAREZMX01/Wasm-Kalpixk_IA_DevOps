@@ -1,6 +1,5 @@
 import time
 import numpy as np
-import pytest
 
 def test_detector_throughput(detector):
     data = np.random.normal(0.5, 0.1, (1000, 32))
