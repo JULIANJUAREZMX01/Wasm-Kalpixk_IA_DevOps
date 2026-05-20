@@ -74,7 +74,9 @@ pub fn process_ghost_signal(node_id: &str, _payload: &str) {
 /// Ensures that retaliatory strikes are only triggered on validated, multi-node threats.
 pub fn v8_ghost_mesh_consensus(target: &str) -> bool {
     let active_nodes = get_active_nodes().len();
-    if active_nodes < 2 { return true; } // Autonomous mode if isolated
+    if active_nodes < 2 {
+        return true;
+    } // Autonomous mode if isolated
 
     if let Ok(db) = THREAT_SIGNATURE_DB.lock() {
         let reports = db.values().filter(|s| s.source == target).count();
@@ -471,10 +473,7 @@ pub fn detect_exfiltration(
 // NODE 8: GUERRILLA DETECTOR (v8.0.0-GUERRILLA)
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
-pub fn detect_guerrilla_threat(
-    _event: &KalpixkEvent,
-    raw_lower: &str,
-) -> NodeResult {
+pub fn detect_guerrilla_threat(_event: &KalpixkEvent, raw_lower: &str) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
     let raw = raw_lower;
@@ -586,7 +585,7 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
 
         // v8 Ghost Mesh Consensus: Validate before full lockdown if mesh is active
         if !v8_ghost_mesh_consensus(&event.source) && get_active_nodes().len() > 1 {
-             return false; // Mitigation: Wait for consensus to avoid false-positive cascade
+            return false; // Mitigation: Wait for consensus to avoid false-positive cascade
         }
 
         return true;

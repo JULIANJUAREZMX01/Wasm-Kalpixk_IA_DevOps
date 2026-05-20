@@ -180,7 +180,9 @@ pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
         v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    { let _ = (target, seed); }
+    {
+        let _ = (target, seed);
+    }
 }
 
 #[wasm_bindgen]
@@ -190,7 +192,9 @@ pub fn v8_quantum_entropy_wasm(target: &mut [u8], seed: f64) {
         v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), seed);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    { let _ = (target, seed); }
+    {
+        let _ = (target, seed);
+    }
 }
 
 #[wasm_bindgen]
@@ -277,7 +281,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-        // [ATLATL-ORDNANCE] Active Memory Scrambling & Guerrilla JIT Shielding v8
+    // [ATLATL-ORDNANCE] Active Memory Scrambling & Guerrilla JIT Shielding v8
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
@@ -292,11 +296,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
                 decoy_buffer.len(),
                 seed ^ 0xDEADBEEF,
             );
-                v8_guerrilla_jit_shield(
-                    decoy_buffer.as_mut_ptr(),
-                    decoy_buffer.len(),
-                    seed ^ 0x1337BEEF,
-                );
+            v8_guerrilla_jit_shield(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0x1337BEEF,
+            );
         }
 
         // Arm traps if critical threat count is high
