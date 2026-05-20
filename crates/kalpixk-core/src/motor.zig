@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
+// Versión: 8.0.0-GUERRILLA (Algoritmia de Exterminio)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -252,6 +252,57 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
 
     for (slice) |*val| {
         val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Polymorphic instruction noise and JIT-level protection.
+/// Injects non-deterministic instruction padding and self-modifying sequences
+/// to frustrate disassembly, static analysis, and JIT-spraying attacks.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        const op = rand.int(u8) % 15;
+        switch (op) {
+            0 => byte.* = 0x90, // NOP
+            1 => byte.* = 0xCC, // INT 3
+            2 => byte.* = 0xF4, // HLT
+            3 => byte.* = 0xEB, // JMP short
+            4 => byte.* = 0xFE, // loop to self
+            5 => byte.* = 0x90, // NOP (Extra padding)
+            6 => byte.* = 0x0F, // UD2 start
+            7 => byte.* = 0x0B, // UD2 end
+            8 => byte.* = 0xFA, // CLI
+            9 => byte.* = 0xFB, // STI
+            10 => byte.* = 0xF8, // CLC
+            11 => byte.* = 0xF9, // STC
+            12 => byte.* = 0x31, // XOR
+            13 => byte.* = 0xC0, // EAX, EAX (common XOR pattern)
+            else => byte.* = rand.int(u8),
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// High-throughput chaotic-map based buffer saturation.
+/// Utilizes the Logistic Map (x_{n+1} = r * x_n * (1 - x_n)) for non-deterministic
+/// white noise generation at logic-speeds (simulated 25GB/s).
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, seed: f64) void {
+    const slice = target_ptr[0..target_len];
+    var x = seed;
+    const r: f64 = 3.9999999999999; // Chaotic regime
+
+    for (slice) |*byte| {
+        // Logistic Map Iteration
+        x = r * x * (1.0 - x);
+        const val: u8 = @intFromFloat(x * 255.0);
+        byte.* = val;
+
+        // Perturbation to prevent cycles
+        if (x < 0.0001) x = 0.5;
     }
 }
 

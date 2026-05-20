@@ -82,8 +82,8 @@ class KynikosOrchestrator:
 
         # Fallback general con contexto del proyecto
         return self._voice(
-            f"Kalpixk online. Motor WASM activo. AMD MI300X lista.\n"
-            f"Comandos: status | benchmark | detect | train | help", intent)
+            "Kalpixk online. Motor WASM activo. AMD MI300X lista.\n"
+            "Comandos: status | benchmark | detect | train | help", intent)
 
     def _voice(self, raw_response: str, intent: Intent) -> str:
         """Aplica el tono KYNIKOS a cualquier respuesta cruda."""

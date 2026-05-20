@@ -1,4 +1,10 @@
-import time, json, numpy as np, torch, torch.nn as nn, subprocess, os
+import time
+import json
+import numpy as np
+import torch
+import torch.nn as nn
+import subprocess
+import os
 
 device = torch.device("cuda")
 vram = torch.cuda.get_device_properties(0).total_memory / 1024**3

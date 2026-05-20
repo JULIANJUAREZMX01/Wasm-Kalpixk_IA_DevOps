@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 torch.manual_seed(42)
 normal_logs = torch.randn(1000, 10).to('cuda')

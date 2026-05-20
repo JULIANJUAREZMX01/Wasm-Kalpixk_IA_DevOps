@@ -1,5 +1,3 @@
-import pytest
-import numpy as np
 from src.runtime.feature_extractor import feature_extractor
 
 def test_T1055_process_injection(detector):

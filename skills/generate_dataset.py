@@ -4,7 +4,9 @@ Skill: generate_dataset
 Genera el dataset de entrenamiento con 9 tipos MITRE ATT&CK
 Uso: python skills/generate_dataset.py [--size 5000] [--output datasets/kalpixk_train.json]
 """
-import sys, os, argparse
+import sys
+import os
+import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run():
@@ -16,7 +18,7 @@ def run():
     os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
 
     # Importar el generador del datasets/
-    import importlib.util, types
+    import importlib.util
     spec = importlib.util.spec_from_file_location("gen", "datasets/generate_dataset.py")
     if spec:
         mod = importlib.util.module_from_spec(spec)
@@ -42,7 +44,7 @@ def run():
     return {"size": len(events), "attacks": attacks, "path": args.output}
 
 def _generate(size):
-    import random, datetime
+    import random
     random.seed(42)
     events = []
     IPS = ["45.33.32.156","203.0.113.45","185.220.101.35"]
