@@ -479,11 +479,11 @@ pub fn detect_guerrilla_threat(_event: &KalpixkEvent, raw_lower: &str) -> NodeRe
     let raw = raw_lower;
 
     // Detect advanced guerrilla tactics (e.g., structural session corruption attempts)
-    if raw.contains("v8_") || raw.contains("guerrilla_") || raw.contains("atlatl_") {
-        if raw.contains("bypass") || raw.contains("inject") || raw.contains("corrupt") {
-            score += 0.85;
-            techniques.push("T1548".to_string()); // Abuse Elevation Control Mechanism
-        }
+    if (raw.contains("v8_") || raw.contains("guerrilla_") || raw.contains("atlatl_"))
+        && (raw.contains("bypass") || raw.contains("inject") || raw.contains("corrupt"))
+    {
+        score += 0.85;
+        techniques.push("T1548".to_string()); // Abuse Elevation Control Mechanism
     }
 
     if raw.contains("jit") && (raw.contains("spray") || raw.contains("shield_bypass")) {
