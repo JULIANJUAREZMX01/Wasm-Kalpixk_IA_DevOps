@@ -243,6 +243,68 @@ pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize,
     }
 }
 
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Injects polymorphic instruction noise into executable buffers to frustrate
+/// static analysis and automated disassembly.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        const op = rand.int(u8) % 12;
+        switch (op) {
+            0 => byte.* = 0x90, // NOP
+            1 => byte.* = 0xCC, // INT 3
+            2 => byte.* = 0xEB, // JMP short
+            3 => byte.* = 0x01, // ADD
+            4 => byte.* = 0xF4, // HLT
+            5 => byte.* = 0x0F, // Prefix
+            6 => byte.* = 0x0B, // UD2
+            7 => byte.* = 0x31, // XOR
+            8 => byte.* = 0x55, // PUSH ebp
+            9 => byte.* = 0x89, // MOV
+            10 => byte.* = 0xE5, // MOV ebp, esp
+            else => byte.* = rand.int(u8),
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// High-speed buffer saturation using the Logistic Map chaotic function.
+/// x_{n+1} = r * x_n * (1 - x_n)
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, x0: f64) void {
+    const r: f64 = 3.999999; // Chaotic regime
+    var x = x0;
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        x = r * x * (1.0 - x);
+        byte.* = @intFromFloat(@floor(x * 255.0));
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_memory_fragmentation_trap
+/// Disrupts memory dump consistency by applying non-deterministic stride-based
+/// pattern corruption across large buffers.
+pub export fn v8_memory_fragmentation_trap(target_ptr: [*]u8, target_len: usize, key: u64) void {
+    var prng = std.rand.DefaultPrng.init(key);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i < target_len) {
+        const stride = (rand.int(usize) % 16) + 1;
+        const block_len = (rand.int(usize) % 32) + 1;
+
+        var j: usize = 0;
+        while (j < block_len and i + j < target_len) : (j += 1) {
+            slice[i + j] ^= @truncate(rand.int(u64));
+        }
+        i += stride + block_len;
+    }
+}
+
 /// [ATLATL-ORDNANCE] v7_neural_decoy
 /// Generates fake tensor data to mislead attackers attempting to poison training.
 pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {
