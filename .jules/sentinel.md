@@ -54,3 +54,8 @@
 **Vulnerability:** SQL Injection in batch alerts via unvalidated dictionary keys and `executemany` failures.
 **Learning:** Hardening batch insertions (`executemany`) requires more than just value parameterization; it requires ensuring all dictionaries in the batch have an identical set of keys if using named placeholders. If keys are heterogeneous (even after whitelisting), some database drivers will fail with a `ProgrammingError`.
 **Prevention:** When performing batch inserts with dynamic columns, first filter all inputs against a strict whitelist, then calculate the union of all allowed keys present in the batch and pad every dictionary with `None` for missing keys to ensure structural uniformity before execution.
+
+## 2026-05-20 - Alert Pagination Bypass and Naive Timestamps
+**Vulnerability:** SQLite `LIMIT -1` bypass and naive `datetime.utcnow()` audit logs.
+**Learning:** SQLite interprets `LIMIT -1` as 'no limit', which can be exploited if API parameters are not validated to be at least 1. Additionally, naive timestamps from `utcnow()` (now deprecated) can cause ambiguity in security audit trails.
+**Prevention:** Always enforce a minimum `limit` of 1 for database queries and use timezone-aware timestamps (e.g., `datetime.now(UTC)` in Python 3.11+) to ensure unambiguous and compliant audit logging.
