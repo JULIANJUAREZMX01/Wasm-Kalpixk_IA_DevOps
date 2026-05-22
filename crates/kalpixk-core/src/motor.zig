@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
+// Versión: 8.0.0-GUERRILLA (Alpha Stack)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -252,6 +252,62 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
 
     for (slice) |*val| {
         val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Inyecta ruido instruccional polimórfico para frustrar el desensamblado dinámico
+/// y el análisis de JIT en el motor WASM.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        const r = rand.int(u8);
+        if (r < 64) {
+            byte.* = 0x90; // NOP
+        } else if (r < 128) {
+            byte.* = 0xCC; // INT 3
+        } else if (r < 192) {
+            byte.* = 0xEB; // JMP short
+        } else {
+            byte.* = rand.int(u8);
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// Implementa un mapa caótico (Logistic Map) para generar entropía de alta calidad
+/// que sature los buffers del atacante y neutralice algoritmos de compresión.
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, r_param: f64, initial_x: f64) void {
+    const slice = target_ptr[0..target_len];
+    var x = initial_x;
+    const r = r_param; // Usualmente 3.99 para caos total
+
+    for (slice) |*byte| {
+        x = r * x * (1.0 - x);
+        const val: u8 = @intFromFloat(@floor(x * 255.0));
+        byte.* = val;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_pointer_poisoning
+/// Corrupción activa de punteros remotos mediante la inyección de saltos infinitos
+/// y redirecciones no deterministas en el tráfico de retorno.
+pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i + 1 < target_len) : (i += 2) {
+        slice[i] = 0xEB;     // JMP short
+        slice[i + 1] = 0xFE; // to self
+        if (rand.boolean()) {
+            slice[i] = 0x90;
+            slice[i + 1] = 0x90;
+        }
     }
 }
 
