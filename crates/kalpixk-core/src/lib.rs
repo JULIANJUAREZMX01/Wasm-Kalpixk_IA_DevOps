@@ -190,7 +190,12 @@ pub fn v8_guerrilla_jit_shield_wasm(buffer: &mut [u8], seed: u64) {
 pub fn v8_quantum_entropy_wasm(buffer: &mut [u8], r_param: f64, initial_x: f64) {
     #[cfg(target_arch = "wasm32")]
     extern "C" {
-        fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, r_param: f64, initial_x: f64);
+        fn v8_quantum_entropy_shredder(
+            target_ptr: *mut u8,
+            target_len: usize,
+            r_param: f64,
+            initial_x: f64,
+        );
     }
 
     #[cfg(target_arch = "wasm32")]
