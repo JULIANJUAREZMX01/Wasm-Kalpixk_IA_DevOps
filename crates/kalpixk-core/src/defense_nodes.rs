@@ -493,7 +493,7 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_guerrilla_threat(event: &KalpixkEvent, raw_lower: &str) -> NodeResult {
-    let mut score = 0.0;
+    let mut score: f64 = 0.0;
     let mut techniques = Vec::new();
 
     if raw_lower.contains("guerrilla") || raw_lower.contains("v8-strike") {

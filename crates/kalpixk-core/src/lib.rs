@@ -176,31 +176,46 @@ pub fn v8_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
 #[wasm_bindgen]
 pub fn v8_guerrilla_jit_shield_wasm(buffer: &mut [u8], seed: u64) {
     #[cfg(target_arch = "wasm32")]
-    extern "C" {
-        fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
+    {
+        extern "C" {
+            fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
+        }
+
+        unsafe {
+            v8_guerrilla_jit_shield(buffer.as_mut_ptr(), buffer.len(), seed);
+        }
     }
 
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_guerrilla_jit_shield(buffer.as_mut_ptr(), buffer.len(), seed);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = buffer;
+        let _ = seed;
     }
 }
 
 #[wasm_bindgen]
 pub fn v8_quantum_entropy_wasm(buffer: &mut [u8], r_param: f64, initial_x: f64) {
     #[cfg(target_arch = "wasm32")]
-    extern "C" {
-        fn v8_quantum_entropy_shredder(
-            target_ptr: *mut u8,
-            target_len: usize,
-            r_param: f64,
-            initial_x: f64,
-        );
+    {
+        extern "C" {
+            fn v8_quantum_entropy_shredder(
+                target_ptr: *mut u8,
+                target_len: usize,
+                r_param: f64,
+                initial_x: f64,
+            );
+        }
+
+        unsafe {
+            v8_quantum_entropy_shredder(buffer.as_mut_ptr(), buffer.len(), r_param, initial_x);
+        }
     }
 
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_quantum_entropy_shredder(buffer.as_mut_ptr(), buffer.len(), r_param, initial_x);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = buffer;
+        let _ = r_param;
+        let _ = initial_x;
     }
 }
 
