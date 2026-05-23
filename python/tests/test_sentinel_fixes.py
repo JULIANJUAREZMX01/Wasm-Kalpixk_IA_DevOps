@@ -88,3 +88,28 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+@pytest.mark.asyncio
+async def test_get_alerts_limit_protection(tmp_db):
+    """Verifies that the limit parameter in get_alerts is correctly constrained."""
+    await init_db()
+    # Insert 5 alerts
+    for i in range(5):
+        await insert_alert({
+            "ts": f"2023-10-27T10:00:0{i}Z",
+            "ip": f"1.1.1.{i}",
+            "anomaly_score": 0.5,
+            "severity": "LOW"
+        })
+
+    # Test with negative limit - should be constrained to at least 1
+    alerts_neg, total_neg = await get_alerts(limit=-10)
+    assert len(alerts_neg) >= 1
+    # SQLite with LIMIT 1 returns 1, but total count is still 5
+    assert len(alerts_neg) == 1
+    assert total_neg == 5
+
+    # Test with zero limit - should be constrained to 1
+    alerts_zero, total_zero = await get_alerts(limit=0)
+    assert len(alerts_zero) == 1
+    assert total_zero == 5
