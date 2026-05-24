@@ -12,8 +12,8 @@ class AdversarialDriftGuard:
         self.window_size = window_size
         self.z_threshold = z_threshold
         self.score_history = []
-        self.current_threshold = 0.5
-        logger.info(f"🛡️ AdversarialDriftGuard v7.0 initialized (window={window_size})")
+        self.current_threshold = 0.3 # Aggressive default for Guerrilla Mode
+        logger.info(f"🛡️ AdversarialDriftGuard v8.0 initialized (window={window_size})")
 
     def update(self, scores: list[float]) -> float:
         """Updates the adaptive threshold based on a sliding window of benign scores."""
@@ -38,7 +38,7 @@ class AdversarialDriftGuard:
 
         # Adaptive threshold: mean + 3.0 * std
         new_threshold = float(mean_score + self.z_threshold * std_score)
-        self.current_threshold = np.clip(new_threshold, 0.4, 0.95)
+        self.current_threshold = np.clip(new_threshold, 0.3, 0.95)
 
         return self.current_threshold
 

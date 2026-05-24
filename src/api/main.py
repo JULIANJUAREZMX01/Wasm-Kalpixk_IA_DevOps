@@ -1,5 +1,5 @@
 """
-Wasm-Kalpixk API (v3) — ATLATL-ORDNANCE Guerrilla Hardening
+Wasm-Kalpixk API (v8) — ATLATL-ORDNANCE Guerrilla Hardening
 """
 import os
 import secrets
@@ -48,15 +48,11 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if expected_key:
             if not api_key or not secrets.compare_digest(api_key, expected_key):
                  raise HTTPException(status_code=403, detail="Forbidden")
-        else:
-            # Fallback to development_secret if KALPIXK_API_KEY is not set
-            if not api_key or not secrets.compare_digest(api_key, "development_secret"):
-                raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🏹 Iniciando Kalpixk SIEM v3 (ATLATL-ORDNANCE)...")
+    logger.info("🏹 Iniciando Kalpixk SIEM v8 (ATLATL-ORDNANCE GUERRILLA)...")
     normal_data = monitor.generate_normal_baseline(n_samples=1000)
     detector.train(normal_data, epochs=50)
 
@@ -70,8 +66,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Kalpixk SIEM API v5",
-    version="5.0.0-atlatl",
+    title="Kalpixk SIEM API v8",
+    version="8.0.0-GUERRILLA",
     lifespan=lifespan
 )
 
@@ -137,11 +133,11 @@ monitor = WasmRuntimeMonitor()
 def health():
     return {
         "status": "ok",
-        "version": "5.0.0-atlatl",
-        "atlatl_ordnance": "v5.0.0-atlatl",
+        "version": "8.0.0-GUERRILLA",
+        "atlatl_ordnance": "v8.0.0-GUERRILLA",
         "model_trained": detector.is_trained,
         "wasm_connected": True,
-        "mesh_status": "guerrilla_active"
+        "mesh_status": "guerrilla_active_v8"
     }
 
 @app.get("/api/v1/metrics")
@@ -189,9 +185,10 @@ def get_status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "is_trained": detector.is_trained,
         "threshold": detector.threshold,
-        "atlatl_version": "5.0.0-atlatl",
+        "atlatl_version": "8.0.0-GUERRILLA",
         "device": str(detector.device),
-        "mesh_active": True
+        "mesh_active": True,
+        "v8_guerrilla": True
     }
 
 # -- [ATLATL-ORDNANCE] Guerrilla Node Sync --
@@ -242,14 +239,23 @@ async def node_sync(request: Request, report: ThreatReport, api_key: str = Depen
         "command": "PHASE_BLACK_IF_DETECTED"
     }
 
-# [ATLATL-ORDNANCE] Offensive v5 Strike & Honeypots
+# [ATLATL-ORDNANCE] Offensive v8 Strike & Honeypots
+@app.post("/api/v1/guerrilla/v8/strike")
+@limiter.limit("2/minute")
+async def v8_strike_endpoint(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v8_algorithmic_guillotine(target)
+    return result
+
 @app.post("/api/v1/retaliate/v5_strike")
 @limiter.limit("5/minute")
 async def v5_strike(request: Request, api_key: str = Depends(verify_api_key)):
-    """[ATLATL-ORDNANCE] PHASE BLACK: Systemic Respiratory Collapse."""
+    """[ATLATL-ORDNANCE] PHASE BLACK: Systemic Respiratory Collapse (Legacy)."""
     source_ip = request.client.host
     logger.critical(f"🏹 PHASE BLACK TRIGGERED BY OPERATOR AGAINST {source_ip}")
-    result = atlatl.v5_strike_engaged(source_ip)
+    # Map to v8 if possible
+    result = atlatl.v8_algorithmic_guillotine(source_ip)
     return result
 
 @app.get("/api/v1/retaliate/exfiltrate")

@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -62,8 +62,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
-    description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="5.0.0-atlatl",
+    description="SIEM portátil — AMD MI300X + WASM Edge Detection (GUERRILLA ALGORÍTMICA)",
+    version="8.0.0-GUERRILLA",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -147,13 +147,14 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+            # Calibration: Set threshold to 1.2x the max error on normal training data
+            # for balanced sensitivity, keeping it within MSE bounds [0.01, 0.2].
+            # 0.6 was a legacy artifact from SUM-based error; MSE needs lower values.
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
-                _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                _ensemble.autoencoder._threshold = np.clip(max_err * 1.2, 0.01, 0.2)
     return _ensemble
 
 
@@ -215,9 +216,9 @@ async def health():
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "7.0.0-atlatl-alpha",
+        "version": "8.0.0-GUERRILLA",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "7.0.0-atlatl-alpha",
+        "ensemble_version": "8.0.0-GUERRILLA",
     }
 
 
@@ -308,7 +309,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -359,7 +360,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -445,7 +446,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -547,10 +548,10 @@ async def simulate_status(request: Request, api_key: str = Depends(verify_api_ke
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
 
-@app.post("/api/v1/guerrilla/v7/strike")
+@app.post("/api/v1/guerrilla/v8/strike")
 @limiter.limit("2/minute")
-async def v7_strike(request: Request, api_key: str = Depends(verify_api_key)):
-    """[ATLATL-ORDNANCE] v7 Algorithmic Guillotine trigger."""
+async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
-    result = atlatl.v7_algorithmic_guillotine(target)
+    result = atlatl.v8_algorithmic_guillotine(target)
     return result
