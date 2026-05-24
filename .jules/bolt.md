@@ -26,3 +26,6 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+## 2026-04-10 - [Optimize ML prediction loop numpy arrays]
+**Learning:** Found unnecessary list to numpy array conversion back and forth inside the `predict` loops of `KalpixkIsolationForest` and `KalpixkAutoencoder`. Converting numpy arrays returned by algorithms to python lists using `.tolist()` and then converting them back to numpy arrays in the `DetectionEnsemble` creates CPU bottlenecks and limits throughput on MI300X systems.
+**Action:** Always prefer returning and operating on native numpy `ndarray` objects directly throughout the prediction lifecycle in machine learning models and ensembles, and only convert to Python lists (`.tolist()`) at the very end when serializing data for JSON/API responses.
