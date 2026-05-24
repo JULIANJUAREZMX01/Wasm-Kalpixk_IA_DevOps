@@ -255,7 +255,10 @@ async def get_kalpixk_alerts(
     since: str | None = None,
     api_key: str = Depends(verify_api_key)
 ):
-    if limit > 500:
+    # Enforce limit boundaries [1, 500] to prevent SQLite LIMIT -1 bypass and DoS
+    if limit < 1:
+        limit = 1
+    elif limit > 500:
         limit = 500
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
