@@ -3,7 +3,7 @@ members = ["crates/kalpixk-core", "crates/kalpixk-agent"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "8.0.0"
 edition = "2021"
 authors = ["Julián Juárez <julianjuarezmx01@gmail.com>"]
 license = "MIT"

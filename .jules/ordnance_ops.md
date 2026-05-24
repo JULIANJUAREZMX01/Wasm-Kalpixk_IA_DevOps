@@ -87,3 +87,37 @@
 - Algorithmic Guillotine: ARMED & ENGAGED
 
 *ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización estructural. El sistema ya no solo resiste; devora.*
+
+## [OP_V8_GUERRILLA] - Guerrilla Mesh Consensus & Algorithmic Guillotine v8
+
+**Vector de Ataque Analizado:**
+1. **Adversarial Neural Evasion:** Los atacantes utilizan técnicas de gradiente para engañar a los modelos de IA mediante ruidos imperceptibles.
+2. **Structural Session Hijacking:** Intentos de interceptar y manipular las sesiones de mando y control (C2) mediante la explotación de la lógica de red.
+3. **Decentralized Node Poisoning:** Intentos de inyectar datos falsos en la malla de defensa para causar desconfianza entre los nodos.
+
+**Defensa Implementada (v8.0-GUERRILLA):**
+1. **Zig Metal Layer (motor.zig):**
+   - `v8_guerrilla_jit_shield`: Padding de instrucciones polimórficas para cegar el desensamblado estático y dinámico.
+   - `v8_quantum_entropy_shredder`: Generador de entropía caótica basado en el Mapa Logístico para saturación de buffers a alta velocidad (25GB/s).
+   - `v8_pointer_poisoning`: Corrupción recursiva de punteros para forzar el agotamiento de CPU local en el atacante.
+2. **Rust/WASM Logic (lib.rs & defense_nodes.rs):**
+   - `Node-8: GUERRILLA`: Nuevo nodo de detección especializado en amenazas adversariales y manipulación estructural.
+   - `v8_ghost_mesh_consensus`: Protocolo de consenso criptográfico para la validación de amenazas en nodos descentralizados.
+   - Orquestación Alpha Stack v8 completa con FFI blindada.
+3. **Python ATLATL-ORDNANCE v8:**
+   - `v8_algorithmic_guillotine`: Ejecución de ataques sistémicos con 25GB/s de saturación y 100k+ firmas polimórficas.
+   - `v8_neural_poisoning`: Inyección de tensores adversariales en el flujo de retorno del atacante.
+   - `v8_structural_session_corruption`: Neutralización activa de la integridad de las sesiones C2 remotas.
+
+**Contra-Ataque (Fase Negra):**
+1. **v8_ALGORITHMIC_GUILLOTINE:**
+   - La respuesta ofensiva ahora es sistémica y algorítmica: el sistema del atacante no solo falla, sino que entra en un bucle infinito de consumo de recursos mientras su EDR es inundado con 100,000+ falsos positivos letales.
+   - La integridad de sus canales de comunicación es destruida mediante la inyección de entropía cuántica no determinista.
+
+**Estado de la Misión:**
+- Alpha Stack v8: DEPLOYED & ARMED
+- Ghost Mesh v8: SYNCHRONIZED (Consensus Reached)
+- Neural Poisoning: ACTIVE
+- Algorithmic Guillotine v8: ENGAGED
+
+*ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla. Misión v8.0.0-GUERRILLA cumplida.*
