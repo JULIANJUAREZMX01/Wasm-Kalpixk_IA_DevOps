@@ -112,9 +112,17 @@ class KalpixkAutoencoder:
             # Hardened: weights_only=True prevents insecure deserialization
             state = torch.load(MODEL_PATH, map_location=self.device, weights_only=True)
             self.net.load_state_dict(state["model_state"])
-            self._threshold  = float(state.get("threshold", 0.05))
-            self._is_trained = True
-            logger.info(f"Autoencoder loaded from {MODEL_PATH} (threshold={self._threshold:.4f})")
+            loaded_threshold = float(state.get("threshold", 0.05))
+
+            # Safety: Reset thresholds > 1.0 (legacy sum-based or corrupt) to force recalibration
+            if loaded_threshold > 1.0:
+                logger.warning(f"Detected legacy/corrupt threshold {loaded_threshold:.4f} — resetting to 0.05")
+                self._threshold = 0.05
+                self._is_trained = False
+            else:
+                self._threshold  = loaded_threshold
+                self._is_trained = True
+                logger.info(f"Autoencoder loaded from {MODEL_PATH} (threshold={self._threshold:.4f})")
         except Exception as e:
             logger.error(f"Failed to load autoencoder: {e} — using fresh model")
 

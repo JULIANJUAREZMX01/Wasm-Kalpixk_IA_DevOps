@@ -48,10 +48,6 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if expected_key:
             if not api_key or not secrets.compare_digest(api_key, expected_key):
                  raise HTTPException(status_code=403, detail="Forbidden")
-        else:
-            # Fallback to development_secret if KALPIXK_API_KEY is not set
-            if not api_key or not secrets.compare_digest(api_key, "development_secret"):
-                raise HTTPException(status_code=403, detail="Forbidden")
     return api_key
 
 @asynccontextmanager
