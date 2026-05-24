@@ -147,13 +147,14 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+            # Calibration: Set threshold to 1.2x the max error on normal training data
+            # for balanced sensitivity, keeping it within MSE bounds [0.01, 0.2].
+            # 0.6 was a legacy artifact from SUM-based error; MSE needs lower values.
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
-                _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                _ensemble.autoencoder._threshold = np.clip(max_err * 1.2, 0.01, 0.2)
     return _ensemble
 
 
