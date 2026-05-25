@@ -22,22 +22,20 @@ class DetectionEnsemble:
         features_np = features.cpu().numpy()
 
         # Inferencia
-        if_scores, if_conf = self.iso_forest.predict(features_np)
-        ae_scores, ae_conf = self.autoencoder.predict(features_np)
+        if_scores_np, if_conf_np = self.iso_forest.predict(features_np)
+        ae_scores_np, ae_conf_np = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
-        if_scores_np = np.asarray(if_scores)
-        ae_scores_np = np.asarray(ae_scores)
-        ensemble_scores = 0.45 * if_scores_np + 0.55 * ae_scores_np
+        ensemble_scores = np.clip(0.45 * if_scores_np + 0.55 * ae_scores_np, 0.0, 1.0)
 
         # Determinar método dominante y confianza
         methods = np.where(if_scores_np > ae_scores_np, "isolation_forest", "autoencoder").tolist()
 
         # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
-        confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
+        confidences = ((if_conf_np + ae_conf_np) / 2).tolist()
 
         # Update and get adaptive threshold
-        current_threshold = self.drift_guard.update(ensemble_scores.tolist())
+        current_threshold = self.drift_guard.update(ensemble_scores)
 
         return (
             ensemble_scores.tolist(),
