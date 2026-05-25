@@ -255,8 +255,11 @@ async def get_kalpixk_alerts(
     since: str | None = None,
     api_key: str = Depends(verify_api_key)
 ):
+    # Enforce limit boundaries [1, 500]
     if limit > 500:
         limit = 500
+    elif limit < 1:
+        limit = 1
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}

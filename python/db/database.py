@@ -66,6 +66,14 @@ async def insert_alert(alert_dict):
         await db.commit()
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    # Defense-in-depth: Force limit to be a positive integer to prevent LIMIT -1 bypass
+    try:
+        limit = int(limit)
+        if limit < 1:
+            limit = 1
+    except (ValueError, TypeError):
+        limit = 100
+
     db_path = get_db_path()
     query = "SELECT * FROM alerts WHERE 1=1"
     params = []
