@@ -15,12 +15,12 @@ class AdversarialDriftGuard:
         self.current_threshold = 0.5
         logger.info(f"🛡️ AdversarialDriftGuard v7.0 initialized (window={window_size})")
 
-    def update(self, scores: list[float]) -> float:
+    def update(self, scores: np.ndarray) -> float:
         """Updates the adaptive threshold based on a sliding window of benign scores."""
-        for s in scores:
-            # Only add scores that are not extreme outliers to the benign baseline
-            if s < 0.9:
-                self.score_history.append(s)
+        # Only add scores that are not extreme outliers to the benign baseline
+        valid_scores = scores[scores < 0.9]
+        if valid_scores.size > 0:
+            self.score_history.extend(valid_scores.tolist())
 
         if len(self.score_history) > self.window_size:
             self.score_history = self.score_history[-self.window_size:]
