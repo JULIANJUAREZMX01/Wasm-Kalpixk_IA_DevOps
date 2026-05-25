@@ -1,8 +1,9 @@
 
+
 import pytest
-import os
-import aiosqlite
-from python.db.database import get_alerts, init_db, insert_alert, get_db_path
+
+from python.db.database import get_alerts, init_db, insert_alert
+
 
 @pytest.fixture
 async def setup_db(monkeypatch, tmp_path):
@@ -36,6 +37,7 @@ async def test_get_alerts_limit_protection(setup_db):
 @pytest.mark.asyncio
 async def test_api_alerts_limit_protection(setup_db, monkeypatch):
     from fastapi.testclient import TestClient
+
     from python.api.kalpixk_api import app, verify_api_key
 
     # Mocking verify_api_key to skip auth for testing
