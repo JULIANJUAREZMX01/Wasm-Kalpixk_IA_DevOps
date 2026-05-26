@@ -258,13 +258,13 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-        // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v8
+    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v8
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
-            let mut decoy_buffer = [0u8; 256];
+        let mut decoy_buffer = [0u8; 256];
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
@@ -273,9 +273,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
                 decoy_buffer.len(),
                 seed ^ 0xDEADBEEF,
             );
-                v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-                v8_quantum_entropy_shredder(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 0.731);
-                v8_pointer_poisoning(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+            v8_quantum_entropy_shredder(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 0.731);
+            v8_pointer_poisoning(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
         }
 
         // Arm traps if critical threat count is high
