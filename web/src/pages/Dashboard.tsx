@@ -39,6 +39,19 @@ const seedChart  = () =>
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+const TerminalLine = React.memo(({ line }: { line: string }) => {
+  const color = line.includes("[WAR]") || line.includes("[CRITICAL]") ? T.red :
+                line.includes("[RETALIATE]") || line.includes("[STRIKE]") ? T.amber : T.green;
+
+  const [timeStr] = useState(() => fmt(new Date()));
+
+  return (
+    <div style={{ marginBottom: 2, color }}>
+      <span style={{ opacity: 0.5 }}>{timeStr}</span> {line}
+    </div>
+  );
+});
+
 const AlertRow = React.memo(({ a, isNew }: { a: KalpixkAlert; isNew: boolean }) => (
   <div
     className={isNew ? "new-row" : ""}
@@ -434,13 +447,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
             </div>
             <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#020202" }}>
                 {terminalOutput.map((line, i) => (
-                    <div key={i} style={{
-                      marginBottom: 2,
-                      color: line.includes("[WAR]") || line.includes("[CRITICAL]") ? T.red :
-                             line.includes("[RETALIATE]") || line.includes("[STRIKE]") ? T.amber : T.green
-                    }}>
-                      <span style={{ opacity: 0.5 }}>{fmt(new Date())}</span> {line}
-                    </div>
+                    <TerminalLine key={`${i}-${line}`} line={line} />
                 ))}
                 <div style={{ color: T.amber, marginTop: 4 }} className="blink">_</div>
             </div>
@@ -677,7 +684,8 @@ const ParsersTab = React.memo(function ParsersTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminalOutput: string[] }) {
   const alerts = useAlertStore((s) => s.alerts);
-  const strikes = terminalOutput.filter(l => l.includes("[STRIKE]") || l.includes("[GUILLOTINE]"));
+  const strikes = useMemo(() => terminalOutput.filter(l => l.includes("[STRIKE]") || l.includes("[GUILLOTINE]")), [terminalOutput]);
+  const targetAlerts = useMemo(() => alerts.filter(a => a.score > 0.8).slice(0, 5), [alerts]);
 
   return (
     <div style={{ flex: 1, padding: 20, overflow: "auto", background: "#000" }}>
@@ -729,7 +737,7 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
           <div>
             <Label text="TARGETED INFRASTRUCTURE" accent={T.amber} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {alerts.filter(a => a.score > 0.8).slice(0, 5).map((a) => (
+              {targetAlerts.map((a) => (
                 <div key={a.id} style={{
                   padding: 12, background: T.surface, border: `1px solid ${T.border}`,
                   position: "relative", overflow: "hidden"
