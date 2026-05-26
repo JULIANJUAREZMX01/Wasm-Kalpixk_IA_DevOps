@@ -59,11 +59,14 @@ extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, seed: f64);
+    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "7.0.0-atlatl-alpha".to_string()
+    "8.0.0-GUERRILLA".to_string()
 }
 
 #[wasm_bindgen]
@@ -73,7 +76,7 @@ pub fn get_security_telemetry() -> String {
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
         "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
-        "v7_status": "ALPHA_GUERRILLA"
+        "v8_status": "GUERRILLA_MODE"
     }).to_string()
 }
 
@@ -121,30 +124,30 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn v7_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
-    // [ATLATL-ORDNANCE] v7 GHOST PROTOCOL
+pub fn v8_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v8 GHOST PROTOCOL
     // Decentralized mesh obfuscation via silent heartbeats and mesh signaling.
     defense_nodes::process_ghost_signal(node_id, encrypted_payload);
     serde_json::json!({
-        "mode": "GHOST_V7",
-        "integrity": "VERIFIED_ALPHA",
-        "obfuscation_layer": "ACTIVE_POLYMORPHIC"
+        "mode": "GHOST_V8",
+        "integrity": "VERIFIED_GUERRILLA",
+        "obfuscation_layer": "ACTIVE_POLYMORPHIC_V8"
     })
     .to_string()
 }
 
 #[wasm_bindgen]
-pub fn v7_guerrilla_process(payload_json: &str) -> String {
-    // [ATLATL-ORDNANCE] v7 GUERRILLA PROCESS
+pub fn v8_guerrilla_process(payload_json: &str) -> String {
+    // [ATLATL-ORDNANCE] v8 GUERRILLA PROCESS
     // High-performance military-grade orchestration between host and WASM sandbox.
-    let guard = wasp::validate_ffi_call("v7_guerrilla_process", 1);
+    let guard = wasp::validate_ffi_call("v8_guerrilla_process", 1);
     if !guard.passed {
         return serde_json::json!({"error": guard.reason}).to_string();
     }
 
     serde_json::json!({
-        "status": "PROCESSED",
-        "v7_orchestration": "ACTIVE",
+        "status": "PROCESSED_V8",
+        "v8_orchestration": "ACTIVE",
         "payload_len": payload_json.len()
     })
     .to_string()
@@ -255,13 +258,13 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
+        // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v8
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
-        let mut decoy_buffer = [0u8; 128];
+            let mut decoy_buffer = [0u8; 256];
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
@@ -270,6 +273,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
                 decoy_buffer.len(),
                 seed ^ 0xDEADBEEF,
             );
+                v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+                v8_quantum_entropy_shredder(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 0.731);
+                v8_pointer_poisoning(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
         }
 
         // Arm traps if critical threat count is high
@@ -369,10 +375,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v7.0.0-atlatl-alpha",
+        "atlatl_ordnance": "v8.0.0-GUERRILLA",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
-        "v7_alpha": true
+        "v8_guerrilla": true
     })
     .to_string()
 }

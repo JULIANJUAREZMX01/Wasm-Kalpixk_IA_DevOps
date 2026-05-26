@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
+// Versión: 8.0.0-GUERRILLA (Algoritmic Guerrilla Warfare)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -252,6 +252,86 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
 
     for (slice) |*val| {
         val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Inyecta ruido instructivo polimórfico en buffers de ejecución para frustrar
+/// el desensamblado estático y dinámico.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i < target_len) {
+        const block_size = (rand.int(usize) % 8) + 1;
+        if (i + block_size > target_len) break;
+
+        const op = rand.int(u8) % 12;
+        switch (op) {
+            0 => { // Multi-byte NOP
+                slice[i] = 0x0F;
+                if (block_size > 1) slice[i + 1] = 0x1F;
+                if (block_size > 2) slice[i + 2] = 0x00;
+            },
+            1 => slice[i] = 0x90, // NOP
+            2 => slice[i] = 0xCC, // INT3
+            3 => slice[i] = 0xF4, // HLT
+            4 => { // JMP short +1
+                slice[i] = 0xEB;
+                if (i + 1 < target_len) slice[i + 1] = 0x01;
+            },
+            5 => slice[i] = 0x37, // AAA
+            6 => slice[i] = 0x3F, // AAS
+            7 => slice[i] = 0x27, // DAA
+            8 => slice[i] = 0x2F, // DAS
+            9 => slice[i] = 0x60, // PUSHA
+            10 => slice[i] = 0x61, // POPA
+            else => slice[i] = rand.int(u8),
+        }
+        i += block_size;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// Genera entropía caótica basada en un Mapa Logístico (Chaos Theory) para
+/// saturación de buffers de alta velocidad.
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, seed: f64) void {
+    const slice = target_ptr[0..target_len];
+    var x = if (seed == 0.0 or seed == 1.0) 0.731 else seed;
+    const r = 3.99; // Chaotic regime
+
+    for (slice) |*byte| {
+        // Logistic Map: x_{n+1} = r * x_n * (1 - x_n)
+        x = r * x * (1.0 - x);
+        byte.* = @intFromFloat(@floor(x * 255.0));
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_pointer_poisoning
+/// Corrupción agresiva de punteros remotos mediante rotación no determinista
+/// y trampas de salto infinito.
+pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    // Phase 1: Infinite loop traps (EB FE)
+    var i: usize = 0;
+    while (i + 1 < target_len) : (i += 4) {
+        slice[i] = 0xEB;
+        slice[i + 1] = 0xFE;
+    }
+
+    // Phase 2: Non-deterministic stride rotation
+    const stride = (rand.int(usize) % (target_len / 2)) + 1;
+    var j: usize = 0;
+    while (j + stride < target_len) : (j += stride) {
+        const k = (j + stride) % target_len;
+        const temp = slice[j];
+        slice[j] = slice[k];
+        slice[k] = temp;
     }
 }
 

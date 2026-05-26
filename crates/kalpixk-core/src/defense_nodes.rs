@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 7 nodes for detecting Red Team techniques:
+//! 8 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
-//! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
+//! - Node-7: MESH_INTEGRITY
+//! - Node-8: GUERRILLA (v8.0-ATLATL)
 //!
-//! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
+//! [ATLATL-ORDNANCE] Version 8.0: Guerrilla Mesh Consensus
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -57,12 +58,12 @@ impl SeverityScore {
     }
 }
 
-/// [ATLATL-ORDNANCE] v7 GHOST PROTOCOL — Process silent signals
+/// [ATLATL-ORDNANCE] v8 GHOST PROTOCOL — Process silent signals
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     // Register heartbeat silently without broadcasting to standard lists
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v7-ghost-{}", node_id),
+            format!("v8-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
@@ -488,7 +489,39 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 7 nodes
+// NODE 8: GUERRILLA DETECTOR (v8.0-ATLATL)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = event.raw.to_lowercase();
+
+    // Detect v8-specific guerrilla threats
+    if raw.contains("guerrilla") || raw.contains("atlatl") || raw.contains("macuahuitl") {
+        if raw.contains("bypass") || raw.contains("poison") {
+            score += 0.85;
+            techniques.push("T1562.001".to_string());
+        }
+    }
+
+    // Detect attempts to manipulate the ghost mesh
+    if raw.contains("ghost") && raw.contains("heartbeat") && raw.contains("spoof") {
+        score += 0.9;
+        techniques.push("T1557".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-8: GUERRILLA".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "v8 Guerrilla Mesh threat detection".to_string(),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// COMPLETE ANALYSIS — Run all 8 nodes
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
@@ -508,6 +541,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
+        detect_guerrilla_threat(event),
     ]
 }
 
@@ -525,11 +559,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
         // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-ATLATL-V7".to_string(),
-            technique: "TA-DETECTION-V7".to_string(),
+            node_id: "WASM-CORE-ATLATL-V8".to_string(),
+            technique: "TA-DETECTION-V8".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V7_ALPHA_SIG".to_string()),
+            signature: Some("V8_GUERRILLA_SIG".to_string()),
         });
         return true;
     }
