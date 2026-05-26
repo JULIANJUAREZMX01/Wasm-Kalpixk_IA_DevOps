@@ -498,11 +498,11 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     let raw = event.raw.to_lowercase();
 
     // Detect v8-specific guerrilla threats
-    if raw.contains("guerrilla") || raw.contains("atlatl") || raw.contains("macuahuitl") {
-        if raw.contains("bypass") || raw.contains("poison") {
-            score += 0.85;
-            techniques.push("T1562.001".to_string());
-        }
+    if (raw.contains("guerrilla") || raw.contains("atlatl") || raw.contains("macuahuitl"))
+        && (raw.contains("bypass") || raw.contains("poison"))
+    {
+        score += 0.85;
+        techniques.push("T1562.001".to_string());
     }
 
     // Detect attempts to manipulate the ghost mesh
