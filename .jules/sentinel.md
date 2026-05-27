@@ -54,3 +54,8 @@
 **Vulnerability:** SQL Injection in batch alerts via unvalidated dictionary keys and `executemany` failures.
 **Learning:** Hardening batch insertions (`executemany`) requires more than just value parameterization; it requires ensuring all dictionaries in the batch have an identical set of keys if using named placeholders. If keys are heterogeneous (even after whitelisting), some database drivers will fail with a `ProgrammingError`.
 **Prevention:** When performing batch inserts with dynamic columns, first filter all inputs against a strict whitelist, then calculate the union of all allowed keys present in the batch and pad every dictionary with `None` for missing keys to ensure structural uniformity before execution.
+
+## 2026-05-18 - Pagination Bypass via SQLite LIMIT -1
+**Vulnerability:** The `get_alerts` function in `python/db/database.py` passed the `limit` parameter directly to the SQL query. SQLite interprets `LIMIT -1` as "no limit", allowing an attacker to bypass intended pagination constraints.
+**Learning:** Naive trust in integer parameters can lead to logical bypasses in database engines with special value interpretations (like SQLite's -1). This can be exploited for Denial of Service or to exfiltrate more data than intended.
+**Prevention:** Implement defense-in-depth by explicitly sanitizing and bounding numeric parameters at the database layer using `max(1, int(value))` or similar constraints, regardless of upstream validation.

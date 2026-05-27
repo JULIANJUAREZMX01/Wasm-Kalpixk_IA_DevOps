@@ -4,7 +4,7 @@ Tests para db/database.py
 
 import pytest
 
-from db.database import get_alerts, init_db, insert_alert
+from python.db.database import get_alerts, init_db, insert_alert
 
 
 @pytest.fixture
