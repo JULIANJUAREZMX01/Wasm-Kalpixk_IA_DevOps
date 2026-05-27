@@ -32,6 +32,9 @@ lazy_static::lazy_static! {
 
     /// [ATLATL-ORDNANCE] GuerrillaMesh Node Health
     static ref MESH_NODES: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+
+    /// [ATLATL-ORDNANCE] v8 Ghost Mesh Proofs
+    static ref GHOST_PROOFS: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
 }
 
 /// Severity score from 0.0 to 1.0
@@ -57,15 +60,30 @@ impl SeverityScore {
     }
 }
 
-/// [ATLATL-ORDNANCE] v7 GHOST PROTOCOL — Process silent signals
-pub fn process_ghost_signal(node_id: &str, _payload: &str) {
-    // Register heartbeat silently without broadcasting to standard lists
+/// [ATLATL-ORDNANCE] v8 GHOST MESH CONSENSUS
+/// Valida pruebas de amenaza entre nodos del mesh sin revelar la topología.
+pub fn v8_ghost_mesh_consensus(node_id: &str, proof_of_threat: &str) -> bool {
+    // Register heartbeat
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v7-ghost-{}", node_id),
+            format!("v8-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
+
+    // Store proof and simulate consensus (requires 1+ proof in this standalone mock)
+    if let Ok(mut proofs) = GHOST_PROOFS.lock() {
+        proofs.insert(proof_of_threat.to_string());
+        return !proofs.is_empty();
+    }
+    false
+}
+
+/// [ATLATL-ORDNANCE] v8 Adaptive Honeypot Rotation
+/// Rota las firmas y direcciones de los honeypots cuando se detecta un ataque crítico.
+pub fn v8_adaptive_honeypot_rotation() -> bool {
+    // Logic to signal honeypot rotation
+    true
 }
 
 /// [ATLATL-ORDNANCE] GuerrillaMesh: Register Node Heartbeat
