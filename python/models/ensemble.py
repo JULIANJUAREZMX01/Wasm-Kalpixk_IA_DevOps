@@ -39,9 +39,4 @@ class DetectionEnsemble:
         # Update and get adaptive threshold
         current_threshold = self.drift_guard.update(ensemble_scores.tolist())
 
-        return (
-            ensemble_scores.tolist(),
-            methods,
-            confidences,
-            current_threshold
-        )
+        return (ensemble_scores.tolist(), methods, confidences, current_threshold)

@@ -8,6 +8,7 @@ class AdversarialDriftGuard:
     Protects detection thresholds against normalization attacks using Z-score windowing
     and statistical invariants.
     """
+
     def __init__(self, window_size: int = 500, z_threshold: float = 3.0):
         self.window_size = window_size
         self.z_threshold = z_threshold
@@ -23,7 +24,7 @@ class AdversarialDriftGuard:
                 self.score_history.append(s)
 
         if len(self.score_history) > self.window_size:
-            self.score_history = self.score_history[-self.window_size:]
+            self.score_history = self.score_history[-self.window_size :]
 
         if len(self.score_history) < 100:
             return self.current_threshold
@@ -50,12 +51,14 @@ class AdversarialDriftGuard:
         # Statistical Invariant: Features should not have near-zero variance in an active system
         feat_std = np.std(features, axis=0)
         if np.any(feat_std < 1e-9):
-             logger.warning("☣️  Potential normalization attack detected (near-zero feature variance).")
-             return False
+            logger.warning(
+                "☣️  Potential normalization attack detected (near-zero feature variance)."
+            )
+            return False
 
         # Max-Abs scaling invariant: normalized features should be within [0, 1]
         if np.any(features < -0.1) or np.any(features > 1.1):
-             logger.warning("☣️  Out-of-bounds feature detected (adversarial injection).")
-             return False
+            logger.warning("☣️  Out-of-bounds feature detected (adversarial injection).")
+            return False
 
         return True

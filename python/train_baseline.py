@@ -17,17 +17,19 @@ FEATURE_DIM = 32
 BASELINE_FILE = Path("models/baseline_model.pkl")
 N_SAMPLES = 2000
 
+
 def generate_normal(n):
     rng = np.random.default_rng(42)
-    s = rng.normal(0.3, 0.1, (n, FEATURE_DIM)).clip(0,1).astype(np.float32)
+    s = rng.normal(0.3, 0.1, (n, FEATURE_DIM)).clip(0, 1).astype(np.float32)
     # Patrones de normalidad WMS
-    s[:, 5]  = rng.uniform(0.0, 0.2, n)   # is_off_hours = bajo
-    s[:, 8]  = rng.uniform(0.8, 1.0, n)   # has_user = casi siempre
+    s[:, 5] = rng.uniform(0.0, 0.2, n)  # is_off_hours = bajo
+    s[:, 8] = rng.uniform(0.8, 1.0, n)  # has_user = casi siempre
     s[:, 16] = rng.uniform(0.0, 0.05, n)  # has_destructive_op = raro
-    s[:, 21] = rng.uniform(0.7, 1.0, n)   # process_is_known = alto
+    s[:, 21] = rng.uniform(0.7, 1.0, n)  # process_is_known = alto
     s[:, 25] = rng.uniform(0.0, 0.03, n)  # has_base64_payload = casi nunca
     s[:, 26] = rng.uniform(0.0, 0.05, n)  # has_powershell_sig = casi nunca
     return s
+
 
 def main():
     print("=" * 50)
@@ -56,8 +58,9 @@ def main():
         pickle.dump(ensemble, f)
 
     print(f"Modelo guardado: {BASELINE_FILE}")
-    print(f"Tiempo total: {time.time()-t0:.2f}s | Device: {device}")
+    print(f"Tiempo total: {time.time() - t0:.2f}s | Device: {device}")
     print("BASELINE OK")
+
 
 if __name__ == "__main__":
     main()

@@ -268,26 +268,26 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-        // [ATLATL-ORDNANCE] v8 Advanced Guerrilla Shielding
+    // [ATLATL-ORDNANCE] v8 Advanced Guerrilla Shielding
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
-            let mut decoy_buffer = [0u8; 256];
+        let mut decoy_buffer = [0u8; 256];
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-                v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
-                v8_pointer_poisoning(
+            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
+            v8_pointer_poisoning(
                 decoy_buffer.as_mut_ptr(),
                 decoy_buffer.len(),
                 seed ^ 0xDEADBEEF,
             );
-                v8_quantum_entropy_shredder(
-                    decoy_buffer.as_mut_ptr(),
-                    decoy_buffer.len(),
-                    0.5 + (seed as f64 / u64::MAX as f64) * 0.4,
-                );
+            v8_quantum_entropy_shredder(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                0.5 + (seed as f64 / u64::MAX as f64) * 0.4,
+            );
         }
 
         // Arm traps if critical threat count is high
