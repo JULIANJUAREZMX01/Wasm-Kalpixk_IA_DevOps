@@ -74,7 +74,7 @@ pub fn v8_ghost_mesh_consensus(node_id: &str, proof_of_threat: &str) -> bool {
     // Store proof and simulate consensus (requires 1+ proof in this standalone mock)
     if let Ok(mut proofs) = GHOST_PROOFS.lock() {
         proofs.insert(proof_of_threat.to_string());
-        return proofs.len() >= 1;
+        return !proofs.is_empty();
     }
     false
 }
