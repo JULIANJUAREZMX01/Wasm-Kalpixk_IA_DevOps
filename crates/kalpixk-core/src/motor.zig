@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
+// Versión: 8.0-GUERRILLA (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -55,52 +55,113 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
     return ptr.load(.Monotonic) == expected;
 }
 
-/// [ATLATL-ORDNANCE] v7_stealth_poisoning
-/// Genera secuencias de salto no deterministas basadas en el drift del reloj y entropia local.
-/// Diseñado para romper el rastreo de ejecución en entornos virtualizados o sandboxed.
-pub export fn v7_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Implementa un escudo polimórfico de instrucciones para frustrar el desensamblado
+/// y análisis de traza dinámico. Introduce ruido computacional (NOP/HLT/INT3) y
+/// bifurcaciones falsas basadas en el estado del registro de entropía.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i < target_len) {
+        const op = rand.int(u8) % 16;
+
+        switch (op) {
+            0 => { // Multi-byte NOP (3 bytes)
+                if (i + 3 > target_len) break;
+                slice[i] = 0x0F;
+                slice[i + 1] = 0x1F;
+                slice[i + 2] = 0x00;
+                i += 3;
+            },
+            1 => { // INT 3 (Trap) (1 byte)
+                if (i + 1 > target_len) break;
+                slice[i] = 0xCC;
+                i += 1;
+            },
+            2 => { // HLT (Privileged instruction noise) (1 byte)
+                if (i + 1 > target_len) break;
+                slice[i] = 0xF4;
+                i += 1;
+            },
+            3 => { // JMP short +1 (3 bytes)
+                if (i + 3 > target_len) break;
+                slice[i] = 0xEB;
+                slice[i + 1] = 0x01;
+                slice[i + 2] = rand.int(u8);
+                i += 3;
+            },
+            4 => { // UD2 (Undefined Instruction) (2 bytes)
+                if (i + 2 > target_len) break;
+                slice[i] = 0x0F;
+                slice[i + 1] = 0x0B;
+                i += 2;
+            },
+            5 => { // PUSH/POP noise (2 bytes)
+                if (i + 2 > target_len) break;
+                slice[i] = 0x50 + (rand.int(u8) % 8); // PUSH reg
+                slice[i + 1] = 0x58 + (rand.int(u8) % 8); // POP reg
+                i += 2;
+            },
+            6 => { // Arithmetic noise (ADD AL, imm8) (2 bytes)
+                if (i + 2 > target_len) break;
+                slice[i] = 0x04;
+                slice[i + 1] = rand.int(u8);
+                i += 2;
+            },
+            7 => { // XOR EAX, EAX (Zeroing) (2 bytes)
+                if (i + 2 > target_len) break;
+                slice[i] = 0x31;
+                slice[i + 1] = 0xC0;
+                i += 2;
+            },
+            else => {
+                if (i + 1 > target_len) break;
+                slice[i] = 0x90; // Standard NOP
+                i += 1;
+            },
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// Generador de entropía caótica basado en el mapa logístico (r=3.99).
+/// Diseñado para saturar buffers de red y confundir algoritmos de detección
+/// basados en patrones estadísticos simples. Alta sensibilidad a condiciones iniciales.
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, seed: f64) void {
+    const slice = target_ptr[0..target_len];
+    var x = seed;
+    if (x <= 0.0 or x >= 1.0) x = 0.5;
+    const r: f64 = 3.99; // Chaotic regime
+
+    for (slice) |*byte| {
+        // Logistic map: x_{n+1} = r * x_n * (1 - x_n)
+        x = r * x * (1.0 - x);
+        byte.* = @intFromFloat(@floor(x * 255.0));
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_pointer_poisoning
+/// Envenenamiento de punteros agresivo. Inyecta secuencias de terminación y
+/// saltos infinitos en buffers de memoria remota para causar denegación de servicio
+/// local en el sistema del atacante.
+pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
     for (slice, 0..) |*byte, i| {
-        const op = rand.int(u8) % 10;
-        switch (op) {
-            0 => byte.* = 0xEB, // JMP short
-            1 => byte.* = 0xFE, // loop
-            2 => byte.* = 0xF4, // HLT
-            3 => byte.* = 0xCC, // INT 3
-            4 => byte.* = 0x0F, // Multi-byte
-            5 => byte.* = 0x0B, // UD2
-            6 => byte.* = 0x90, // NOP
-            7 => byte.* = 0xE9, // JMP near
-            else => byte.* = rand.int(u8),
-        }
-        _ = i;
-    }
-}
-
-/// [ATLATL-ORDNANCE] mesh_entropy_shredder
-/// Saturación de buffer con patrones de ruido blanco sintético que neutralizan
-/// algoritmos de deduplicación y compresión de red.
-pub export fn mesh_entropy_shredder(target_ptr: [*]u8, target_len: usize, key: u64) void {
-    var prng = std.rand.DefaultPrng.init(key);
-    const rand = prng.random();
-    const slice = target_ptr[0..target_len];
-
-    for (slice) |*byte| {
-        byte.* = rand.int(u8);
-    }
-}
-
-/// [ATLATL-ORDNANCE] Legacy: poison_pointers
-pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
-    const slice = target_ptr[0..target_len];
-    for (slice, 0..) |*byte, i| {
-        if (i % 2 == 0) {
-            byte.* = 0xEB;
-        } else {
-            byte.* = 0xFE;
+        if (i % 8 == 0) {
+            // Nullify pointer-like structures
+            byte.* = 0x00;
+        } else if (i % 7 == 3) {
+            // Inject 0xEB 0xFE (JMP $)
+            byte.* = if (rand.boolean()) 0xEB else 0xFE;
+        } else if (i % 5 == 0) {
+            // Randomized corruption
+            byte.* = rand.int(u8);
         }
     }
 }
@@ -264,25 +325,32 @@ pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_ca
     return false;
 }
 
-test "v5 stealth poisoning is non-zero" {
+test "v8 guerrilla jit shield is non-zero" {
     var buffer: [512]u8 = undefined;
     @memset(&buffer, 0);
-    v5_stealth_poisoning(&buffer, buffer.len, 0x54321);
+    v8_guerrilla_jit_shield(&buffer, buffer.len, 0x54321);
     var sum: u64 = 0;
     for (buffer) |b| sum += b;
     try std.testing.expect(sum > 0);
 }
 
-test "mesh entropy shredder produces high entropy" {
+test "v8 quantum entropy shredder produces high entropy" {
     var buffer: [1024]u8 = undefined;
-    mesh_entropy_shredder(&buffer, buffer.len, 0x98765);
+    v8_quantum_entropy_shredder(&buffer, buffer.len, 0.42);
     const entropy = shannon_entropy(&buffer, buffer.len);
     try std.testing.expect(entropy > 7.5);
 }
 
-test "legacy poison pointers" {
-    var buffer: [4]u8 = undefined;
-    poison_pointers(&buffer, buffer.len);
-    try std.testing.expect(buffer[0] == 0xEB);
-    try std.testing.expect(buffer[1] == 0xFE);
+test "v8 pointer poisoning" {
+    var buffer: [128]u8 = undefined;
+    @memset(&buffer, 0xFF);
+    v8_pointer_poisoning(&buffer, buffer.len, 0x12345);
+    var changed = false;
+    for (buffer) |b| {
+        if (b != 0xFF) {
+            changed = true;
+            break;
+        }
+    }
+    try std.testing.expect(changed);
 }
