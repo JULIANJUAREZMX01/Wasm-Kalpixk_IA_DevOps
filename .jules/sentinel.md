@@ -54,3 +54,8 @@
 **Vulnerability:** SQL Injection in batch alerts via unvalidated dictionary keys and `executemany` failures.
 **Learning:** Hardening batch insertions (`executemany`) requires more than just value parameterization; it requires ensuring all dictionaries in the batch have an identical set of keys if using named placeholders. If keys are heterogeneous (even after whitelisting), some database drivers will fail with a `ProgrammingError`.
 **Prevention:** When performing batch inserts with dynamic columns, first filter all inputs against a strict whitelist, then calculate the union of all allowed keys present in the batch and pad every dictionary with `None` for missing keys to ensure structural uniformity before execution.
+
+## 2026-05-27 - SQLite LIMIT -1 Pagination Bypass and Ensemble API Desync
+**Vulnerability:** SQLite `LIMIT -1` pagination bypass and runtime crash in `AnomalyDetector.predict`.
+**Learning:** SQLite interprets `LIMIT -1` as 'no limit', allowing pagination bypass if the `limit` parameter is not validated. Additionally, the `AnomalyDetector.predict` method was crashing because it wasn't updated to handle the 4-tuple (including adaptive threshold) returned by the v8-hardened `DetectionEnsemble.predict`.
+**Prevention:** Enforce strict positive integer bounds on database `LIMIT` parameters at the API or DB layer. Ensure that all downstream call sites are synchronized when modifying core model return signatures to prevent "too many values to unpack" runtime failures.

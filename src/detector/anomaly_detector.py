@@ -57,16 +57,17 @@ class AnomalyDetector:
             X_scaled = X
 
         X_tensor = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
-        scores, methods, confidences = self.ensemble.predict(X_tensor)
+        scores, methods, confidences, threshold = self.ensemble.predict(X_tensor)
 
-        # Threshold at 0.6 for ensemble anomaly
-        anomalies = [float(s) > 0.6 for s in scores]
+        # Use adaptive threshold from ensemble
+        anomalies = [float(s) > threshold for s in scores]
 
         return {
             "reconstruction_errors": scores,
             "anomalies": anomalies,
             "methods": methods,
             "confidences": confidences,
+            "adaptive_threshold": threshold,
             "anomaly_count": sum(anomalies)
         }
 
@@ -103,7 +104,7 @@ class AnomalyDetector:
             "recall": float(recall),
             "f1": float(f1),
             "auc": 0.0, # Placeholder for backward compat with tests
-            "threshold": 0.6
+            "threshold": res.get("adaptive_threshold", 0.6)
         }
 
     def save_evaluation_report(self, metrics: dict, path: str = "models/evaluation_report.json"):
