@@ -1,5 +1,5 @@
-import pytest
 from src.retaliation.atlatl import atlatl
+
 
 def test_v8_algorithmic_guillotine_logic():
     """Verify v8 strike orchestration and entropy saturation."""
