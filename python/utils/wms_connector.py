@@ -27,7 +27,7 @@ import random
 import time
 from collections.abc import Generator
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 logger = logging.getLogger("kalpixk.wms_connector")
 
@@ -187,7 +187,7 @@ class WmsConnector:
         Suitable for local development and CI testing.
         """
         rng = random.Random(42)
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
         idx = 0
 
         # Anomaly injection schedule (every ~50 events inject 1 anomaly)
@@ -324,7 +324,7 @@ class WmsConnector:
 
         try:
             import ibm_db  # type: ignore
-            last_ts = datetime.now(timezone.utc) - timedelta(minutes=5)
+            last_ts = datetime.now(UTC) - timedelta(minutes=5)
 
             while True:
                 sql = f"""
@@ -338,7 +338,7 @@ class WmsConnector:
                 row = ibm_db.fetch_assoc(stmt)
                 while row:
                     entry = WmsLogEntry(
-                        timestamp=row.get("TIMESTAMP", datetime.now(timezone.utc)),
+                        timestamp=row.get("TIMESTAMP", datetime.now(UTC)),
                         authid=row.get("AUTHID", "UNKNOWN"),
                         hostname=row.get("APPID", "unknown"),
                         operation="EXECUTE",
@@ -377,7 +377,7 @@ class WmsConnector:
             "TIMESTAMP={ts} AUTHID=UNKNOWN HOSTNAME=10.0.3.99 SQL=DROP TABLE WMS_USER SQLCODE=-551 ROWS=0",
             "TIMESTAMP={ts} AUTHID=WMS_OPS HOSTNAME=cedis_427 SQL=GRANT SELECT ON INVENTORY TO PUBLIC SQLCODE=0 ROWS=0",
         ]
-        base_time = datetime.now(timezone.utc)
+        base_time = datetime.now(UTC)
         for i in range(100): # Limited to 100 for shorter runs
             ts = (base_time - timedelta(seconds=i * 30)).strftime("%Y-%m-%d %H:%M:%S")
             tpl = random.choice(templates)
