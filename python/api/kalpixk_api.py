@@ -547,10 +547,10 @@ async def simulate_status(request: Request, api_key: str = Depends(verify_api_ke
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
 
-@app.post("/api/v1/guerrilla/v7/strike")
+@app.post("/api/v1/guerrilla/v8/strike")
 @limiter.limit("2/minute")
-async def v7_strike(request: Request, api_key: str = Depends(verify_api_key)):
-    """[ATLATL-ORDNANCE] v7 Algorithmic Guillotine trigger."""
+async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
-    result = atlatl.v7_algorithmic_guillotine(target)
+    result = atlatl.v8_algorithmic_guillotine(target)
     return result
