@@ -54,7 +54,6 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
-
 #[wasm_bindgen]
 pub fn version() -> String {
     "7.0.0-atlatl-alpha".to_string()
