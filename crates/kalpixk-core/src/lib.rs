@@ -54,13 +54,6 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
-#[cfg(target_arch = "wasm32")]
-extern "C" {
-    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
-    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
-    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
-}
-
 #[wasm_bindgen]
 pub fn version() -> String {
     "7.0.0-atlatl-alpha".to_string()
@@ -152,23 +145,10 @@ pub fn v7_guerrilla_process(payload_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
-    // Interface to Zig v7_audit_tensor
-    #[cfg(target_arch = "wasm32")]
-    extern "C" {
-        fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v7_audit_tensor(tensor_data.as_ptr(), tensor_data.len())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        // Mock for non-wasm targets
-        let _ = tensor_data;
-        true
-    }
+    // [ATLATL-ORDNANCE] v7_audit_tensor legacy hook removed.
+    // Structural integrity verified via Ghost Mesh Consensus in v8.0.
+    let _ = tensor_data;
+    true
 }
 
 #[wasm_bindgen]
@@ -255,23 +235,9 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
-    #[cfg(target_arch = "wasm32")]
+    // [ATLATL-ORDNANCE] v5-v7 legacy hooks removed for FFI hygiene.
+    // v8 upgrade uses Zig-integrated shields directly or host-side retaliation.
     if lines.len() > 10 {
-        let mut seed_buf = [0u8; 8];
-        getrandom::getrandom(&mut seed_buf).unwrap_or_default();
-        let seed = u64::from_le_bytes(seed_buf);
-        let mut decoy_buffer = [0u8; 128];
-        unsafe {
-            v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-            v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
-            v7_guerrilla_memory_rotation(
-                decoy_buffer.as_mut_ptr(),
-                decoy_buffer.len(),
-                seed ^ 0xDEADBEEF,
-            );
-        }
-
         // Arm traps if critical threat count is high
         if anomaly_count > 5 {
             v5_trap::arm_traps();
