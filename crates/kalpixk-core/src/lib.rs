@@ -137,7 +137,7 @@ pub fn v8_ghost_mesh_consensus(node_id: &str, threat_report_json: &str) -> Strin
     defense_nodes::process_ghost_signal(node_id, threat_report_json);
 
     // Logic for consensus (simulated)
-    let consensus_reached = node_id.len() > 0;
+    let consensus_reached = !node_id.is_empty();
 
     serde_json::json!({
         "mode": "GHOST_V8_GUERRILLA",
@@ -213,12 +213,12 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn v8_trigger_retaliation(json_target: &str, severity: f64) -> String {
+pub fn v8_trigger_retaliation(json_target: &str, _severity: f64) -> String {
     // [ATLATL-ORDNANCE] v8.0.0-GUERRILLA Retaliation
     // Coordinated Zig Metal Core strike via WASM FFI.
 
     #[cfg(target_arch = "wasm32")]
-    if severity > 0.8 {
+    if _severity > 0.8 {
         let mut buffer = [0u8; 1024];
         let seed = chrono::Utc::now().timestamp() as u64;
         unsafe {
