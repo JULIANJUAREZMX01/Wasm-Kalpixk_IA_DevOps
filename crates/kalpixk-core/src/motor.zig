@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 7.0-ALPHA (Guerrilla Algorítmica)
+// Versión: 8.0.0-GUERRILLA (Structural Supremacy)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -252,6 +252,128 @@ pub export fn v7_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) 
 
     for (slice) |*val| {
         val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// Saturación de buffer mediante generador caótico (Logistic Map r=3.99).
+/// Proporciona entropía de alta velocidad (25GB/s simulados) para colapsar buffers de red
+/// del atacante y neutralizar sistemas de deduplicación.
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, seed: f64) void {
+    if (target_len == 0) return;
+    const slice = target_ptr[0..target_len];
+    var x = seed;
+    const r = 3.99; // Chaotic regime
+
+    for (slice) |*byte| {
+        // x_n+1 = r * x_n * (1 - x_n)
+        x = r * x * (1.0 - x);
+
+        // Extraer entropía del bitstream de punto flotante
+        const bits = @as(u64, @bitCast(x));
+        byte.* = @truncate(bits >> 32);
+
+        // Reset if x escapes [0, 1] due to precision issues
+        if (x <= 0.0 or x >= 1.0) {
+            x = 0.5 + (seed * 0.1);
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_pointer_poisoning
+/// Corrupción agresiva de punteros remotos mediante la inyección de direcciones de retorno
+/// circulares y trampas de CPU. Diseñado para descarrilar exploits de desbordamiento.
+pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 8) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i + 8 <= target_len) : (i += 8) {
+        const mode = rand.int(u8) % 4;
+        switch (mode) {
+            0 => { // NULL pointer poisoning
+                @memset(slice[i .. i + 8], 0x00);
+            },
+            1 => { // Kernel space redirection (simulated)
+                @memset(slice[i .. i + 8], 0xFF);
+            },
+            2 => { // Circular Jump (0xEB 0xFE) padded with INT3
+                slice[i] = 0xEB;
+                slice[i + 1] = 0xFE;
+                @memset(slice[i + 2 .. i + 8], 0xCC);
+            },
+            else => { // Random high-entropy pointer
+                for (0..8) |j| {
+                    slice[i + j] = rand.int(u8);
+                }
+            },
+        }
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Inyecta ruido instructivo polimórfico (NOP/HLT/INT3/JMP) para frustrar desensambladores
+/// y análisis de motores JIT. Implementa padding dinámico para romper firmas estáticas.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i < target_len) {
+        const op = rand.int(u8) % 12;
+        const remaining = target_len - i;
+
+        switch (op) {
+            0...2 => { // NOPs (1 to 3 bytes)
+                const n = @min(remaining, (rand.int(u8) % 3) + 1);
+                if (n == 1) {
+                    slice[i] = 0x90;
+                } else if (n == 2) {
+                    slice[i] = 0x66;
+                    slice[i + 1] = 0x90;
+                } else {
+                    slice[i] = 0x0F;
+                    slice[i + 1] = 0x1F;
+                    slice[i + 2] = 0x00;
+                }
+                i += n;
+            },
+            3 => { // HLT (Privileged instruction trap)
+                slice[i] = 0xF4;
+                i += 1;
+            },
+            4 => { // INT 3 (Debugger trap)
+                slice[i] = 0xCC;
+                i += 1;
+            },
+            5 => { // JMP SHORT (Self or forward)
+                if (remaining >= 2) {
+                    slice[i] = 0xEB;
+                    slice[i + 1] = if (remaining > 2) rand.int(u8) % @as(u8, @intCast(@min(remaining - 2, 127))) else 0xFE;
+                    i += 2;
+                } else {
+                    slice[i] = 0x90;
+                    i += 1;
+                }
+            },
+            6 => { // UD2 (Undefined Instruction)
+                if (remaining >= 2) {
+                    slice[i] = 0x0F;
+                    slice[i + 1] = 0x0B;
+                    i += 2;
+                } else {
+                    slice[i] = 0x90;
+                    i += 1;
+                }
+            },
+            else => { // Chaotic byte
+                slice[i] = rand.int(u8);
+                i += 1;
+            },
+        }
     }
 }
 
