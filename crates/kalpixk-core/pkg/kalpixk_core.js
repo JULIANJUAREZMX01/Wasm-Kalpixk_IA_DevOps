@@ -208,6 +208,100 @@ export function trigger_v4_retaliation(json_target) {
 }
 
 /**
+ * @param {Float32Array} tensor_data
+ * @returns {boolean}
+ */
+export function v7_audit_tensor_wasm(tensor_data) {
+    const ptr0 = passArrayF32ToWasm0(tensor_data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.v7_audit_tensor_wasm(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
+ * @param {string} node_id
+ * @param {string} encrypted_payload
+ * @returns {string}
+ */
+export function v7_ghost_heartbeat(node_id, encrypted_payload) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(encrypted_payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.v7_ghost_heartbeat(ptr0, len0, ptr1, len1);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * @param {string} payload_json
+ * @returns {string}
+ */
+export function v7_guerrilla_process(payload_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(payload_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.v7_guerrilla_process(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {string} node_id
+ * @param {string} threat_report_json
+ * @returns {string}
+ */
+export function v8_ghost_mesh_consensus(node_id, threat_report_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(threat_report_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.v8_ghost_mesh_consensus(ptr0, len0, ptr1, len1);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * @param {string} json_target
+ * @param {number} _severity
+ * @returns {string}
+ */
+export function v8_trigger_retaliation(json_target, _severity) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(json_target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.v8_trigger_retaliation(ptr0, len0, _severity);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * @returns {string}
  */
 export function version() {
@@ -246,6 +340,12 @@ export function wasm_lockdown(node, score, event_json) {
     }
 }
 import * as import1 from "env"
+import * as import2 from "env"
+import * as import3 from "env"
+import * as import4 from "env"
+import * as import5 from "env"
+import * as import6 from "env"
+import * as import7 from "env"
 
 function __wbg_get_imports() {
     const import0 = {
@@ -367,6 +467,12 @@ function __wbg_get_imports() {
         __proto__: null,
         "./kalpixk_core_bg.js": import0,
         "env": import1,
+        "env": import2,
+        "env": import3,
+        "env": import4,
+        "env": import5,
+        "env": import6,
+        "env": import7,
     };
 }
 
@@ -437,6 +543,13 @@ function handleError(f, args) {
 
 function isLikeNone(x) {
     return x === undefined || x === null;
+}
+
+function passArrayF32ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 4, 4) >>> 0;
+    getFloat32ArrayMemory0().set(arg, ptr / 4);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {
