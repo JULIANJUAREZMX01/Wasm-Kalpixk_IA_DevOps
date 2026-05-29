@@ -131,7 +131,8 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 pub fn v8_ghost_mesh_consensus(node_id: &str, threat_report_json: &str) -> String {
     // [ATLATL-ORDNANCE] v8 GHOST MESH CONSENSUS
     // Cryptographic threat validation and dynamic honeypot rotation.
-    let report: serde_json::Value = serde_json::from_str(threat_report_json).unwrap_or(serde_json::Value::Null);
+    let report: serde_json::Value =
+        serde_json::from_str(threat_report_json).unwrap_or(serde_json::Value::Null);
 
     defense_nodes::process_ghost_signal(node_id, threat_report_json);
 
