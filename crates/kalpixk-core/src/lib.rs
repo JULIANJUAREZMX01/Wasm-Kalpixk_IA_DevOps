@@ -55,11 +55,19 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 export!(KalpixkCore);
 
 #[cfg(target_arch = "wasm32")]
+#[link(wasm_import_module = "env")]
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v5_active_memory_scrambling(_: *mut u8, _: usize, _: u64) {}
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v5_chaotic_interleaving(_: *mut u8, _: usize, _: usize) {}
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v7_guerrilla_memory_rotation(_: *mut u8, _: usize, _: u64) {}
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -154,6 +162,7 @@ pub fn v7_guerrilla_process(payload_json: &str) -> String {
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
     // Interface to Zig v7_audit_tensor
     #[cfg(target_arch = "wasm32")]
+    #[link(wasm_import_module = "env")]
     extern "C" {
         fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
     }
@@ -256,7 +265,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
-    #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
