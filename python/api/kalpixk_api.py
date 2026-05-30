@@ -290,35 +290,50 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
     total_anomalies = 0
     alerts_to_insert = []
 
-    for i in range(len(scores)):
-        score = float(scores[i])
-        results.append({
-            "anomaly_score": score,
-            "technique": techniques[i],
-            "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
-        })
+    scores_np = np.array(scores, dtype=np.float32)
+    confidences_np = np.array(confidences, dtype=np.float32)
 
-        if score > threshold:
-            total_anomalies += 1
+    anomaly_mask = scores_np > threshold
+    total_anomalies = int(np.sum(anomaly_mask))
+
+    # Vectorized list creation for results
+    results = [
+        {
+            "anomaly_score": float(scores_np[i]),
+            "technique": techniques[i],
+            "confidence": float(confidences_np[i]),
+            "adaptive_threshold": threshold
+        }
+        for i in range(len(scores))
+    ]
+
+    if total_anomalies > 0:
+        # Pre-compute shared values
+        ts_now = datetime.utcnow().isoformat()
+        client_ip = request.client.host if request.client else "unknown"
+        source_val = req.source or "agent"
+
+        # Iterate only over anomalous indices
+        anomaly_indices = np.where(anomaly_mask)[0]
+        for i in anomaly_indices:
+            score = float(scores_np[i])
             severity = (
                 "CRITICAL" if score > 0.8
                 else "HIGH" if score > 0.6
                 else "LOW"
             )
-            # Persist alert
-            alert_data = {
-                "ts": datetime.utcnow().isoformat(),
-                "ip": request.client.host if request.client else "unknown",
+
+            alerts_to_insert.append({
+                "ts": ts_now,
+                "ip": client_ip,
                 "anomaly_score": score,
                 "event_type": req.source_type,
                 "severity": severity,
                 "technique": techniques[i],
-                "confidence": float(confidences[i]),
+                "confidence": float(confidences_np[i]),
                 "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
-                "source": req.source or "agent"
-            }
-            alerts_to_insert.append(alert_data)
+                "source": source_val
+            })
 
     if alerts_to_insert:
         await insert_alerts(alerts_to_insert)
