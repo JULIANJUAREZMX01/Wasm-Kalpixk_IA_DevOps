@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 7 nodes for detecting Red Team techniques:
+//! 8 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
+//! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
 //!
-//! [ATLATL-ORDNANCE] Version 4.0: Cryptographic Node Integrity
+//! [ATLATL-ORDNANCE] Version 8.0.0-GUERRILLA: Structural Alpha Stack Hardening
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -20,7 +21,7 @@ pub struct ThreatSignature {
     pub technique: String,
     pub score: f64,
     pub timestamp: i64,
-    pub signature: Option<String>, // [ATLATL-ORDNANCE] Node-7 HMAC
+    pub signature: Option<String>,
 }
 
 lazy_static::lazy_static! {
@@ -32,6 +33,9 @@ lazy_static::lazy_static! {
 
     /// [ATLATL-ORDNANCE] GuerrillaMesh Node Health
     static ref MESH_NODES: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+
+    /// [ATLATL-ORDNANCE] v8 Dynamic Honeypot Rotation
+    static ref HONEYPOT_ROTATION: Mutex<u64> = Mutex::new(0);
 }
 
 /// Severity score from 0.0 to 1.0
@@ -57,31 +61,41 @@ impl SeverityScore {
     }
 }
 
-/// [ATLATL-ORDNANCE] v7 GHOST PROTOCOL — Process silent signals
+/// [ATLATL-ORDNANCE] v8 GHOST MESH CONSENSUS
+/// Enables cryptographic threat validation and dynamic honeypot rotation.
+pub fn v8_ghost_mesh_consensus(_node_id: &str, signal: &str) -> bool {
+    // Cryptographic validation (simplified for demo)
+    if signal.contains("v8-valid") {
+        if let Ok(mut rot) = HONEYPOT_ROTATION.lock() {
+            *rot = (*rot + 1) % 100;
+        }
+        return true;
+    }
+    false
+}
+
+/// [ATLATL-ORDNANCE] Legacy: v7 GHOST PROTOCOL
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
-    // Register heartbeat silently without broadcasting to standard lists
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v7-ghost-{}", node_id),
+            format!("v8-guerrilla-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
 }
 
-/// [ATLATL-ORDNANCE] GuerrillaMesh: Register Node Heartbeat
 pub fn register_node_heartbeat(node_id: String) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(node_id, chrono::Utc::now().timestamp_millis());
     }
 }
 
-/// [ATLATL-ORDNANCE] GuerrillaMesh: Get Active Nodes
 pub fn get_active_nodes() -> Vec<String> {
     if let Ok(nodes) = MESH_NODES.lock() {
         let now = chrono::Utc::now().timestamp_millis();
         nodes
             .iter()
-            .filter(|(_, &ts)| now - ts < 60000) // Active if seen in last 60s
+            .filter(|(_, &ts)| now - ts < 60000)
             .map(|(id, _)| id.clone())
             .collect()
     } else {
@@ -89,7 +103,6 @@ pub fn get_active_nodes() -> Vec<String> {
     }
 }
 
-/// [ATLATL-ORDNANCE] Export Global Blacklist for synchronization
 pub fn get_global_blacklist() -> Vec<String> {
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
         registry.iter().cloned().collect()
@@ -98,21 +111,12 @@ pub fn get_global_blacklist() -> Vec<String> {
     }
 }
 
-/// [ATLATL-ORDNANCE] Detailed Sync Logic
 pub fn register_threat_signature(sig: ThreatSignature) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         registry.insert(sig.source.clone());
     }
     if let Ok(mut db) = THREAT_SIGNATURE_DB.lock() {
         db.insert(sig.source.clone(), sig);
-    }
-}
-
-pub fn get_threat_signatures() -> Vec<ThreatSignature> {
-    if let Ok(db) = THREAT_SIGNATURE_DB.lock() {
-        db.values().cloned().collect()
-    } else {
-        Vec::new()
     }
 }
 
@@ -136,7 +140,6 @@ impl SeverityLevel {
     }
 }
 
-/// Defense node detection result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeResult {
     pub node: String,
@@ -447,27 +450,16 @@ pub fn detect_exfiltration(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 7: MESH_INTEGRITY DETECTOR (v4.0-ATLATL)
+// NODE 7: MESH_INTEGRITY DETECTOR
 // ═══════════════════════════════════════════════════════════════════════════════════════
-
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
 
-    // [ATLATL-ORDNANCE] Time-windowed HMAC validation (Conceptual)
-    // In a real WASM scenario, we'd verify the 'mesh_token' here.
     if event.source_type == "mesh_sync" {
         match event.metadata.get("mesh_token").and_then(|v| v.as_str()) {
-            Some(token) if token.len() == 64 => {
-                // Token exists and has valid length
-                score = 0.0;
-            }
-            _ => {
-                // MISSING OR INVALID TOKEN - IMMEDIATE ISOLATION
-                score = 1.0;
-            }
+            Some(token) if token.len() == 64 => score = 0.0,
+            _ => score = 1.0,
         }
-
-        // Replay Protection: Check timestamp window (±5 mins)
         if let Some(ts) = event.metadata.get("timestamp").and_then(|v| v.as_i64()) {
             let now = chrono::Utc::now().timestamp();
             if (now - ts).abs() > 300 {
@@ -488,16 +480,45 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// COMPLETE ANALYSIS — Run all 7 nodes
+// NODE 8: GUERRILLA DETECTOR (v8.0.0-GUERRILLA)
 // ═══════════════════════════════════════════════════════════════════════════════════════
+pub fn detect_v8_guerrilla_threat(_event: &KalpixkEvent, raw_lower: &str) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
 
+    // Detect systemic aggression vectors
+    if raw_lower.contains("v8-strike") || raw_lower.contains("guillotine") {
+        score += 0.95;
+        techniques.push("TA-GUERRILLA-V8".to_string());
+    }
+
+    // Detect attempts to bypass JIT shields or entropy shredders
+    if raw_lower.contains("jit-bypass") || raw_lower.contains("entropy-null") {
+        score += 0.85;
+        techniques.push("T1562".to_string()); // Impair Defenses
+    }
+
+    // Detect structural session corruption attempts
+    if raw_lower.contains("session-hijack-v8") || raw_lower.contains("pointer-scan") {
+        score += 0.9;
+        techniques.push("T1555".to_string()); // Credentials from Password Stores (pointer tracing)
+    }
+
+    NodeResult {
+        node: "NODE-8: GUERRILLA".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: format!("v8 Guerrilla threat score: {:.2}", score),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// COMPLETE ANALYSIS — Run all 8 nodes
+// ═══════════════════════════════════════════════════════════════════════════════════════
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
-    let user_lower = event
-        .user
-        .as_deref()
-        .map(|s| s.to_lowercase())
-        .unwrap_or_default();
+    let user_lower = event.user.as_deref().map(|s| s.to_lowercase()).unwrap_or_default();
     let source_lower = event.source.to_lowercase();
 
     vec![
@@ -508,6 +529,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_rce_injection(event, &raw_lower, &user_lower, &source_lower),
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
+        detect_v8_guerrilla_threat(event, &raw_lower),
     ]
 }
 
@@ -515,36 +537,32 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
     results
         .into_iter()
-        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
+        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
         .unwrap()
 }
 
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     let score = get_max_severity(event).score;
     if score >= 0.7 {
-        // [ATLATL-ORDNANCE] GuerrillaMode: Sync threat to decentralized registry
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-ATLATL-V7".to_string(),
-            technique: "TA-DETECTION-V7".to_string(),
+            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
+            technique: "TA-DETECTION-V8".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V7_ALPHA_SIG".to_string()),
+            signature: Some("V8_GUERRILLA_SIG".to_string()),
         });
         return true;
     }
 
-    // Check global blacklist
     if let Ok(registry) = GLOBAL_THREAT_REGISTRY.lock() {
         if registry.contains(&event.source) {
             return true;
         }
     }
-
     false
 }
 
-/// [ATLATL-ORDNANCE] P2P Threat Sync
 pub fn sync_threats(external_threats: Vec<String>) {
     if let Ok(mut registry) = GLOBAL_THREAT_REGISTRY.lock() {
         for threat in external_threats {

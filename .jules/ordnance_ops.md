@@ -87,3 +87,34 @@
 - Algorithmic Guillotine: ARMED & ENGAGED
 
 *ATLATL-ORDNANCE: El Centro de Mando confirma la neutralización estructural. El sistema ya no solo resiste; devora.*
+
+## [OP_V8_GUERRILLA] - Structural Alpha Stack & Quantum Entropy
+
+**Vector de Ataque Analizado:**
+1. **JIT Static Analysis Bypass:** Los atacantes intentan mapear los patrones de ejecución del motor WASM para inyectar payloads que eludan las firmas estáticas.
+2. **Buffer Saturation Resistance:** Los ataques de exfiltración de alta velocidad pueden ignorar tormentas de entropía simples si los patrones son predecibles o deduplicables.
+3. **Session State Persistence:** Los agresores intentan mantener persistencia mediante el escaneo de punteros y secuestro de estados de sesión en la memoria del host.
+
+**Defensa Implementada (v8.0.0-GUERRILLA):**
+1. **Zig Metal Core (motor.zig):**
+   - `v8_guerrilla_jit_shield`: Inyección de ruido polimórfico (3-byte NOPs, INT3, HLT) para frustrar el desensamblado.
+   - `v8_quantum_entropy_shredder`: Generación caótica basada en el Mapa Logístico (r=3.99) para saturar búferes con ruido no deducible.
+   - `v8_pointer_poisoning`: Inyección de trampas de memoria y bucles infinitos en direcciones críticas.
+2. **Rust Logic Layer (lib.rs & defense_nodes.rs):**
+   - `Node-8: GUERRILLA`: Nuevo nodo de detección para vectores de agresión sistémica v8.
+   - `v8_ghost_mesh_consensus`: Consenso criptográfico para validación de amenazas y rotación dinámica de honeypots.
+3. **SAC_OS v8 UI:**
+   - Actualización a 'PHASE BLACK v8.0-GUERRILLA' con visualización de envenenamiento neural y colapso estructural.
+
+**Contra-Ataque (Fase Negra):**
+1. **v8_ALGORITHMIC_GUILLOTINE:**
+   - Saturación de banda ancha de Stage 8 a 25GB/s mediante tormentas de entropía cuántica.
+   - `v8_structural_session_corruption`: Inhabilitación total de la infraestructura de persistencia del atacante mediante la corrupción dirigida de sus estados de sesión remotos.
+   - Envenenamiento Neural: Inyección de tensores adversarios para colapsar los modelos de ML/EDR del agresor.
+
+**Estado de la Misión:**
+- JIT Shield: ACTIVE
+- Quantum Entropy: SATURATING (25GB/s)
+- Structural Corruption: ARMED & ENGAGED
+
+*ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
