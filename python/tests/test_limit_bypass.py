@@ -1,6 +1,6 @@
 
 import pytest
-import os
+
 from db.database import get_alerts, init_db, insert_alert
 
 @pytest.fixture

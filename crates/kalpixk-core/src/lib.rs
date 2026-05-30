@@ -61,6 +61,13 @@ extern "C" {
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v5_active_memory_scrambling(_: *mut u8, _: usize, _: u64) {}
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v5_chaotic_interleaving(_: *mut u8, _: usize, _: usize) {}
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn v7_guerrilla_memory_rotation(_: *mut u8, _: usize, _: u64) {}
+
 #[wasm_bindgen]
 pub fn version() -> String {
     "7.0.0-atlatl-alpha".to_string()
@@ -256,7 +263,6 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
-    #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
