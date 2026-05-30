@@ -22,3 +22,9 @@ node_modules/
 
 # Vite build output — generado por CI, no commitear
 web/dist/
+
+# Test reports and results
+playwright-report/
+test-results/
+*.png
+web_output.log
