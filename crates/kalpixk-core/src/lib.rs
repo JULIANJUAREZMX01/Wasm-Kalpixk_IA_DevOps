@@ -227,7 +227,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         let mut decoy_buffer = [0u8; 128];
         unsafe {
             v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-            v8_pointer_poisoning(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0xDEADBEEF);
+            v8_pointer_poisoning(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0xDEADBEEF,
+            );
         }
 
         if anomaly_count > 5 {

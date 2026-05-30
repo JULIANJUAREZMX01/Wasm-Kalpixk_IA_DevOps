@@ -518,7 +518,11 @@ pub fn detect_v8_guerrilla_threat(_event: &KalpixkEvent, raw_lower: &str) -> Nod
 // ═══════════════════════════════════════════════════════════════════════════════════════
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
-    let user_lower = event.user.as_deref().map(|s| s.to_lowercase()).unwrap_or_default();
+    let user_lower = event
+        .user
+        .as_deref()
+        .map(|s| s.to_lowercase())
+        .unwrap_or_default();
     let source_lower = event.source.to_lowercase();
 
     vec![
@@ -537,7 +541,11 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
     results
         .into_iter()
-        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
+        .max_by(|a, b| {
+            a.score
+                .partial_cmp(&b.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .unwrap()
 }
 
