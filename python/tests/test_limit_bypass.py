@@ -3,6 +3,7 @@ import pytest
 
 from db.database import get_alerts, init_db, insert_alert
 
+
 @pytest.fixture
 async def tmp_db(monkeypatch, tmp_path):
     db_file = str(tmp_path / "test_limit.db")
