@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 import aiosqlite
 from loguru import logger
@@ -55,8 +55,9 @@ async def insert_alert(alert_dict):
             filtered_data["features_json"] = json.dumps(features)
 
         # Ensure timestamp if not provided
+        # Hardened: Using timezone-aware UTC now for ISO8601 compliance (Ruff UP017)
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         columns = ", ".join(filtered_data.keys())
         placeholders = ", ".join([":" + k for k in filtered_data.keys()])
@@ -66,6 +67,8 @@ async def insert_alert(alert_dict):
         await db.commit()
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    # Hardened: Constrain limit to at least 1 to prevent SQLite bypass via negative values
+    limit = max(1, int(limit))
     db_path = get_db_path()
     query = "SELECT * FROM alerts WHERE 1=1"
     params = []
@@ -129,7 +132,7 @@ async def insert_alerts(alerts_list):
         if isinstance(features, list):
             filtered_data["features_json"] = json.dumps(features)
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         filtered_alerts.append(filtered_data)
 
