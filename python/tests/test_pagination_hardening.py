@@ -1,15 +1,18 @@
 
-import pytest
-from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
 
 # Add python dir to path if needed
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from datetime import UTC, datetime
+
 from api.kalpixk_api import app
 from db.database import get_alerts, init_db, insert_alert
-from datetime import UTC, datetime
+
 
 @pytest.fixture
 def tmp_db(monkeypatch, tmp_path):
