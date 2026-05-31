@@ -54,3 +54,8 @@
 **Vulnerability:** SQL Injection in batch alerts via unvalidated dictionary keys and `executemany` failures.
 **Learning:** Hardening batch insertions (`executemany`) requires more than just value parameterization; it requires ensuring all dictionaries in the batch have an identical set of keys if using named placeholders. If keys are heterogeneous (even after whitelisting), some database drivers will fail with a `ProgrammingError`.
 **Prevention:** When performing batch inserts with dynamic columns, first filter all inputs against a strict whitelist, then calculate the union of all allowed keys present in the batch and pad every dictionary with `None` for missing keys to ensure structural uniformity before execution.
+
+## 2026-05-20 - Pagination Bypass and ISO8601 Compliance
+**Vulnerability:** Resource exhaustion and data exfiltration via negative pagination limits and inconsistent timestamping.
+**Learning:** In SQLite, a `LIMIT -1` clause is interpreted as "no limit," which can be used to bypass pagination controls and cause DoS or bulk data exposure. Additionally, using timezone-naive `datetime.utcnow()` (deprecated in Python 3.12) can lead to ambiguity in multi-node mesh deployments.
+**Prevention:** Always constrain numeric pagination parameters to a strict positive range (e.g., `max(1, limit)`) at both the API and database layers. Use timezone-aware `datetime.now(UTC)` for all auditing and event timestamping to ensure ISO8601 compliance and prevent drift.
