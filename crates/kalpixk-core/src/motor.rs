@@ -54,7 +54,11 @@ pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
 
 pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
     let r = 3.99;
-    let mut x = if initial_x <= 0.0 || initial_x >= 1.0 { 0.5 } else { initial_x };
+    let mut x = if initial_x <= 0.0 || initial_x >= 1.0 {
+        0.5
+    } else {
+        initial_x
+    };
 
     for byte in target.iter_mut() {
         x = r * x * (1.0 - x);
@@ -73,26 +77,36 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
         let trap_type = (state % 4) as u8;
 
         match trap_type {
-            0 => { // NULL Pointer Trap
-                for j in 0..8 { target[i + j] = 0; }
-            },
-            1 => { // Circular Jump Trap (0xEB 0xFE)
+            0 => {
+                // NULL Pointer Trap
+                for j in 0..8 {
+                    target[i + j] = 0;
+                }
+            }
+            1 => {
+                // Circular Jump Trap (0xEB 0xFE)
                 target[i] = 0xEB;
                 target[i + 1] = 0xFE;
-                for j in 2..8 { target[i + j] = 0x90; }
-            },
-            2 => { // CPU Exhaustion / HLT Loop
+                for j in 2..8 {
+                    target[i + j] = 0x90;
+                }
+            }
+            2 => {
+                // CPU Exhaustion / HLT Loop
                 target[i] = 0xF4;
                 target[i + 1] = 0xEB;
                 target[i + 2] = 0xFD; // JMP -3
-                for j in 3..8 { target[i + j] = 0xCC; }
-            },
-            _ => { // Random Poison
+                for j in 3..8 {
+                    target[i + j] = 0xCC;
+                }
+            }
+            _ => {
+                // Random Poison
                 for j in 0..8 {
                     state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
                     target[i + j] = (state >> 24) as u8;
                 }
-            },
+            }
         }
         i += 8;
     }

@@ -132,7 +132,8 @@ pub fn detect_reconnaissance(
         score += 0.4;
         techniques.push("T1595".to_string());
     }
-    if raw_lower.contains("scan") || user_lower.contains("shodan") || user_lower.contains("nuclei") {
+    if raw_lower.contains("scan") || user_lower.contains("shodan") || user_lower.contains("nuclei")
+    {
         score += 0.6;
         techniques.push("T1595".to_string());
     }
@@ -154,7 +155,11 @@ pub fn detect_lateral_movement(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
-    let dst_port = event.metadata.get("dst_port").and_then(|v| v.as_i64()).unwrap_or(0);
+    let dst_port = event
+        .metadata
+        .get("dst_port")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0);
 
     if [5985, 5986, 3389, 22, 445].contains(&dst_port) {
         score += 0.3;
@@ -203,7 +208,9 @@ pub fn detect_payload_execution(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
-    if raw_lower.contains("powershell") && (raw_lower.contains("-enc") || raw_lower.contains("bypass")) {
+    if raw_lower.contains("powershell")
+        && (raw_lower.contains("-enc") || raw_lower.contains("bypass"))
+    {
         score += 0.8;
         techniques.push("T1059.001".to_string());
     }
@@ -293,8 +300,8 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 
     if event.source_type == "guerrilla_strike" {
-         score = 1.0;
-         techniques.push("T1548".to_string());
+        score = 1.0;
+        techniques.push("T1548".to_string());
     }
 
     NodeResult {
@@ -327,7 +334,11 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
     results
         .into_iter()
-        .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
+        .max_by(|a, b| {
+            a.score
+                .partial_cmp(&b.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .unwrap()
 }
 
