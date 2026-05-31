@@ -275,10 +275,8 @@ pub fn detect_exfiltration(
 
 pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
-    if event.source_type == "mesh_sync" {
-        if event.metadata.get("mesh_token").is_none() {
-            score = 1.0;
-        }
+    if event.source_type == "mesh_sync" && !event.metadata.contains_key("mesh_token") {
+        score = 1.0;
     }
     NodeResult {
         node: "NODE-7: MESH_INTEGRITY".to_string(),
