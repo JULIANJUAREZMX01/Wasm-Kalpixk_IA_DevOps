@@ -106,6 +106,17 @@ pub enum SeverityLevel {
     Critical,
 }
 
+impl SeverityLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SeverityLevel::Clean => "CLEAN",
+            SeverityLevel::Suspicious => "SUSPICIOUS",
+            SeverityLevel::Anomaly => "ANOMALY",
+            SeverityLevel::Critical => "CRITICAL",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeResult {
     pub node: String,
@@ -116,7 +127,7 @@ pub struct NodeResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
-// NODE 1-6: MITRE HEURISTICS
+// NODE 1: RECONNAISSANCE DETECTOR
 // ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_reconnaissance(
@@ -132,9 +143,27 @@ pub fn detect_reconnaissance(
         score += 0.4;
         techniques.push("T1595".to_string());
     }
-    if raw_lower.contains("scan") || user_lower.contains("shodan") || user_lower.contains("nuclei")
+
+    if raw_lower.contains("scan")
+        || raw_lower.contains("syn")
+        || raw_lower.contains("ack")
+        || raw_lower.contains("fin")
     {
-        score += 0.6;
+        score += 0.3;
+        techniques.push("T1595".to_string());
+    }
+
+    if raw_lower.contains(".git")
+        || raw_lower.contains(".env")
+        || raw_lower.contains("cve-")
+        || raw_lower.contains("nuclei")
+    {
+        score += 0.5;
+        techniques.push("T1593".to_string());
+    }
+
+    if user_lower.contains("shodan") || user_lower.contains("nuclei") {
+        score += 0.5;
         techniques.push("T1595".to_string());
     }
 
@@ -146,6 +175,10 @@ pub fn detect_reconnaissance(
         description: format!("Recon score: {:.2}", score),
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 2: LATERAL MOVEMENT DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════════════
 
 pub fn detect_lateral_movement(
     event: &KalpixkEvent,
@@ -161,13 +194,23 @@ pub fn detect_lateral_movement(
         .and_then(|v| v.as_i64())
         .unwrap_or(0);
 
-    if [5985, 5986, 3389, 22, 445].contains(&dst_port) {
+    if [5985, 5986, 3389, 22, 445].contains(&(dst_port as i32)) {
         score += 0.3;
         techniques.push("T1021".to_string());
     }
-    if raw_lower.contains("psexec") || raw_lower.contains("wmic") {
+
+    if raw_lower.contains("psexec")
+        || raw_lower.contains("wmic")
+        || raw_lower.contains("winrm")
+        || raw_lower.contains("ssh -o")
+    {
         score += 0.6;
         techniques.push("T1021".to_string());
+    }
+
+    if raw_lower.contains("responder") || raw_lower.contains("poison") {
+        score += 0.7;
+        techniques.push("T1557".to_string());
     }
 
     NodeResult {
@@ -179,6 +222,10 @@ pub fn detect_lateral_movement(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 3: CREDENTIAL THEFT DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
 pub fn detect_credential_theft(
     _event: &KalpixkEvent,
     raw_lower: &str,
@@ -187,10 +234,18 @@ pub fn detect_credential_theft(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") {
+
+    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    {
         score += 0.95;
         techniques.push("T1003".to_string());
     }
+
+    if raw_lower.contains("ntds.dit") || raw_lower.contains("shadowcopy") {
+        score += 0.9;
+        techniques.push("T1003.003".to_string());
+    }
+
     NodeResult {
         node: "NODE-3: CREDS".to_string(),
         score,
@@ -200,6 +255,10 @@ pub fn detect_credential_theft(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 4: PAYLOAD/EXECUTION DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
 pub fn detect_payload_execution(
     _event: &KalpixkEvent,
     raw_lower: &str,
@@ -208,16 +267,22 @@ pub fn detect_payload_execution(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
+
     if raw_lower.contains("powershell")
-        && (raw_lower.contains("-enc") || raw_lower.contains("bypass"))
+        && (raw_lower.contains("-enc") || raw_lower.contains("bypass") || raw_lower.contains("-e "))
     {
         score += 0.8;
         techniques.push("T1059.001".to_string());
     }
-    if raw_lower.contains("msfvenom") || raw_lower.contains("meterpreter") {
+
+    if raw_lower.contains("msfvenom")
+        || raw_lower.contains("meterpreter")
+        || raw_lower.contains("cobaltstrike")
+    {
         score += 1.0;
         techniques.push("T1059".to_string());
     }
+
     NodeResult {
         node: "NODE-4: PAYLOAD".to_string(),
         score,
@@ -227,6 +292,10 @@ pub fn detect_payload_execution(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 5: RCE / INJECTION DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
 pub fn detect_rce_injection(
     _event: &KalpixkEvent,
     raw_lower: &str,
@@ -235,14 +304,22 @@ pub fn detect_rce_injection(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
+
     if raw_lower.contains("union select") || raw_lower.contains("information_schema") {
         score += 0.8;
         techniques.push("T1190".to_string());
     }
-    if raw_lower.contains("jndi") || raw_lower.contains("ldap") {
+
+    if raw_lower.contains("eval(") || raw_lower.contains("system(") || raw_lower.contains("exec(") {
+        score += 0.7;
+        techniques.push("T1059".to_string());
+    }
+
+    if raw_lower.contains("${") && (raw_lower.contains("jndi") || raw_lower.contains("ldap")) {
         score += 1.0;
         techniques.push("T1210".to_string());
     }
+
     NodeResult {
         node: "NODE-5: RCE/INJ".to_string(),
         score,
@@ -252,6 +329,10 @@ pub fn detect_rce_injection(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 6: EXFILTRATION DETECTOR
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
 pub fn detect_exfiltration(
     _event: &KalpixkEvent,
     raw_lower: &str,
@@ -260,10 +341,22 @@ pub fn detect_exfiltration(
 ) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
-    if raw_lower.contains("rclone") || raw_lower.contains("mega.nz") {
+
+    if raw_lower.contains("rclone")
+        || raw_lower.contains("mega.nz")
+        || raw_lower.contains("dropbox")
+    {
         score += 0.8;
         techniques.push("T1567".to_string());
     }
+
+    if (raw_lower.contains(".zip") || raw_lower.contains(".7z") || raw_lower.contains(".rar"))
+        && raw_lower.contains("-p")
+    {
+        score += 0.6;
+        techniques.push("T1074".to_string());
+    }
+
     NodeResult {
         node: "NODE-6: EXFIL".to_string(),
         score,
@@ -330,14 +423,14 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
-    results
-        .into_iter()
-        .max_by(|a, b| {
-            a.score
-                .partial_cmp(&b.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .unwrap()
+    // Prefer earlier nodes in case of score ties to satisfy legacy tests
+    let mut max_res = results[0].clone();
+    for res in results.into_iter().skip(1) {
+        if res.score > max_res.score {
+            max_res = res;
+        }
+    }
+    max_res
 }
 
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
