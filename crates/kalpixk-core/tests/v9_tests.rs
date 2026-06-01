@@ -1,5 +1,5 @@
 use kalpixk_core::defense_nodes::{analyze_all_nodes, set_expected_binary_hash};
-use kalpixk_core::event::{EventType, KalpixkEvent};
+use kalpixk_core::event::KalpixkEvent;
 use std::collections::HashMap;
 
 #[test]
