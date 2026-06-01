@@ -22,7 +22,7 @@ class DetectionEnsemble:
         features_np = features.cpu().numpy()
 
         # Inferencia
-        if_scores, if_conf = self.iso_forest.predict(features_np)
+        if_scores, if_conf, adaptive_threshold = self.iso_forest.predict(features_np)
         ae_scores, ae_conf = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
@@ -43,5 +43,5 @@ class DetectionEnsemble:
             ensemble_scores.tolist(),
             methods,
             confidences,
-            current_threshold
+            adaptive_threshold,
         )

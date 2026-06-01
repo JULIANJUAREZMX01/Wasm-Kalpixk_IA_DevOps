@@ -1,61 +1,80 @@
+"""
+python/detection/adaptive_threshold.py
+───────────────────────────────────────
+Sliding-window adaptive threshold for anomaly scores.
+"""
+
+import threading
+from collections import deque
+
 import numpy as np
-from loguru import logger
 
 
-class AdversarialDriftGuard:
+class AdaptiveThreshold:
     """
-    [ATLATL-ORDNANCE] Adversarial Drift Guard v7.0
-    Protects detection thresholds against normalization attacks using Z-score windowing
-    and statistical invariants.
+    Sliding-window adaptive threshold for anomaly scores.
+
+    Algorithm:
+      1. Maintains a ring buffer of the last N benign scores (default N=500)
+      2. Every `recalibrate_every` new samples, recomputes:
+           threshold = mean(buffer) + k * std(buffer)   (default k=3.0)
+      3. Exposes is_anomaly(score) -> bool
+      4. Exposes current_threshold property
+      5. Thread-safe (uses threading.Lock)
     """
-    def __init__(self, window_size: int = 500, z_threshold: float = 3.0):
+
+    def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50):
         self.window_size = window_size
-        self.z_threshold = z_threshold
-        self.score_history = []
-        self.current_threshold = 0.5
-        logger.info(f"🛡️ AdversarialDriftGuard v7.0 initialized (window={window_size})")
+        self.k = k
+        self.recalibrate_every = recalibrate_every
 
-    def update(self, scores: list[float]) -> float:
-        """Updates the adaptive threshold based on a sliding window of benign scores."""
-        for s in scores:
-            # Only add scores that are not extreme outliers to the benign baseline
-            if s < 0.9:
-                self.score_history.append(s)
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5  # Initial baseline
+        self._updates_since_recalc = 0
+        self._total_updates = 0
 
-        if len(self.score_history) > self.window_size:
-            self.score_history = self.score_history[-self.window_size:]
-
-        if len(self.score_history) < 100:
-            return self.current_threshold
-
-        # Recalibrate based on mean and std
-        mean_score = np.mean(self.score_history)
-        std_score = np.std(self.score_history)
-
-        # Guard against zero variance
-        if std_score < 1e-6:
-            std_score = 0.1
-
-        # Adaptive threshold: mean + 3.0 * std
-        new_threshold = float(mean_score + self.z_threshold * std_score)
-        self.current_threshold = np.clip(new_threshold, 0.4, 0.95)
-
-        return self.current_threshold
-
-    def validate_batch(self, features: np.ndarray) -> bool:
+    def update(self, score: float, is_confirmed_benign: bool = False) -> None:
         """
-        [ATLATL-ORDNANCE] Bit-level statistical invariant validation.
-        Detects if features have been manipulated to cause drift.
+        Add score to buffer.
+        Only updates buffer if is_confirmed_benign or score < current_threshold.
         """
-        # Statistical Invariant: Features should not have near-zero variance in an active system
-        feat_std = np.std(features, axis=0)
-        if np.any(feat_std < 1e-9):
-             logger.warning("☣️  Potential normalization attack detected (near-zero feature variance).")
-             return False
+        with self._lock:
+            if is_confirmed_benign or score < self._current_threshold:
+                self._buffer.append(score)
+                self._updates_since_recalc += 1
+                self._total_updates += 1
 
-        # Max-Abs scaling invariant: normalized features should be within [0, 1]
-        if np.any(features < -0.1) or np.any(features > 1.1):
-             logger.warning("☣️  Out-of-bounds feature detected (adversarial injection).")
-             return False
+                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                    self._recalibrate()
 
-        return True
+    def _recalibrate(self) -> None:
+        """Recompute threshold based on buffer statistics. Internal use only."""
+        # Assumption: called while holding self._lock
+        data = np.array(self._buffer)
+        mean = np.mean(data)
+        std = np.std(data)
+        self._current_threshold = float(mean + self.k * std)
+        self._updates_since_recalc = 0
+
+    def is_anomaly(self, score: float) -> bool:
+        """Return True if score exceeds adaptive threshold."""
+        with self._lock:
+            return score > self._current_threshold
+
+    @property
+    def current_threshold(self) -> float:
+        """Current threshold value."""
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict:
+        """Serializable state for /api/status endpoint."""
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "k": self.k,
+                "total_updates": self._total_updates,
+            }
