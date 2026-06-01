@@ -46,7 +46,7 @@ export function useAlertHistory() {
     const fetchHistory = async () => {
       try {
         const res = await fetch(`${API_URL}/api/alerts?limit=50`, {
-          headers: { "x-api-key": API_KEY },
+          headers: { "X-Kalpixk-Key": API_KEY },
         });
         if (!res.ok) return; // backend no tiene el endpoint aún — silencioso
         const data = await res.json();

@@ -115,20 +115,44 @@ async def insert_alerts(alerts_list):
     if not alerts_list:
         return
 
+    filtered_alerts = []
+    for alert_dict in alerts_list:
+        filtered_data = {}
+        for k, v in alert_dict.items():
+            if k in ALLOWED_COLUMNS:
+                filtered_data[k] = v
+
+        if not filtered_data:
+            continue
+
+        features = filtered_data.get("features_json")
+        if isinstance(features, list):
+            filtered_data["features_json"] = json.dumps(features)
+        if "ts" not in filtered_data:
+            filtered_data["ts"] = datetime.utcnow().isoformat()
+
+        filtered_alerts.append(filtered_data)
+
+    if not filtered_alerts:
+        return
+
+    # Ensure all dicts have the same keys for executemany with named placeholders.
+    # We use the union of all keys found in the filtered alerts.
+    all_keys = set()
+    for a in filtered_alerts:
+        all_keys.update(a.keys())
+
+    all_keys = sorted(list(all_keys)) # Deterministic order
+    for a in filtered_alerts:
+        for k in all_keys:
+            if k not in a:
+                a[k] = None
+
     db_path = get_db_path()
     async with aiosqlite.connect(db_path) as db:
-        for alert_dict in alerts_list:
-            features = alert_dict.get("features_json")
-            if isinstance(features, list):
-                alert_dict["features_json"] = json.dumps(features)
-            if "ts" not in alert_dict:
-                alert_dict["ts"] = datetime.utcnow().isoformat()
-
-        # Assuming all dicts have the same keys (which is the case for batch insertion)
-        first_alert = alerts_list[0]
-        columns = ", ".join(first_alert.keys())
-        placeholders = ", ".join([":" + k for k in first_alert.keys()])
+        columns = ", ".join(all_keys)
+        placeholders = ", ".join([":" + k for k in all_keys])
         query = f"INSERT INTO alerts ({columns}) VALUES ({placeholders})"
 
-        await db.executemany(query, alerts_list)
+        await db.executemany(query, filtered_alerts)
         await db.commit()

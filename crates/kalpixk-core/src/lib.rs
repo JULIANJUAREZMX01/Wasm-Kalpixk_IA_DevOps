@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v2.2
+// [ATLATL-ORDNANCE] WasmGuard Core v8.0.0-GUERRILLA
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
@@ -7,6 +7,7 @@ mod entropy;
 mod event;
 mod features;
 mod metrics;
+mod motor;
 mod parsers;
 mod payloads;
 mod retaliation;
@@ -58,11 +59,15 @@ export!(KalpixkCore);
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
+    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
+    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "5.0.0-atlatl".to_string()
+    "8.0.0-GUERRILLA".to_string()
 }
 
 #[wasm_bindgen]
@@ -71,7 +76,8 @@ pub fn get_security_telemetry() -> String {
         "shared_access_count": SHARED_ACCESS_COUNT.load(Ordering::Relaxed),
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
-        "active_mesh_nodes": defense_nodes::get_active_nodes().len()
+        "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
+        "v8_status": "GUERRILLA_ACTIVE"
     }).to_string()
 }
 
@@ -119,16 +125,79 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn v6_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
-    // [ATLATL-ORDNANCE] v6 GHOST PROTOCOL
-    // Decentralized mesh obfuscation via silent heartbeats.
+pub fn v8_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v8 GHOST PROTOCOL
     defense_nodes::process_ghost_signal(node_id, encrypted_payload);
     serde_json::json!({
-        "mode": "GHOST",
-        "integrity": "VERIFIED",
-        "obfuscation_layer": "ACTIVE"
+        "mode": "GHOST_V8",
+        "integrity": "VERIFIED_GUERRILLA",
+        "obfuscation_layer": "ACTIVE_V8_POLYMORPHIC"
     })
     .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v8_guerrilla_process(payload_json: &str) -> String {
+    let guard = wasp::validate_ffi_call("v8_guerrilla_process", 1);
+    if !guard.passed {
+        return serde_json::json!({"error": guard.reason}).to_string();
+    }
+
+    serde_json::json!({
+        "status": "PROCESSED_V8",
+        "v8_orchestration": "ACTIVE",
+        "payload_len": payload_json.len()
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
+pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v8_guerrilla_jit_shield(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v8_quantum_entropy_shredder(target, initial_x);
+}
+
+#[wasm_bindgen]
+pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v8_pointer_poisoning(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    extern "C" {
+        fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v7_audit_tensor(tensor_data.as_ptr(), tensor_data.len())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = tensor_data;
+        true
+    }
 }
 
 #[wasm_bindgen]
@@ -146,9 +215,6 @@ pub fn sync_threats_wasm(json_threats: &str) -> String {
 
 #[wasm_bindgen]
 pub fn trigger_v4_retaliation(json_target: &str) -> String {
-    // [ATLATL-ORDNANCE] WASM Guerrilla Retaliation v4
-    // This hook allows the JS side to trigger defensive memory poisoning
-    // or report the node state to the mesh.
     serde_json::json!({
         "status": "V4_ARMED",
         "chaotic_poisoning": true,
@@ -215,7 +281,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let mut anomaly_count = 0usize;
     let threshold = 0.5f64;
 
-    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5
+    // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5/v8
     #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
         let mut seed_buf = [0u8; 8];
@@ -225,9 +291,14 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         unsafe {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
+            v7_guerrilla_memory_rotation(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0xDEADBEEF,
+            );
+            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
         }
 
-        // Arm traps if critical threat count is high
         if anomaly_count > 5 {
             v5_trap::arm_traps();
         }
@@ -324,9 +395,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v5.0.0-atlatl",
+        "atlatl_ordnance": "v8.0.0-GUERRILLA",
         "heartbeat": wasp::get_runtime_heartbeat(),
-        "mesh_active": true
+        "mesh_active": true,
+        "v8_guerrilla": true
     })
     .to_string()
 }

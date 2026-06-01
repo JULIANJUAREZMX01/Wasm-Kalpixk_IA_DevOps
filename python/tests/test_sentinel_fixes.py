@@ -54,3 +54,37 @@ async def test_insert_alert_only_invalid_fields(tmp_db):
 
     alerts, total = await get_alerts()
     assert total == 0
+
+@pytest.mark.asyncio
+async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
+    await init_db()
+    from python.db.database import insert_alerts
+
+    malicious_key = "severity) VALUES ('2023-10-27T10:00:00Z', '8.8.8.8', 0.9, 'batch_injection', 'CRITICAL', 'none', 1.0, '[]', 'agent'); --"
+
+    batch = [
+        {
+            "ts": "2023-10-27T11:00:00Z",
+            "ip": "2.2.2.2",
+            "anomaly_score": 0.1,
+            "event_type": "normal"
+        },
+        {
+            "ts": "2023-10-27T11:00:01Z",
+            "ip": "3.3.3.3",
+            "anomaly_score": 0.8,
+            malicious_key: "CRITICAL"
+        }
+    ]
+
+    await insert_alerts(batch)
+
+    alerts, total = await get_alerts(limit=10)
+
+    # Should have 2 alerts
+    assert total == 2
+
+    ips = [a['ip'] for a in alerts]
+    assert "2.2.2.2" in ips
+    assert "3.3.3.3" in ips
+    assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"

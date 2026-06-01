@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 5.0-ATLATL (Guerrilla Algorítmica)
+// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -40,13 +40,79 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     return 0;
 }
 
-/// [ATLATL-ORDNANCE] DYNAMIC OBFUSCATION
-pub export fn dynamic_obfuscation(target_ptr: [*]u8, target_len: usize, seed: u32) void {
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
+/// Polymorphic instruction padding with NOP/HLT/INT3 noise to disrupt JIT spray/probing.
+pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
     const slice = target_ptr[0..target_len];
-    var state = seed;
+
+    var i: usize = 0;
+    while (i < target_len) {
+        const noise_type = rand.int(u8) % 4;
+        const noise_len = (rand.int(u8) % 4) + 1; // 1 to 4 bytes
+
+        if (i + noise_len > target_len) break;
+
+        for (0..noise_len) |j| {
+            switch (noise_type) {
+                0 => slice[i + j] = 0x90, // NOP
+                1 => slice[i + j] = 0xF4, // HLT
+                2 => slice[i + j] = 0xCC, // INT 3
+                else => slice[i + j] = rand.int(u8),
+            }
+        }
+        i += noise_len;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
+/// Chaotic entropy generation using a Logistic Map (r=3.99).
+/// Saturates attacker buffers with non-linear, high-entropy noise.
+pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, initial_x: f64) void {
+    const r: f64 = 3.99;
+    var x = initial_x;
+    if (x <= 0.0 or x >= 1.0) x = 0.5;
+
+    const slice = target_ptr[0..target_len];
     for (slice) |*byte| {
-        state = state *% 1103515245 +% 12345;
-        byte.* ^= @truncate(state >> 16);
+        x = r * x * (1.0 - x);
+        byte.* = @intFromFloat(x * 255.0);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_pointer_poisoning
+/// Injects 8-byte traps into target memory to cause CPU exhaustion or crashes.
+pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 8) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i + 8 <= target_len) : (i += 8) {
+        const trap_type = rand.int(u8) % 4;
+        switch (trap_type) {
+            0 => { // NULL Pointer Trap
+                @memset(slice[i .. i + 8], 0);
+            },
+            1 => { // Circular Jump Trap (0xEB 0xFE)
+                slice[i] = 0xEB;
+                slice[i + 1] = 0xFE;
+                @memset(slice[i + 2 .. i + 8], 0x90);
+            },
+            2 => { // CPU Exhaustion / HLT Loop
+                slice[i] = 0xF4;
+                slice[i + 1] = 0xEB;
+                slice[i + 2] = 0xFD; // JMP -3
+                @memset(slice[i + 3 .. i + 8], 0xCC);
+            },
+            else => { // Random Poison
+                for (0..8) |j| {
+                    slice[i + j] = rand.int(u8);
+                }
+            },
+        }
     }
 }
 
@@ -55,15 +121,13 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
     return ptr.load(.Monotonic) == expected;
 }
 
-/// [ATLATL-ORDNANCE] v5_stealth_poisoning
-/// Genera secuencias de salto no deterministas basadas en el drift del reloj y entropia local.
-/// Diseñado para romper el rastreo de ejecución en entornos virtualizados o sandboxed.
-pub export fn v5_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+/// [ATLATL-ORDNANCE] v7_stealth_poisoning (Legacy Support)
+pub export fn v7_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
     const slice = target_ptr[0..target_len];
 
-    for (slice, 0..) |*byte, i| {
+    for (slice) |*byte| {
         const op = rand.int(u8) % 10;
         switch (op) {
             0 => byte.* = 0xEB, // JMP short
@@ -76,173 +140,69 @@ pub export fn v5_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u
             7 => byte.* = 0xE9, // JMP near
             else => byte.* = rand.int(u8),
         }
-        _ = i;
     }
 }
 
-/// [ATLATL-ORDNANCE] mesh_entropy_shredder
-/// Saturación de buffer con patrones de ruido blanco sintético que neutralizan
-/// algoritmos de deduplicación y compresión de red.
-pub export fn mesh_entropy_shredder(target_ptr: [*]u8, target_len: usize, key: u64) void {
-    var prng = std.rand.DefaultPrng.init(key);
-    const rand = prng.random();
-    const slice = target_ptr[0..target_len];
-
-    for (slice) |*byte| {
-        byte.* = rand.int(u8);
-    }
-}
-
-/// [ATLATL-ORDNANCE] Legacy: poison_pointers
-pub export fn poison_pointers(target_ptr: [*]u8, target_len: usize) void {
-    const slice = target_ptr[0..target_len];
-    for (slice, 0..) |*byte, i| {
-        if (i % 2 == 0) {
-            byte.* = 0xEB;
-        } else {
-            byte.* = 0xFE;
-        }
-    }
-}
-
-/// [ATLATL-ORDNANCE] v5_active_memory_scrambling
-/// Disrupts debugger attachment by rotating memory patterns and causing
-/// non-deterministic execution in tracer contexts.
-/// Structural Hardening: Extended logic for multi-vector scrambling.
-pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
-    var prng = std.rand.DefaultPrng.init(entropy_seed);
-    const rand = prng.random();
-    const slice = target_ptr[0..target_len];
-
-    for (slice, 0..) |*byte, i| {
-        // Phase 1: Bit rotation
-        const shift = rand.int(u3);
-        if (shift > 0) {
-            byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
-        }
-
-        // Phase 2: Positional XOR with seeded entropy
-        byte.* ^= rand.int(u8) ^ @as(u8, @truncate(i));
-
-        // Phase 3: Non-linear transformation based on parity
-        if (i % 2 == 0) {
-            byte.* = byte.* +% rand.int(u8);
-        } else {
-            byte.* = byte.* ^% rand.int(u8);
-        }
-
-        // Phase 4: Conditional inversion
-        if (rand.boolean()) {
-            byte.* = ~byte.*;
-        }
-    }
-}
-
-/// [ATLATL-ORDNANCE] v5_buffer_seal
-/// Protects SharedArrayBuffer segments with rolling canaries.
-pub export fn v5_buffer_seal(buffer_ptr: [*]u8, buffer_len: usize, secret_key: u64) void {
-    if (buffer_len < 16) return;
-    const slice = buffer_ptr[0..buffer_len];
-    var prng = std.rand.DefaultPrng.init(secret_key);
-    const rand = prng.random();
-
-    // Place rolling canaries at boundaries
-    slice[0] = rand.int(u8) ^ 0xAA;
-    slice[buffer_len - 1] = rand.int(u8) ^ 0x55;
-
-    // Scramble internal alignment bytes to break automated struct parsing
-    var i: usize = 8;
-    while (i < buffer_len - 8) : (i += 16) {
-        slice[i] ^= 0xFF;
-    }
-}
-
-/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
-/// Rotates memory topology during runtime to disrupt memory analysis.
-pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
-    if (target_len < stride * 2 or stride == 0) return;
-    const slice = target_ptr[0..target_len];
-    var i: usize = 0;
-    while (i + stride * 2 <= target_len) : (i += stride * 2) {
-        // Swap blocks
-        for (0..stride) |j| {
-            const temp = slice[i + j];
-            slice[i + j] = slice[i + stride + j];
-            slice[i + stride + j] = temp;
-        }
-    }
-}
-
-/// [ATLATL-ORDNANCE] v5_logic_bomb_detector
-/// Detects suspicious instruction sequences (e.g., JMP short + loop) in raw buffers.
-pub export fn v5_logic_bomb_detector(data_ptr: [*]const u8, data_len: usize) bool {
-    if (data_len == 0) return false;
+/// [ATLATL-ORDNANCE] v7_audit_tensor
+pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) bool {
+    if (data_len == 0) return true;
     const slice = data_ptr[0..data_len];
-    var i: usize = 0;
-    while (i < data_len) : (i += 1) {
-        // Multi-byte checks
-        if (i < data_len - 1) {
-            // Check for 0xEB 0xFE (JMP short to itself)
-            if (slice[i] == 0xEB and slice[i + 1] == 0xFE) return true;
-        }
-        // Single-byte checks
-        // Check for 0xF4 (HLT) or 0xCC (INT 3) - common in anti-debug/logic bombs
-        if (slice[i] == 0xF4 or slice[i] == 0xCC) return true;
+
+    var prev: f32 = slice[0];
+    for (slice) |val| {
+        if (!std.math.isFinite(val)) return false;
+        const diff = @abs(val - prev);
+        if (diff > 10.0) return false;
+        prev = val;
     }
-    return false;
+    return true;
 }
 
-/// [ATLATL-ORDNANCE] v5_memory_encryption_at_rest
-/// XOR-based rolling encryption for decoy buffers to prevent static analysis.
-pub export fn v5_memory_encryption_at_rest(target_ptr: [*]u8, target_len: usize, key: u64) void {
-    const slice = target_ptr[0..target_len];
-    var prng = std.rand.DefaultPrng.init(key);
-    const rand = prng.random();
-    for (slice) |*byte| {
-        byte.* ^= rand.int(u8);
-    }
-}
-
-/// [ATLATL-ORDNANCE] v5_neural_decoy
-/// Generates fake tensor data to mislead attackers attempting to poison training.
-pub export fn v5_neural_decoy(target_ptr: [*]f32, target_len: usize, seed: u64) void {
+/// [ATLATL-ORDNANCE] v7_guerrilla_memory_rotation
+pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 16) return;
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
+
+    const stride = (rand.int(usize) % (target_len / 4)) + 1;
     const slice = target_ptr[0..target_len];
 
-    for (slice) |*val| {
-        val.* = rand.float(f32) * 2.0 - 1.0; // [-1.0, 1.0]
+    var i: usize = 0;
+    while (i + stride < target_len) : (i += stride) {
+        const j = (i + stride) % target_len;
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
     }
 }
 
-/// [ATLATL-ORDNANCE] DETECCION DE CORRUPCION (CANARY GUARD)
-pub export fn detect_memory_corruption(ptr: [*]const u8, len: usize, expected_canary: u8) bool {
-    const slice = ptr[0..len];
-    for (slice) |byte| {
-        if (byte != expected_canary) return true;
-    }
-    return false;
-}
-
-test "v5 stealth poisoning is non-zero" {
-    var buffer: [512]u8 = undefined;
+test "v8 guerrilla jit shield" {
+    var buffer: [128]u8 = undefined;
     @memset(&buffer, 0);
-    v5_stealth_poisoning(&buffer, buffer.len, 0x54321);
+    v8_guerrilla_jit_shield(&buffer, buffer.len, 0x12345);
     var sum: u64 = 0;
     for (buffer) |b| sum += b;
     try std.testing.expect(sum > 0);
 }
 
-test "mesh entropy shredder produces high entropy" {
+test "v8 quantum entropy shredder" {
     var buffer: [1024]u8 = undefined;
-    mesh_entropy_shredder(&buffer, buffer.len, 0x98765);
+    v8_quantum_entropy_shredder(&buffer, buffer.len, 0.5);
     const entropy = shannon_entropy(&buffer, buffer.len);
     try std.testing.expect(entropy > 7.5);
 }
 
-test "legacy poison pointers" {
-    var buffer: [4]u8 = undefined;
-    poison_pointers(&buffer, buffer.len);
-    try std.testing.expect(buffer[0] == 0xEB);
-    try std.testing.expect(buffer[1] == 0xFE);
+test "v8 pointer poisoning" {
+    var buffer: [64]u8 = undefined;
+    @memset(&buffer, 0xFF);
+    v8_pointer_poisoning(&buffer, buffer.len, 0x54321);
+    // Check if at least some bytes changed from 0xFF
+    var changed = false;
+    for (buffer) |b| {
+        if (b != 0xFF) {
+            changed = true;
+            break;
+        }
+    }
+    try std.testing.expect(changed);
 }

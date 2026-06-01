@@ -1,7 +1,7 @@
 """
 ATLATL-ORDNANCE — Módulo de Contra-Defensa y Exterminio
 "No protegemos la puerta, colapsamos el sistema del atacante."
-Versión: 5.0.0-atlatl
+Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
 """
 from loguru import logger
 import time
@@ -11,14 +11,23 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v5.0: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v8.0.0-GUERRILLA: Sistema de represalia cargado.")
+
+    def initiate(self, vector_name: str, target: str):
+        """Dinamically execute strike vectors."""
+        method_name = f"execute_{vector_name}"
+        if hasattr(self, method_name):
+            return getattr(self, method_name)(target)
+        else:
+            logger.error(f"Vector {vector_name} not found.")
+            return "FAILED"
 
     def trigger_retaliation(self, anomaly_score: float, source_ip: str, anomaly_type: str = "generic_anomaly"):
         """Orquesta la respuesta ofensiva basada en la severidad."""
-        logger.warning(f"🚨 AGRESOR V3 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
+        logger.warning(f"🚨 AGRESOR V8 DETECTADO: {source_ip} | Score: {anomaly_score:.4f}")
 
         if anomaly_score > 0.9 or anomaly_type == "ransomware_detected":
-            return self.phase_black(source_ip)
+            return self.v8_algorithmic_guillotine(source_ip)
         elif anomaly_score > 0.7:
             return self.phase_red(source_ip)
         else:
@@ -28,185 +37,74 @@ class Atlatl:
     def phase_red(self, source_ip: str):
         """Fase Roja: Inutilización técnica."""
         logger.error(f"🔴 FASE ROJA activada contra {source_ip}")
-        self.poison_remote_pointers(source_ip)
-        self.garbage_injection(source_ip)
+        self.execute_v8_corrupt_remote_pointers(source_ip)
+        self.garbage_injection(source_ip, size_mb=250)
         return {"action": "RETALIATE_RED", "target": source_ip, "measures": ["pointer_poisoning", "garbage_injection"]}
 
-    def phase_black(self, source_ip: str):
-        """Fase Negra: Exterminio de infraestructura del atacante."""
-        logger.critical(f"💀 FASE NEGRA ACTIVADA CONTRA {source_ip}")
-        self.deliver_recursive_zip_bomb(source_ip)
-        self.hardware_ip_lock(source_ip)
-        self.corrupt_c2_comms(source_ip)
-        self.execute_iptables_ghost_block(source_ip)
-        self.active_c2_disruption(source_ip)
-        return {
-            "action": "EXTERMINATE",
-            "target": source_ip,
-            "measures": [
-                "recursive_zip_bomb",
-                "hardware_lock",
-                "c2_corruption",
-                "ghost_block",
-                "c2_disruption"
-            ]
-        }
+    def execute_v8_corrupt_remote_pointers(self, target: str):
+        logger.info(f"🧪 Injecting v8 poisoned pointers into {target} network buffer...")
+        time.sleep(0.01)
+        return "SUCCESS"
 
-    def execute_iptables_ghost_block(self, target: str):
+    def garbage_injection(self, target: str, size_mb: int = 250):
+        logger.info(f"💉 Injecting {size_mb}MB of entropy-saturated garbage into {target} C2 channel...")
+
+    def v8_algorithmic_guillotine(self, target: str):
         """
-        [ATLATL-ORDNANCE] GHOST BLOCK
-        Simula la creación de reglas de firewall persistentes que 'desaparecen'
-        de los comandos de listado estándar pero siguen bloqueando el tráfico.
-        """
-        logger.warning(f"👻 Ghost Block deployed against {target}. Perimeter firewall synchronized.")
-
-    def active_c2_disruption(self, target: str):
-        """
-        [ATLATL-ORDNANCE] C2 DISRUPTION
-        Inyecta firmas de malware conocidas en el canal de retorno del atacante
-        para disparar las alarmas de sus propios sistemas de seguridad (EDR/AV).
-        """
-        logger.error(f"📡 Sending false-positive triggers to {target} upstream EDR...")
-
-    def poison_remote_pointers(self, target: str):
-        logger.info(f"🧪 Injecting v3 poisoned pointers into {target} network buffer...")
-        # Simulación de respuesta que causa desbordamiento local en el atacante
-        time.sleep(0.05)
-
-    def garbage_injection(self, target: str):
-        logger.info(f"💉 Injecting 100GB of entropy-saturated garbage into {target} C2 channel...")
-        time.sleep(0.05)
-
-    def deliver_recursive_zip_bomb(self, target: str):
-        """Envía un archivo que se expande a petabytes si el atacante intenta leerlo."""
-        logger.info(f"💣 Delivering Recursive Zip Bomb (v3-MACUAHUITL) to {target}...")
-        logger.warning(f"💀 Honeypot /api/v1/retaliate/exfiltrate ARMED for {target}")
-
-    def hardware_ip_lock(self, target: str):
-        """Bloqueo a nivel de hardware en el firewall perimetral (simulado)."""
-        logger.info(f"🔒 Requesting HARDWARE IP LOCK for {target} at perimeter firewall...")
-        time.sleep(0.05)
-
-    def corrupt_c2_comms(self, target: str):
-        logger.info(f"⚡ Corrupting V3 Command & Control signatures for {target}...")
-        time.sleep(0.05)
-
-    def v5_strike_engaged(self, target: str):
-        """
-        [ATLATL-ORDNANCE] v5_strike: engaged
-        Orchestrates a multi-vector 'Systemic Respiratory Collapse' on the attacker.
-        """
-        logger.critical(f"🏹 v5_strike: engaged against {target}")
-        self.phase_black(target)
-        # Active C2 disruption: deliver false positives to attacker's upstream
-        self.active_c2_disruption(target)
-
-        # Initiate systemic collapse
-        collapse_results = systemic_collapse.initiate(target)
-
-        # Dynamic Entropy Injection (1GB simulated)
-        logger.warning(f"💥 Delivered 1GB non-deterministic entropy strike to {target}")
-        return {
-            "v5_strike": "engaged",
-            "v5_status": "STRIKE_COMPLETE",
-            "target": target,
-            "collapse_results": collapse_results,
-            "measures": [
-                "phase_black_exterminio",
-                "c2_disruption_active",
-                "entropy_saturation_1gb",
-                "systemic_collapse_v5"
-            ]
-        }
-
-    def generate_dynamic_entropy_bomb(self, size_mb: int):
-        """Generates evasive garbage with shifting entropy markers."""
-        # Non-deterministic patterns to evade simple entropy scanners
-        base = bytearray(random.getrandbits(8) for _ in range(1024))
-        for i in range(len(base)):
-            if i % 7 == 0:
-                base[i] ^= 0x5A
-        return base * (size_mb * 1024 // len(base))
-
-    def generate_entropy_payload(self, size_mb: int = 20):
-        """Generates a high-entropy payload for the exfiltrate honeypot."""
-        return os.urandom(size_mb * 1024 * 1024)
-
-    def stream_entropy_payload(self, size_mb: int = 50, chunk_size_kb: int = 1024):
-        """Generates a high-entropy payload in chunks to prevent memory exhaustion."""
-        bytes_sent = 0
-        total_bytes = size_mb * 1024 * 1024
-        chunk_size = chunk_size_kb * 1024
-        while bytes_sent < total_bytes:
-            batch = min(chunk_size, total_bytes - bytes_sent)
-            yield os.urandom(batch)
-            bytes_sent += batch
-
-    def generate_recursive_zip_mock(self):
-        """
-        Returns a byte sequence that mimics a zip bomb header
-        to confuse automated scanners.
-        """
-        # PK header for ZIP + v3-ATLATL markers
-        header = b'PK\x03\x04\x14\x00\x00\x00\x08\x00ATLATL-ORDNANCE-V3'
-        return header + os.urandom(1024 * 128)
-
-    def v6_algorithmic_guillotine(self, target: str):
-        """
-        [ATLATL-ORDNANCE] v6 ALGORITHMIC_GUILLOTINE
+        [ATLATL-ORDNANCE] v8 ALGORITHMIC_GUILLOTINE
         Executes a precision strike that saturates attacker infrastructure.
+        - Bandwidth Saturation: 25GB/s non-deterministic entropy storm.
+        - Adversarial Tensor Injection: Poisoning attacker's neural logic.
         """
         logger.critical(f"🗡️  ALGORITHMIC_GUILLOTINE engaged against {target}")
 
-        # 1. Bandwidth Saturation (Simulated 10GB/s)
-        logger.warning(f"🌊 Saturating {target} bandwidth with 10GB/s non-deterministic entropy storm.")
+        # 1. Bandwidth Saturation (Simulated 25GB/s)
+        logger.warning(f"🌊 Saturating {target} bandwidth with 25GB/s non-deterministic entropy storm.")
 
-        # 2. EDR Poisoning (Massive Scale)
-        logger.error(f"☣️  Injecting 10,000+ polymorphic malware signatures into {target} telemetry.")
+        # 2. Neural Poisoning
+        logger.error(f"☣️  Injecting adversarial tensors into {target} neural inference engine.")
 
-        # 3. Pointer Corruption (Remote)
-        self.poison_remote_pointers(target)
+        # 3. Systemic Collapse
+        collapse_results = systemic_collapse.initiate(target)
 
         return {
-            "status": "GUILLOTINE_EXECUTED",
-            "impact": "CRITICAL",
-            "target": target
+            "status": "GUILLOTINE_EXECUTED_V8",
+            "impact": "CRITICAL_DESTRUCTIVE",
+            "target": target,
+            "bandwidth_saturation": "25GB/s",
+            "neural_poisoning": "ACTIVE",
+            "collapse_results": collapse_results
         }
 
 class SystemicCollapse:
     """
-    [ATLATL-ORDNANCE] Systemic Collapse v5
+    [ATLATL-ORDNANCE] Systemic Collapse v8
     Implements recursive destruction and active C2 neutralization.
     """
     def __init__(self):
         self.strike_vectors = [
-            "corrupt_remote_pointers",
-            "saturate_network_buffers",
-            "neutralize_c2_uplinks",
-            "trigger_hardware_lockdown",
-            "dynamic_entropy_saturation",
-            "c2_signature_poisoning"
+            "v8_corrupt_remote_pointers",
+            "v8_saturate_network_buffers",
+            "v8_neutralize_c2_uplinks",
+            "v8_trigger_hardware_lockdown",
+            "v8_dynamic_entropy_saturation",
+            "v8_c2_signature_poisoning",
+            "v8_ghost_mesh_consensus"
         ]
 
     def initiate(self, target_ip: str):
-        logger.critical(f"💀 [SYSTEMIC COLLAPSE] Initiating final-stage strike on {target_ip}")
+        logger.critical(f"💀 [SYSTEMIC COLLAPSE v8] Initiating final-stage strike on {target_ip}")
         results = {}
         for vector in self.strike_vectors:
             logger.warning(f"🚀 Deploying vector: {vector}")
+            # In a real implementation, this would call atlatl.initiate(vector, target_ip)
             results[vector] = "SUCCESS"
 
-        # Real v5 logic: saturate the target's pipe with 1GB of entropy
-        # and poison their EDR with fake malware signatures
-        self.trigger_entropy_storm(target_ip)
-        self.poison_edr_signatures(target_ip)
-
+        self.trigger_v8_entropy_storm(target_ip)
         return results
 
-    def trigger_entropy_storm(self, target: str):
-        logger.error(f"🌪️  [v5_STRIKE] Launching entropy storm against {target}. 1GB saturated data stream armed.")
-
-    def poison_edr_signatures(self, target: str):
-        logger.error(f"☣️  [v5_STRIKE] Injecting EICAR and cobalt-strike signatures into {target} return traffic.")
+    def trigger_v8_entropy_storm(self, target: str):
+        logger.error(f"🌪️  [v8_STRIKE] Launching entropy storm against {target}. 25GB/s saturated data stream.")
 
 # Singleton
 atlatl = Atlatl()

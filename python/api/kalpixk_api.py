@@ -41,6 +41,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, "/app/wasm_kalpixk")
 
+from src.retaliation.atlatl import atlatl
+
 from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
@@ -61,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="5.0.0-atlatl",
+    version="8.0.0-GUERRILLA",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -214,9 +216,9 @@ async def health():
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "5.0.0-atlatl",
+        "version": "8.0.0-GUERRILLA",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "5.0.0-atlatl",
+        "ensemble_version": "8.0.0-GUERRILLA",
     }
 
 
@@ -297,6 +299,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
+            "adaptive_threshold": threshold
         })
 
         if score > adaptive_threshold:
@@ -503,7 +506,7 @@ _sim_state: dict = {"proc": None, "phase": "idle"}
 
 @app.post("/api/simulate/start")
 @limiter.limit("5/minute")
-async def simulate_start(request: Request) -> dict:
+async def simulate_start(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Launch the ransomware simulator as a background subprocess."""
     if _sim_state["proc"] and _sim_state["proc"].poll() is None:
         return {"status": "already_running", "phase": _sim_state["phase"]}
@@ -524,7 +527,7 @@ async def simulate_start(request: Request) -> dict:
 
 @app.post("/api/simulate/stop")
 @limiter.limit("10/minute")
-async def simulate_stop(request: Request) -> dict:
+async def simulate_stop(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Kill the running simulator process."""
     proc = _sim_state.get("proc")
     if proc and proc.poll() is None:
@@ -539,7 +542,8 @@ async def simulate_stop(request: Request) -> dict:
 
 
 @app.get("/api/simulate/status")
-async def simulate_status() -> dict:
+@limiter.limit("30/minute")
+async def simulate_status(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
     """Return current simulator state."""
     proc = _sim_state.get("proc")
     if proc is None or proc.poll() is not None:
@@ -547,3 +551,11 @@ async def simulate_status() -> dict:
         _sim_state["proc"] = None
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
+
+@app.post("/api/v1/guerrilla/v8/strike")
+@limiter.limit("2/minute")
+async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v8_algorithmic_guillotine(target)
+    return result
