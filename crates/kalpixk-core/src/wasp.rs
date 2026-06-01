@@ -50,6 +50,8 @@ pub fn validate_ffi_call(function_name: &str, params_count: usize) -> WaspPolicy
         "poison_pointers",
         "wasm_lockdown",
         "macuahuitl_strike",
+        "v9_integrity_init",
+        "v9_recursive_zip_trap",
     ];
     if sensitive_fns.contains(&function_name) {
         violations.push(format!(

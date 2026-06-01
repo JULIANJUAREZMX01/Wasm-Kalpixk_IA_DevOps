@@ -192,6 +192,26 @@ test "v8 quantum entropy shredder" {
     try std.testing.expect(entropy > 7.5);
 }
 
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling hash (non-standard) for WASM binary self-verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var hash: u64 = 0xCBF29CE484222325;
+    const slice = data_ptr[0..data_len];
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(0x100000001B3);
+    }
+    return hash;
+}
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Generates a deterministic challenge for Mesh node authentication (identical to Rust LCG).
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    var state = seed;
+    state = state *% 6364136223846793005 +% 1;
+    return state ^ 0x584F4348494D494C; // XOR with "XOCHIMIL"
+}
+
 test "v8 pointer poisoning" {
     var buffer: [64]u8 = undefined;
     @memset(&buffer, 0xFF);
