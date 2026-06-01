@@ -242,7 +242,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -390,8 +392,16 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
 pub fn detect_mesh_auth_failure(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     if event.source_type == "mesh_sync" {
-        let challenge = event.metadata.get("challenge").and_then(|v| v.as_u64()).unwrap_or(0);
-        let response = event.metadata.get("response").and_then(|v| v.as_u64()).unwrap_or(0);
+        let challenge = event
+            .metadata
+            .get("challenge")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let response = event
+            .metadata
+            .get("response")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
 
         // v9: Very simple non-linear check for demonstration
         let expected = crate::motor::v9_polymorphic_challenge_gen(challenge);
@@ -411,7 +421,11 @@ pub fn detect_mesh_auth_failure(event: &KalpixkEvent) -> NodeResult {
 pub fn detect_integrity_violation(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     if event.source_type == "integrity_check" {
-        let current_hash = event.metadata.get("binary_hash").and_then(|v| v.as_u64()).unwrap_or(0);
+        let current_hash = event
+            .metadata
+            .get("binary_hash")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         if let Ok(expected) = EXPECTED_BINARY_HASH.lock() {
             if *expected != 0 && current_hash != *expected {
                 score = 1.0;

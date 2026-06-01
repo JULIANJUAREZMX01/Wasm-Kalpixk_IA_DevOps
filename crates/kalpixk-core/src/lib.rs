@@ -235,7 +235,12 @@ pub fn mesh_heartbeat(node_id: &str, challenge: u64, response: u64) -> String {
         metadata: serde_json::json!({
             "challenge": challenge,
             "response": response
-        }).as_object().unwrap().clone().into_iter().collect(),
+        })
+        .as_object()
+        .unwrap()
+        .clone()
+        .into_iter()
+        .collect(),
         ..Default::default()
     };
 
@@ -282,7 +287,12 @@ pub fn v9_check_integrity(binary: &[u8]) -> bool {
         source: "wasm_self".to_string(),
         metadata: serde_json::json!({
             "binary_hash": current_hash
-        }).as_object().unwrap().clone().into_iter().collect(),
+        })
+        .as_object()
+        .unwrap()
+        .clone()
+        .into_iter()
+        .collect(),
         ..Default::default()
     };
 

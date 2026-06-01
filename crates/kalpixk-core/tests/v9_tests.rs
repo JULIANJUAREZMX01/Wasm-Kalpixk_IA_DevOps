@@ -1,5 +1,5 @@
 use kalpixk_core::defense_nodes::{analyze_all_nodes, set_expected_binary_hash};
-use kalpixk_core::event::{KalpixkEvent, EventType};
+use kalpixk_core::event::{EventType, KalpixkEvent};
 use std::collections::HashMap;
 
 #[test]
@@ -16,7 +16,10 @@ fn test_node_9_mesh_auth_fail() {
     };
 
     let results = analyze_all_nodes(&event);
-    let n9 = results.iter().find(|r| r.node == "NODE-9: MESH_AUTH").unwrap();
+    let n9 = results
+        .iter()
+        .find(|r| r.node == "NODE-9: MESH_AUTH")
+        .unwrap();
     assert_eq!(n9.score, 1.0);
 }
 
@@ -35,6 +38,9 @@ fn test_node_10_integrity_fail() {
     };
 
     let results = analyze_all_nodes(&event);
-    let n10 = results.iter().find(|r| r.node == "NODE-10: INTEGRITY").unwrap();
+    let n10 = results
+        .iter()
+        .find(|r| r.node == "NODE-10: INTEGRITY")
+        .unwrap();
     assert_eq!(n10.score, 1.0);
 }
