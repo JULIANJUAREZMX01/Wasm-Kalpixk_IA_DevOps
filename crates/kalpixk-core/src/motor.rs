@@ -1,5 +1,5 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
-// Ensures build compatibility in environments without a Zig compiler.
+// motor.rs — Rust implementation of security and math functions for Kalpixk.
+// Ported from Zig and expanded for v8.0.0-GUERRILLA.
 
 use std::sync::atomic::{AtomicU8, Ordering};
 
@@ -23,6 +23,58 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
         entropy -= p * p.log2();
     }
     entropy
+}
+
+pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
+    ptr.load(Ordering::Relaxed) == expected
+}
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], entropy_seed: u64) {
+    let mut state = entropy_seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < stride * 2 {
+        return;
+    }
+    for i in (0..target.len() - stride).step_by(stride * 2) {
+        for j in 0..stride {
+            if i + j + stride < target.len() {
+                target.swap(i + j, i + j + stride);
+            }
+        }
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.len() < 2 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let rotation = (state % target.len() as u64) as usize;
+    target.rotate_left(rotation);
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        if (val - prev).abs() > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
 }
 
 pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
@@ -112,6 +164,22 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
     }
 }
 
-pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
-    ptr.load(Ordering::Relaxed) == expected
+// --- FFI Interfaces (satisfies linker and allowed calls from host) ---
+
+#[no_mangle]
+pub extern "C" fn shannon_entropy_ffi(ptr: *const u8, len: usize) -> f64 {
+    let data = unsafe { std::slice::from_raw_parts(ptr, len) };
+    shannon_entropy(data)
+}
+
+#[no_mangle]
+pub extern "C" fn v5_active_memory_scrambling_ffi(ptr: *mut u8, len: usize, seed: u64) {
+    let data = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
+    v5_active_memory_scrambling(data, seed);
+}
+
+#[no_mangle]
+pub extern "C" fn v8_guerrilla_jit_shield_ffi(ptr: *mut u8, len: usize, seed: u64) {
+    let data = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
+    v8_guerrilla_jit_shield(data, seed);
 }
