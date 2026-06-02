@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -77,6 +77,7 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 async def verify_api_key(api_key: str = Security(api_key_header)):
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
+    development_secret = "development_secret"
 
     if env == "production":
         if not expected_key:
@@ -86,7 +87,8 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
+        effective_key = expected_key if expected_key else development_secret
+        if not api_key or not secrets.compare_digest(api_key, effective_key):
              raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
@@ -558,4 +560,12 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
+    return result
+
+@app.post("/api/v1/guerrilla/v9/strike")
+@limiter.limit("2/minute")
+async def v9_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v9 XOCHIMILCO_GUILLOTINE trigger."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v9_xochimilco_guillotine(target)
     return result

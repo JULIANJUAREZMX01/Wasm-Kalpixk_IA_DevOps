@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v9.0.0-XOCHIMILCO initialized.", "[SYSTEM] Mesh operating in XOCHIMILCO MODE v9.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -170,7 +170,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v8.0.0-GUERRILLA · AMD MI300X MESH
+              XOCHIMILCO GUERRILLA · v9.0.0-XOCHIMILCO · AMD MI300X MESH
             </div>
           </div>
         </div>
@@ -234,34 +234,63 @@ export default function Dashboard() {
         {/* WASM status pill */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", paddingRight: 12, gap: 16 }}>
           {threatLevel === "CRITICAL" && (
-            <button
-              onClick={async () => {
-                try {
-                  const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/guerrilla/v8/strike", {
-                    method: "POST",
-                    headers: { "X-Kalpixk-Key": apiKey }
-                  });
-                  const data = await res.json();
-                  setTerminalOutput(prev => [
-                    ...prev,
-                    `[STRIKE] v8 ALGORITHMIC GUILLOTINE ENGAGED.`,
-                    `[STRIKE] STATUS: ${data.status}`,
-                    ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
-                  ]);
-                  alert("v7 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
-                } catch (e) {
-                  console.error("Strike failed", e);
-                }
-              }}
-              style={{
-                background: T.red, color: "white", border: "none",
-                padding: "4px 12px", fontSize: 9, fontWeight: 800,
-                letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
-                boxShadow: `0 0 10px ${T.red}`,
-              }}>
-              EXECUTAR: PHASE BLACK
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
+                    const res = await fetch("/api/v1/guerrilla/v9/strike", {
+                      method: "POST",
+                      headers: { "X-Kalpixk-Key": apiKey }
+                    });
+                    const data = await res.json();
+                    setTerminalOutput(prev => [
+                      ...prev,
+                      `[STRIKE] v9 XOCHIMILCO GUILLOTINE ENGAGED.`,
+                      `[STRIKE] STATUS: ${data.status}`,
+                      ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
+                    ]);
+                    alert("v9 XOCHIMILCO GUILLOTINE ENGAGED: SYSTEMIC NULLIFICATION INITIATED");
+                  } catch (e) {
+                    console.error("Strike failed", e);
+                  }
+                }}
+                style={{
+                  background: T.red, color: "white", border: "none",
+                  padding: "4px 12px", fontSize: 9, fontWeight: 800,
+                  letterSpacing: 2, cursor: "pointer", animation: "pulse 0.8s infinite",
+                  boxShadow: `0 0 10px ${T.red}`,
+                }}>
+                XOCHIMILCO STRIKE (v9)
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
+                    const res = await fetch("/api/v1/guerrilla/v8/strike", {
+                      method: "POST",
+                      headers: { "X-Kalpixk-Key": apiKey }
+                    });
+                    const data = await res.json();
+                    setTerminalOutput(prev => [
+                      ...prev,
+                      `[STRIKE] v8 ALGORITHMIC GUILLOTINE ENGAGED.`,
+                      `[STRIKE] STATUS: ${data.status}`,
+                      ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
+                    ]);
+                    alert("v8 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  } catch (e) {
+                    console.error("Strike failed", e);
+                  }
+                }}
+                style={{
+                  background: T.amber, color: "black", border: "none",
+                  padding: "4px 12px", fontSize: 9, fontWeight: 800,
+                  letterSpacing: 2, cursor: "pointer",
+                }}>
+                LEGACY STRIKE (v8)
+              </button>
+            </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* WebSocket status */}
@@ -424,12 +453,12 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
           </div>
         </div>
 
-        {/* Command Terminal (SAC_OS Style) — ATLATL-ORDNANCE v7 Hardened */}
+        {/* Command Terminal (SAC_OS Style) — ATLATL-ORDNANCE v9 Hardened */}
         <div style={{ flex: 1, overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", background: "#000", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
               <span style={{ color: T.red, fontSize: 8, letterSpacing: 2, fontWeight: 800 }} className="blink">
-                ● ATLATL_V8_GUERRILLA_ACTIVE
+                ● ATLATL_V9_XOCHIMILCO_ACTIVE
               </span>
             </div>
             <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#020202" }}>
@@ -521,14 +550,14 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
           </div>
         </div>
 
-        <Label text="WASM ENGINE" accent={T.blue} />
+        <Label text="WASM ENGINE (XOCHIMILCO)" accent={T.blue} />
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "8px 10px", marginBottom: 10 }}>
           {[
             ["PARSERS",     "syslog·db2·json·win·nf"],
             ["FEATURES",    "32 dims / event"],
-            ["SIZE",        `${metrics.wasmSizeKb} KB`],
+            ["MESH AUTH",   "Node-9 (v9) ACTIVE ✓"],
+            ["INTEGRITY",   "Node-10 (v9) GUARD ✓"],
             ["SAB GUARDS",  "Atomics.cmpxchg ✓"],
-            ["CSP",         "wasm-unsafe-eval ✓"],
           ].map(([k, v]) => (
             <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
               <span style={{ color: T.dim, fontSize: 9 }}>{k}</span>
@@ -688,12 +717,12 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
               WAR ROOM
             </h2>
             <p style={{ color: T.dim, fontSize: 10, letterSpacing: 4 }}>
-              SYSTEMIC COLLAPSE ORCHESTRATION · PHASE BLACK v8.0-GUERRILLA
+              SYSTEMIC NULLIFICATION · PHASE BLACK v9.0-XOCHIMILCO
             </p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_V8_GUERRILLA_ACTIVE</div>
-            <div style={{ color: T.dim, fontSize: 9 }}>MESH_GHOST_MODE_V8: ENABLED</div>
+            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_V9_XOCHIMILCO_ACTIVE</div>
+            <div style={{ color: T.dim, fontSize: 9 }}>MESH_AUTH_V9: ENABLED (NODE-9)</div>
           </div>
         </div>
 
@@ -715,8 +744,8 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
                   }}>
                     <div style={{ color: T.red, fontWeight: 800, fontSize: 12, marginBottom: 4 }}>{s}</div>
                     <div style={{ display: "flex", gap: 20 }}>
-                      <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: v8_ALGORITHMIC_GUILLOTINE</div>
-                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: CRITICAL_DESTRUCTIVE (25GB/s)</div>
+                    <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: {s.includes("v9") ? "v9_XOCHIMILCO_GUILLOTINE" : "v8_ALGORITHMIC_GUILLOTINE"}</div>
+                    <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: {s.includes("v9") ? "SYSTEMIC_NULLIFICATION (50GB/s)" : "CRITICAL_DESTRUCTIVE (25GB/s)"}</div>
                       <div style={{ color: T.green, fontSize: 9 }}>STATUS: EXECUTING</div>
                     </div>
                   </div>

@@ -176,6 +176,35 @@ pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize,
     }
 }
 
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic LCG for mesh authentication challenges.
+/// XORed with 'XOCHIMIL' (0x584F4348494D494C)
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL'
+
+    var state = seed.wrapping_mul(multiplier).wrapping_add(increment);
+    return state ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant for runtime WASM module verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    const FNV_OFFSET_BASIS: u64 = 14695981039346656037;
+    const FNV_PRIME: u64 = 1099511628211;
+
+    var hash: u64 = FNV_OFFSET_BASIS;
+    const slice = data_ptr[0..data_len];
+
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+
+    return hash;
+}
+
 test "v8 guerrilla jit shield" {
     var buffer: [128]u8 = undefined;
     @memset(&buffer, 0);

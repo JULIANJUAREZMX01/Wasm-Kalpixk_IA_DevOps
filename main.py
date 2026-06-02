@@ -83,6 +83,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 async def verify_api_key(api_key: str = Security(api_key_header)):
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
+    development_secret = "development_secret"
 
     if env == "production":
         if not expected_key:
@@ -91,14 +92,14 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
-        # In development, if a key is set, enforce it. If not, allow access.
-        if expected_key:
-            if not api_key or not secrets.compare_digest(api_key, expected_key):
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+        # Hardened fail-secure: require either real key or development_secret
+        effective_key = expected_key if expected_key else development_secret
+        if not api_key or not secrets.compare_digest(api_key, effective_key):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 # -- FastAPI App --
-app = FastAPI(title="Kalpixk SIEM", version="5.0.0-atlatl")
+app = FastAPI(title="Kalpixk SIEM", version="9.0.0-XOCHIMILCO")
 app.state.limiter = limiter
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -140,6 +141,13 @@ def train_api(request: Request, payload: TrainPayload, api_key: str = Depends(ve
     data = monitor_wasm.generate_normal_baseline(n_samples=payload.n_samples)
     detector.train(data, epochs=payload.epochs)
     return {"success": True}
+
+@app.post("/api/v1/guerrilla/v9/strike")
+@limiter.limit("2/minute")
+def v9_strike_api(request: Request, api_key: str = Depends(verify_api_key)):
+    from src.retaliation.atlatl import atlatl
+    target = request.client.host if request.client else "unknown"
+    return atlatl.v9_xochimilco_guillotine(target)
 
 # -- SPA Static Serving --
 dist_path = Path("web/dist")

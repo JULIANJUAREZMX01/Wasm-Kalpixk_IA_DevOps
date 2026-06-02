@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v8.0.0-GUERRILLA
+// [ATLATL-ORDNANCE] WasmGuard Core v9.0.0-XOCHIMILCO
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
@@ -67,7 +67,7 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "8.0.0-GUERRILLA".to_string()
+    "9.0.0-XOCHIMILCO".to_string()
 }
 
 #[wasm_bindgen]
@@ -77,7 +77,9 @@ pub fn get_security_telemetry() -> String {
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
         "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
-        "v8_status": "GUERRILLA_ACTIVE"
+        "v9_status": "XOCHIMILCO_ACTIVE",
+        "mesh_auth": "NODE_9_ENGAGED",
+        "integrity_guard": "NODE_10_ENGAGED"
     }).to_string()
 }
 
@@ -179,6 +181,16 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v9_polymorphic_challenge_wasm(seed: u64) -> u64 {
+    motor::v9_polymorphic_challenge_gen(seed)
+}
+
+#[wasm_bindgen]
+pub fn v9_binary_integrity_hash_wasm(data: &[u8]) -> u64 {
+    motor::v9_binary_integrity_hash(data)
 }
 
 #[wasm_bindgen]
@@ -395,10 +407,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v8.0.0-GUERRILLA",
+        "atlatl_ordnance": "v9.0.0-XOCHIMILCO",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
-        "v8_guerrilla": true
+        "v9_xochimilco": true
     })
     .to_string()
 }
