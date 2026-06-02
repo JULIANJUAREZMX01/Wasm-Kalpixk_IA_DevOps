@@ -40,6 +40,29 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     return 0;
 }
 
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+    for (slice) |*byte| {
+        byte.* ^= rand.int(u8);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
+    if (stride == 0 or target_len < stride * 2) return;
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + stride < target_len) : (i += stride * 2) {
+        const j = i + stride;
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
+    }
+}
+
 /// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
 /// Polymorphic instruction padding with NOP/HLT/INT3 noise to disrupt JIT spray/probing.
 pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
@@ -174,6 +197,35 @@ pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize,
         slice[i] = slice[j];
         slice[j] = temp;
     }
+}
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic LCG for mesh authentication challenges.
+/// XORed with 'XOCHIMIL' (0x584F4348494D494C)
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL'
+
+    var state = seed.wrapping_mul(multiplier).wrapping_add(increment);
+    return state ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant for runtime WASM module verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    const FNV_OFFSET_BASIS: u64 = 14695981039346656037;
+    const FNV_PRIME: u64 = 1099511628211;
+
+    var hash: u64 = FNV_OFFSET_BASIS;
+    const slice = data_ptr[0..data_len];
+
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+
+    return hash;
 }
 
 test "v8 guerrilla jit shield" {

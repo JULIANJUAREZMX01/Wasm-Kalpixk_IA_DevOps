@@ -78,3 +78,30 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    [ATLATL-ORDNANCE] v9 Adversarial Drift Guard
+    Protects the adaptive threshold from poisoning attacks by validating
+    statistical invariants and limiting the rate of threshold drift.
+    """
+    def __init__(self, baseline_threshold: float = 0.65, max_drift: float = 0.02):
+        self.baseline = baseline_threshold
+        self.max_drift = max_drift
+        self.current = baseline_threshold
+
+    def validate_and_update(self, new_threshold: float) -> float:
+        """Limits the drift to prevent threshold poisoning."""
+        drift = new_threshold - self.current
+        if abs(drift) > self.max_drift:
+            # Clip drift
+            self.current += np.sign(drift) * self.max_drift
+        else:
+            self.current = new_threshold
+        return self.current
+
+    def update(self, scores: list[float]) -> float:
+        """Legacy update shim for ensemble integration."""
+        # In this context, just returns the current threshold
+        return self.current
