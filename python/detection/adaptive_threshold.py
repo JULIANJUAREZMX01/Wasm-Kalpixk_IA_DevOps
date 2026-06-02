@@ -86,7 +86,7 @@ class AdversarialDriftGuard:
     Protects the adaptive threshold from poisoning attacks by validating
     statistical invariants and limiting the rate of threshold drift.
     """
-    def __init__(self, baseline_threshold: float = 0.5, max_drift: float = 0.05):
+    def __init__(self, baseline_threshold: float = 0.65, max_drift: float = 0.02):
         self.baseline = baseline_threshold
         self.max_drift = max_drift
         self.current = baseline_threshold
