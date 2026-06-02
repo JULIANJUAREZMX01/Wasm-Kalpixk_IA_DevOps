@@ -40,6 +40,29 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     return 0;
 }
 
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+    for (slice) |*byte| {
+        byte.* ^= rand.int(u8);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
+    if (stride == 0 or target_len < stride * 2) return;
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + stride < target_len) : (i += stride * 2) {
+        const j = i + stride;
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
+    }
+}
+
 /// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
 /// Polymorphic instruction padding with NOP/HLT/INT3 noise to disrupt JIT spray/probing.
 pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
