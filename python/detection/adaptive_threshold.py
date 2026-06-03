@@ -10,6 +10,41 @@ from collections import deque
 import numpy as np
 
 
+class AdversarialDriftGuard:
+    """
+    [ATLATL-ORDNANCE] Adversarial Drift Guard v7
+    Protects detection threshold from poisoning and 'boiling frog' attacks.
+    Uses Z-score windowing and dampened updates.
+    """
+    def __init__(self, window_size: int = 100, z_threshold: float = 3.5):
+        self.window = deque(maxlen=window_size)
+        self.z_threshold = z_threshold
+        self.current_threshold = 0.5
+        self._lock = threading.Lock()
+
+    def update(self, scores: list[float]) -> float:
+        with self._lock:
+            for s in scores:
+                if len(self.window) > 10:
+                    arr = np.array(self.window)
+                    mean = np.mean(arr)
+                    std = np.std(arr) + 1e-6
+                    z = (s - mean) / std
+                    # If score is not an outlier, add to window for threshold tracking
+                    if abs(z) < self.z_threshold:
+                        self.window.append(s)
+                else:
+                    self.window.append(s)
+
+            if len(self.window) > 10:
+                # Target threshold is mean + 2*std of benign window
+                arr = np.array(self.window)
+                target = np.mean(arr) + 2.0 * np.std(arr)
+                # Dampened update to prevent rapid drift
+                self.current_threshold = 0.9 * self.current_threshold + 0.1 * target
+
+            return self.current_threshold
+
 class AdaptiveThreshold:
     """
     Sliding-window adaptive threshold for anomaly scores.

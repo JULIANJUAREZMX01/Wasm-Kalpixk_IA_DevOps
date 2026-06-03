@@ -115,3 +115,44 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let multiplier: u64 = 6364136223846793005;
+    let increment: u64 = 1;
+    let xochimil: u64 = 0x584F4348494D494C; // "XOCHIMIL"
+    (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil
+}
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut hash: u64 = 0xCBF29CE484222325;
+    let prime: u64 = 0x100000001B3;
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(prime);
+    }
+    hash ^ 0x584F4348494D494C
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_v9_polymorphic_challenge_gen() {
+        let c1 = v9_polymorphic_challenge_gen(12345);
+        let c2 = v9_polymorphic_challenge_gen(12345);
+        assert_eq!(c1, c2);
+        assert_ne!(c1, 12345);
+    }
+
+    #[test]
+    fn test_v9_binary_integrity_hash() {
+        let data = b"XOCHIMILCO_CORE_V9";
+        let h1 = v9_binary_integrity_hash(data);
+        let h2 = v9_binary_integrity_hash(data);
+        assert_eq!(h1, h2);
+
+        let h3 = v9_binary_integrity_hash(b"DIFFERENT");
+        assert_ne!(h1, h3);
+    }
+}

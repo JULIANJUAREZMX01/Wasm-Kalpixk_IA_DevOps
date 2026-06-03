@@ -176,6 +176,44 @@ pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize,
     }
 }
 
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic Linear Congruential Generator (LCG) XORed with 'XOCHIMIL'.
+/// multiplier: 6364136223846793005, increment: 1
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C; // "XOCHIMIL"
+    return (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant hash for WASM module verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var hash: u64 = 0xCBF29CE484222325; // FNV offset basis
+    const prime: u64 = 0x100000001B3; // FNV prime
+    const slice = data_ptr[0..data_len];
+
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(prime);
+    }
+    return hash ^ 0x584F4348494D494C; // Final XOR with XOCHIMILCO marker
+}
+
+test "v9 polymorphic challenge gen" {
+    const c1 = v9_polymorphic_challenge_gen(12345);
+    const c2 = v9_polymorphic_challenge_gen(12345);
+    try std.testing.expectEqual(c1, c2);
+    try std.testing.expect(c1 != 12345);
+}
+
+test "v9 binary integrity hash" {
+    const data = "XOCHIMILCO_CORE_V9";
+    const h1 = v9_binary_integrity_hash(data.ptr, data.len);
+    const h2 = v9_binary_integrity_hash(data.ptr, data.len);
+    try std.testing.expectEqual(h1, h2);
+}
+
 test "v8 guerrilla jit shield" {
     var buffer: [128]u8 = undefined;
     @memset(&buffer, 0);
