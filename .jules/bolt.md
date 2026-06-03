@@ -26,3 +26,7 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+
+## 2026-05-19 - [Optimize ML prediction loops with NumPy vectorization instead of lists]
+**Learning:** Native Python list comprehensions and list methods (like `.tolist()`) inside ML evaluation loops severely degrade throughput and add unnecessary overhead compared to native C-backed NumPy vectorization, particularly when processing arrays from PyTorch/cuML endpoints. Returning arrays and keeping the math (like `np.clip` and `np.where`) entirely within NumPy scales substantially better for large logging volumes.
+**Action:** Always prefer native NumPy vectorized operations (`np.where`, `np.clip`, `np.abs`) and maintain `np.ndarray` across function boundaries. Avoid eagerly calling `.tolist()` mid-pipeline; reserve scalar conversions for the exact moment of JSON serialization.

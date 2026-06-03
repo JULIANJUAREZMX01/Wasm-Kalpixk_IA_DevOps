@@ -41,7 +41,7 @@ class DetectionEnsemble:
     def predict(
         self, 
         features: torch.Tensor
-    ) -> tuple[list[float], list[str], list[float]]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Predecir scores de anomalía para un batch de features.
         
@@ -66,16 +66,16 @@ class DetectionEnsemble:
             ae_scores = self._predict_autoencoder(features)
         
         # Combinar con pesos del ensemble
-        ensemble_scores = 0.45 * if_scores + 0.55 * ae_scores
+        ensemble_scores = np.clip(0.45 * if_scores + 0.55 * ae_scores, 0.0, 1.0)
         
         # Determinar método ganador y confianza
         diffs = np.abs(if_scores - ae_scores)
-        confidences = np.maximum(0.5, 1.0 - diffs).tolist()
+        confidences = np.maximum(0.5, 1.0 - diffs)
         if_greater = if_scores > ae_scores
-        methods = np.where(if_greater, "isolation_forest", "autoencoder").tolist()
+        methods = np.where(if_greater, "isolation_forest", "autoencoder")
         
         return (
-            ensemble_scores.tolist(),
+            ensemble_scores,
             methods,
             confidences,
         )

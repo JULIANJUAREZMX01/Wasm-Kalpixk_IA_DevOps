@@ -294,7 +294,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
         score = float(scores[i])
         results.append({
             "anomaly_score": score,
-            "technique": techniques[i],
+            "technique": str(techniques[i]),
             "confidence": float(confidences[i]),
             "adaptive_threshold": threshold
         })
@@ -313,7 +313,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
                 "anomaly_score": score,
                 "event_type": req.source_type,
                 "severity": severity,
-                "technique": techniques[i],
+                "technique": str(techniques[i]),
                 "confidence": float(confidences[i]),
                 "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
                 "source": req.source or "agent"
