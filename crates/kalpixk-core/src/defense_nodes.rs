@@ -237,7 +237,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -426,7 +428,9 @@ pub fn detect_binary_tampering(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
     if event.source_type == "integrity_check" {
-        let integrity_passed = event.metadata.get("integrity_passed")
+        let integrity_passed = event
+            .metadata
+            .get("integrity_passed")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
         if !integrity_passed {
