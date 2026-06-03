@@ -78,3 +78,56 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    [ATLATL-ORDNANCE] AdversarialDriftGuard v9
+    Protects the detection threshold using Z-score windows and statistical invariant validation.
+    Prevents 'boiling frog' attacks by enforcing strict boundaries on threshold drift.
+    """
+
+    def __init__(self, window_size: int = 1000, z_threshold: float = 3.5):
+        self.window_size = window_size
+        self.z_threshold = z_threshold
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.65  # Default hardened threshold
+        self._min_threshold = 0.4
+        self._max_threshold = 0.85
+
+    def update(self, scores: list[float]) -> float:
+        """
+        Update baseline with new scores and return the current adaptive threshold.
+        Filters out outliers during baseline update to prevent poisoning.
+        """
+        with self._lock:
+            for s in scores:
+                # Statistical Invariant: scores must be in [0, 1]
+                s = max(0.0, min(1.0, float(s)))
+
+                # Poisoning Protection: Only update baseline with 'normal' scores
+                if s < self._current_threshold:
+                    self._buffer.append(s)
+
+            if len(self._buffer) >= 100:
+                data = np.array(self._buffer)
+                mean = np.mean(data)
+                std = np.std(data)
+
+                # Z-score based adaptive threshold
+                target_threshold = mean + self.z_threshold * std
+
+                # Dampened Update: prevent sudden adversarial threshold shifts
+                self._current_threshold = 0.95 * self._current_threshold + 0.05 * target_threshold
+
+            # Hard Boundary Guard: prevent threshold from being pushed to extremes
+            self._current_threshold = max(
+                self._min_threshold, min(self._max_threshold, self._current_threshold)
+            )
+
+            return float(self._current_threshold)
+
+    def validate_and_update(self, scores: list[float]) -> float:
+        """Alias for update() for compatibility with ensemble logic."""
+        return self.update(scores)
