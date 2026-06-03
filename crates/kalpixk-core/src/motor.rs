@@ -25,7 +25,9 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
     entropy
 }
 
-pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
+#[no_mangle]
+pub extern "C" fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64) {
+    let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
     let mut state = seed;
     let mut i = 0;
     while i < target.len() {
@@ -52,7 +54,13 @@ pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
     }
 }
 
-pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
+#[no_mangle]
+pub extern "C" fn v8_quantum_entropy_shredder(
+    target_ptr: *mut u8,
+    target_len: usize,
+    initial_x: f64,
+) {
+    let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
     let r = 3.99;
     let mut x = if initial_x <= 0.0 || initial_x >= 1.0 {
         0.5
@@ -66,7 +74,9 @@ pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
     }
 }
 
-pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
+#[no_mangle]
+pub extern "C" fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64) {
+    let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
     if target.len() < 8 {
         return;
     }
@@ -116,14 +126,79 @@ pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
 
-pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+#[no_mangle]
+pub extern "C" fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, seed: u64) {
+    let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize) {
+    let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    if stride == 0 || target.len() < 2 {
+        return;
+    }
+    for i in (0..target.len() - 1).step_by(stride) {
+        let j = (i + 1) % target.len();
+        target.swap(i, j);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64) {
+    let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    if target.len() < 16 {
+        return;
+    }
+    let mut state = seed;
+    let stride = {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        ((state as usize) % (target.len() / 4)) + 1
+    };
+
+    let mut i = 0;
+    while i + stride < target.len() {
+        let j = (i + stride) % target.len();
+        target.swap(i, j);
+        i += stride;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool {
+    let data = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        let diff = (val - prev).abs();
+        if diff > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
+
+#[no_mangle]
+pub extern "C" fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
     let multiplier: u64 = 6364136223846793005;
     let increment: u64 = 1;
     let xochimil: u64 = 0x584F4348494D494C; // "XOCHIMIL"
     (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil
 }
 
-pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+#[no_mangle]
+pub extern "C" fn v9_binary_integrity_hash(data_ptr: *const u8, data_len: usize) -> u64 {
+    let data = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
     let mut hash: u64 = 0xCBF29CE484222325;
     let prime: u64 = 0x100000001B3;
     for &byte in data {
@@ -148,11 +223,11 @@ mod tests {
     #[test]
     fn test_v9_binary_integrity_hash() {
         let data = b"XOCHIMILCO_CORE_V9";
-        let h1 = v9_binary_integrity_hash(data);
-        let h2 = v9_binary_integrity_hash(data);
+        let h1 = v9_binary_integrity_hash(data.as_ptr(), data.len());
+        let h2 = v9_binary_integrity_hash(data.as_ptr(), data.len());
         assert_eq!(h1, h2);
 
-        let h3 = v9_binary_integrity_hash(b"DIFFERENT");
+        let h3 = v9_binary_integrity_hash(b"DIFFERENT".as_ptr(), 9);
         assert_ne!(h1, h3);
     }
 }
