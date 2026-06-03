@@ -267,7 +267,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             decoy_buffer.len(),
             seed ^ 0xDEADBEEF,
         );
-        motor::v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
+        motor::v8_guerrilla_jit_shield(
+            decoy_buffer.as_mut_ptr(),
+            decoy_buffer.len(),
+            seed ^ 0x1337,
+        );
 
         if anomaly_count > 5 {
             v5_trap::arm_traps();
