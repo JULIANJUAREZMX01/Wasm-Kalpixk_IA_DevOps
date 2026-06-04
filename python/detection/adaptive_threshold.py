@@ -90,6 +90,7 @@ class AdversarialDriftGuard(AdaptiveThreshold):
         super().__init__(window_size=window_size, **kwargs)
         self.z_threshold = z_threshold
         # Start with a more permissive threshold to allow initial baseline establishment
+        # in environments where model state on disk might be stale.
         self._current_threshold = 0.8
 
     def update(self, scores: list[float] | float) -> float:
@@ -112,14 +113,15 @@ class AdversarialDriftGuard(AdaptiveThreshold):
                     mean = np.mean(data)
                     std = np.std(data)
 
-                    if std > 0:
+                    if std > 1e-4:
                         z_score = abs(score - mean) / std
                         # If the score is a statistical outlier (potential poisoning),
                         # we don't use it to update our 'normal' baseline.
                         if z_score > self.z_threshold:
                             continue
 
-                # Update baseline if score is below current threshold OR if buffer is nearly empty
+                # Update baseline if score is below current threshold
+                # OR if buffer is nearly empty (cold start)
                 if score < self._current_threshold or len(self._buffer) < 20:
                     self._buffer.append(score)
                     self._updates_since_recalc += 1
@@ -137,9 +139,13 @@ class AdversarialDriftGuard(AdaptiveThreshold):
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)
+
         # Increase k for the guard to reduce false positives in high-variance scenarios
         # Using k=4.0 by default (self.k=3.0 + 1.0)
         self._current_threshold = float(mean + (self.k + 1.0) * std)
-        # Ensure threshold doesn't collapse too low
+
+        # Ensure threshold doesn't collapse too low during initialization
+        # A floor of 0.4 ensures we don't start blocking almost everything
+        # unless the model is extremely certain.
         self._current_threshold = max(self._current_threshold, 0.4)
         self._updates_since_recalc = 0
