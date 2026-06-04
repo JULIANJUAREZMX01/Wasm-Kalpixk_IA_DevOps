@@ -78,3 +78,62 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+class AdversarialDriftGuard(AdaptiveThreshold):
+    """
+    [ATLATL-ORDNANCE] Adversarial Drift Guard.
+    Protects the adaptive threshold from 'boiling frog' poisoning attacks
+    using Z-score windowing and statistical invariant validation.
+    """
+
+    def __init__(self, window_size: int = 1000, z_threshold: float = 3.5, **kwargs):
+        super().__init__(window_size=window_size, **kwargs)
+        self.z_threshold = z_threshold
+
+    def update(self, scores: list[float] | float) -> float:
+        """
+        Update the guard with new scores.
+        Filters out adversarial outliers that attempt to shift the threshold.
+        """
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for score in scores:
+                if not (0.0 <= score <= 1.0):
+                    continue
+
+                # Validation of statistical invariants
+                if len(self._buffer) > 50:
+                    data = np.array(self._buffer)
+                    mean = np.mean(data)
+                    std = np.std(data)
+
+                    if std > 0:
+                        z_score = abs(score - mean) / std
+                        # If the score is a statistical outlier (potential poisoning),
+                        # we don't use it to update our 'normal' baseline.
+                        if z_score > self.z_threshold:
+                            continue
+
+                # Standard adaptive update (only update baseline with 'normal' scores)
+                if score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                    self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Recompute threshold with a more conservative approach. (Assumes lock held)"""
+        if len(self._buffer) < 10:
+            return
+        data = np.array(self._buffer)
+        mean = np.mean(data)
+        std = np.std(data)
+        # Increase k for the guard to reduce false positives in high-variance scenarios
+        self._current_threshold = float(mean + (self.k + 1.0) * std)
+        self._updates_since_recalc = 0
