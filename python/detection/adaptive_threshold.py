@@ -89,6 +89,8 @@ class AdversarialDriftGuard(AdaptiveThreshold):
     def __init__(self, window_size: int = 1000, z_threshold: float = 3.5, **kwargs):
         super().__init__(window_size=window_size, **kwargs)
         self.z_threshold = z_threshold
+        # Start with a more permissive threshold to allow initial baseline establishment
+        self._current_threshold = 0.8
 
     def update(self, scores: list[float] | float) -> float:
         """
@@ -104,6 +106,7 @@ class AdversarialDriftGuard(AdaptiveThreshold):
                     continue
 
                 # Validation of statistical invariants
+                # Only apply Z-score filtering if we have enough samples for a stable mean/std
                 if len(self._buffer) > 50:
                     data = np.array(self._buffer)
                     mean = np.mean(data)
@@ -116,18 +119,18 @@ class AdversarialDriftGuard(AdaptiveThreshold):
                         if z_score > self.z_threshold:
                             continue
 
-                # Standard adaptive update (only update baseline with 'normal' scores)
-                if score < self._current_threshold:
+                # Update baseline if score is below current threshold OR if buffer is nearly empty
+                if score < self._current_threshold or len(self._buffer) < 20:
                     self._buffer.append(score)
                     self._updates_since_recalc += 1
                     self._total_updates += 1
 
                 if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
-                    self._recalibrate()
+                    self._recalibrate_with_lock()
 
             return self._current_threshold
 
-    def _recalibrate(self) -> None:
+    def _recalibrate_with_lock(self) -> None:
         """Recompute threshold with a more conservative approach. (Assumes lock held)"""
         if len(self._buffer) < 10:
             return
@@ -135,5 +138,8 @@ class AdversarialDriftGuard(AdaptiveThreshold):
         mean = np.mean(data)
         std = np.std(data)
         # Increase k for the guard to reduce false positives in high-variance scenarios
+        # Using k=4.0 by default (self.k=3.0 + 1.0)
         self._current_threshold = float(mean + (self.k + 1.0) * std)
+        # Ensure threshold doesn't collapse too low
+        self._current_threshold = max(self._current_threshold, 0.4)
         self._updates_since_recalc = 0
