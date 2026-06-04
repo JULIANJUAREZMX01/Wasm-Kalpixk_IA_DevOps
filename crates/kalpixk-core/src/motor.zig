@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -38,6 +38,29 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     if (h >= 7.8) return 2; // Ransomware/Encrypted
     if (h >= 7.2) return 1; // Suspicious
     return 0;
+}
+
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var state = seed;
+    const slice = target_ptr[0..target_len];
+    for (slice) |*byte| {
+        state = state.wrappingMul(6364136223846793005).wrappingAdd(1);
+        byte.* ^= @as(u8, @truncate(state >> 32));
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
+    if (stride == 0 or target_len < 2) return;
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i < target_len - 1) : (i += stride) {
+        const j = (i + 1) % target_len;
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
+    }
 }
 
 /// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
@@ -176,6 +199,29 @@ pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize,
     }
 }
 
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic Linear Congruential Generator XORed with 'XOCHIMIL' (0x584F4348494D494C).
+/// Ensures cross-language deterministic challenge generation for Mesh Auth.
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C;
+    return (seed.wrappingMul(multiplier).wrappingAdd(increment)) ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Implements a rolling FNV-1a variant hash to verify the WASM module against a baseline.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var h: u64 = 0xCBF29CE484222325;
+    const prime: u64 = 0x100000001B3;
+    const slice = data_ptr[0..data_len];
+    for (slice) |byte| {
+        h ^= byte;
+        h = h.wrappingMul(prime);
+    }
+    return h;
+}
+
 test "v8 guerrilla jit shield" {
     var buffer: [128]u8 = undefined;
     @memset(&buffer, 0);
@@ -205,29 +251,6 @@ test "v8 pointer poisoning" {
         }
     }
     try std.testing.expect(changed);
-}
-
-/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
-/// Deterministic Linear Congruential Generator XORed with 'XOCHIMIL' (0x584F4348494D494C).
-/// Ensures cross-language deterministic challenge generation for Mesh Auth.
-pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
-    const multiplier: u64 = 6364136223846793005;
-    const increment: u64 = 1;
-    const xochimil: u64 = 0x584F4348494D494C;
-    return (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil;
-}
-
-/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
-/// Implements a rolling FNV-1a variant hash to verify the WASM module against a baseline.
-pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
-    var h: u64 = 0xCBF29CE484222325;
-    const prime: u64 = 0x100000001B3;
-    const slice = data_ptr[0..data_len];
-    for (slice) |byte| {
-        h ^= byte;
-        h = h.wrapping_mul(prime);
-    }
-    return h;
 }
 
 test "v9 polymorphic challenge gen" {

@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -23,6 +23,33 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
         entropy -= p * p.log2();
     }
     entropy
+}
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < 2 {
+        return;
+    }
+    for i in (0..target.len() - 1).step_by(stride) {
+        target.swap(i, (i + 1) % target.len());
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.len() < 2 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let shift = (state % target.len() as u64) as usize;
+    target.rotate_left(shift);
 }
 
 pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
@@ -78,13 +105,11 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 
         match trap_type {
             0 => {
-                // NULL Pointer Trap
                 for j in 0..8 {
                     target[i + j] = 0;
                 }
             }
             1 => {
-                // Circular Jump Trap (0xEB 0xFE)
                 target[i] = 0xEB;
                 target[i + 1] = 0xFE;
                 for j in 2..8 {
@@ -92,7 +117,6 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
                 }
             }
             2 => {
-                // CPU Exhaustion / HLT Loop
                 target[i] = 0xF4;
                 target[i + 1] = 0xEB;
                 target[i + 2] = 0xFD; // JMP -3
@@ -101,7 +125,6 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
                 }
             }
             _ => {
-                // Random Poison
                 for j in 0..8 {
                     state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
                     target[i + j] = (state >> 24) as u8;
@@ -131,4 +154,21 @@ pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
         h = h.wrapping_mul(PRIME);
     }
     h
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        if (val - prev).abs() > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
 }
