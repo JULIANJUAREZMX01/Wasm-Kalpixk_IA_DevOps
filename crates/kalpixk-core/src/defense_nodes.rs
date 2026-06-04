@@ -235,7 +235,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -404,6 +406,60 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    if event.source_type == "mesh_sync" {
+        let challenge = event
+            .metadata
+            .get("challenge")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let response = event
+            .metadata
+            .get("response")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        if challenge > 0 {
+            let expected = crate::motor::v9_polymorphic_challenge_gen(challenge);
+            if response != expected {
+                score = 1.0;
+            }
+        } else {
+            score = 0.5; // Missing auth challenge
+        }
+    }
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: vec!["T1557".to_string()],
+        description: "Unauthenticated or malicious mesh registration attempt".to_string(),
+    }
+}
+
+pub fn detect_integrity_violation(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    if let Some(hash) = event.metadata.get("binary_hash").and_then(|v| v.as_u64()) {
+        let baseline = event
+            .metadata
+            .get("baseline_hash")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        if baseline > 0 && hash != baseline {
+            score = 1.0;
+        }
+    }
+    NodeResult {
+        node: "NODE-10: INTEGRITY_GUARD".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: vec!["T1542".to_string()],
+        description: "WASM binary tampering or unauthorized module modification detected"
+            .to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -418,6 +474,8 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_mesh_auth(event),
+        detect_integrity_violation(event),
     ]
 }
 

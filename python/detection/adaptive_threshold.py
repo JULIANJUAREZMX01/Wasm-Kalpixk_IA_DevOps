@@ -78,3 +78,48 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+class AdversarialDriftGuard(AdaptiveThreshold):
+    """
+    [ATLATL-ORDNANCE] AdversarialDriftGuard
+    Hardened version of AdaptiveThreshold that protects against 'boiling frog' poisoning attacks.
+    """
+    def __init__(self, window_size: int = 500, k: float = 3.5, recalibrate_every: int = 50):
+        super().__init__(window_size, k, recalibrate_every)
+        self.z_threshold = 3.5
+        self.dampening_factor = 0.8
+
+    def update(self, scores: list[float]) -> float:
+        """
+        Hardened update: filter scores via Z-score windowing before adding to buffer.
+        Returns the current threshold.
+        """
+        with self._lock:
+            for score in scores:
+                if len(self._buffer) >= 10:
+                    data = np.array(self._buffer)
+                    mean = np.mean(data)
+                    std = np.std(data) + 1e-6
+                    z_score = abs(score - mean) / std
+
+                    if z_score < self.z_threshold:
+                        self._buffer.append(score)
+                        self._updates_since_recalc += 1
+                        self._total_updates += 1
+                else:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                    self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Recompute threshold with dampening to prevent sharp jumps."""
+        data = np.array(self._buffer)
+        new_val = float(np.mean(data) + self.k * np.std(data))
+        # Dampen the update: current = (1-d)*new + d*current
+        self._current_threshold = (1.0 - self.dampening_factor) * new_val + self.dampening_factor * self._current_threshold
+        self._updates_since_recalc = 0
