@@ -206,3 +206,40 @@ test "v8 pointer poisoning" {
     }
     try std.testing.expect(changed);
 }
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic Linear Congruential Generator XORed with 'XOCHIMIL' (0x584F4348494D494C).
+/// Ensures cross-language deterministic challenge generation for Mesh Auth.
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C;
+    return (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Implements a rolling FNV-1a variant hash to verify the WASM module against a baseline.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var h: u64 = 0xCBF29CE484222325;
+    const prime: u64 = 0x100000001B3;
+    const slice = data_ptr[0..data_len];
+    for (slice) |byte| {
+        h ^= byte;
+        h = h.wrapping_mul(prime);
+    }
+    return h;
+}
+
+test "v9 polymorphic challenge gen" {
+    const c1 = v9_polymorphic_challenge_gen(12345);
+    const c2 = v9_polymorphic_challenge_gen(12345);
+    try std.testing.expect(c1 == c2);
+    try std.testing.expect(c1 != 12345);
+}
+
+test "v9 binary integrity hash" {
+    const data = "ATLATL-ORDNANCE-V9";
+    const h1 = v9_binary_integrity_hash(data.ptr, data.len);
+    const h2 = v9_binary_integrity_hash(data.ptr, data.len);
+    try std.testing.expect(h1 == h2);
+}

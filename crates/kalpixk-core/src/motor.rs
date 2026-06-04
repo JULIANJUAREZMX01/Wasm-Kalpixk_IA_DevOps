@@ -115,3 +115,20 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    const MULTIPLIER: u64 = 6364136223846793005;
+    const INCREMENT: u64 = 1;
+    const XOCHIMIL: u64 = 0x584F4348494D494C;
+    seed.wrapping_mul(MULTIPLIER).wrapping_add(INCREMENT) ^ XOCHIMIL
+}
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut h: u64 = 0xCBF29CE484222325;
+    const PRIME: u64 = 0x100000001B3;
+    for &byte in data {
+        h ^= byte as u64;
+        h = h.wrapping_mul(PRIME);
+    }
+    h
+}

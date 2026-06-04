@@ -63,11 +63,13 @@ extern "C" {
     fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
     fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
     fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v9_polymorphic_challenge_gen(seed: u64) -> u64;
+    fn v9_binary_integrity_hash(target_ptr: *const u8, target_len: usize) -> u64;
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "8.0.0-GUERRILLA".to_string()
+    "9.0.0-XOCHIMILCO".to_string()
 }
 
 #[wasm_bindgen]
@@ -179,6 +181,26 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v9_polymorphic_challenge_gen_wasm(seed: u64) -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v9_polymorphic_challenge_gen(seed)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v9_polymorphic_challenge_gen(seed)
+}
+
+#[wasm_bindgen]
+pub fn v9_binary_integrity_hash_wasm(target: &[u8]) -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v9_binary_integrity_hash(target.as_ptr(), target.len())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v9_binary_integrity_hash(target)
 }
 
 #[wasm_bindgen]
@@ -395,9 +417,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v8.0.0-GUERRILLA",
+        "atlatl_ordnance": "v9.0.0-XOCHIMILCO",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
+        "v9_xochimilco": true,
         "v8_guerrilla": true
     })
     .to_string()
