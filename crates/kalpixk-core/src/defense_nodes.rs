@@ -235,7 +235,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -407,8 +409,16 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
 pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     if event.source_type == "mesh_sync" {
-        let challenge = event.metadata.get("challenge").and_then(|v| v.as_u64()).unwrap_or(0);
-        let response = event.metadata.get("response").and_then(|v| v.as_u64()).unwrap_or(0);
+        let challenge = event
+            .metadata
+            .get("challenge")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let response = event
+            .metadata
+            .get("response")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
 
         if challenge > 0 {
             let expected = crate::motor::v9_polymorphic_challenge_gen(challenge);
@@ -431,7 +441,11 @@ pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
 pub fn detect_integrity_violation(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     if let Some(hash) = event.metadata.get("binary_hash").and_then(|v| v.as_u64()) {
-        let baseline = event.metadata.get("baseline_hash").and_then(|v| v.as_u64()).unwrap_or(0);
+        let baseline = event
+            .metadata
+            .get("baseline_hash")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         if baseline > 0 && hash != baseline {
             score = 1.0;
         }
@@ -441,7 +455,8 @@ pub fn detect_integrity_violation(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: vec!["T1542".to_string()],
-        description: "WASM binary tampering or unauthorized module modification detected".to_string(),
+        description: "WASM binary tampering or unauthorized module modification detected"
+            .to_string(),
     }
 }
 
