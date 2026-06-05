@@ -70,9 +70,7 @@ extern "C" {
 }
 
 #[cfg(all(target_arch = "wasm32", not(feature = "zig_metal")))]
-use crate::motor::{
-    v8_guerrilla_jit_shield, v8_pointer_poisoning, v8_quantum_entropy_shredder,
-};
+use crate::motor::{v8_guerrilla_jit_shield, v8_pointer_poisoning, v8_quantum_entropy_shredder};
 
 #[cfg(all(target_arch = "wasm32", not(feature = "zig_metal")))]
 unsafe fn v8_guerrilla_jit_shield_ffi(target_ptr: *mut u8, target_len: usize, seed: u64) {
