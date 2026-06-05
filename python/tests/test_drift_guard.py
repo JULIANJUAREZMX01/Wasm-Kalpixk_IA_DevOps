@@ -1,12 +1,13 @@
-
-import numpy as np
 import pytest
+
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_drift_guard_initialization():
     guard = AdversarialDriftGuard(initial_threshold=0.8)
     assert guard.current_threshold == 0.8
     assert len(guard.buffer) == 0
+
 
 def test_drift_guard_recalibrate():
     # Set alpha=1.0 to see immediate recalibration effect
@@ -19,6 +20,7 @@ def test_drift_guard_recalibrate():
     # After 100 samples, recalibrate should have fired
     # mean=0.1, std=0.0 -> threshold = 0.1 + 2.0*0 = 0.1
     assert guard.current_threshold == pytest.approx(0.1, abs=1e-5)
+
 
 def test_drift_guard_poisoning_protection():
     # Alpha=1.0 for testing, so we see full update if it passes Z-score
@@ -37,6 +39,7 @@ def test_drift_guard_poisoning_protection():
     assert len(guard.buffer) == 100
     assert 1.0 not in guard.buffer
     assert guard.current_threshold == baseline
+
 
 def test_drift_guard_dampening():
     # Use alpha=0.1 (default)

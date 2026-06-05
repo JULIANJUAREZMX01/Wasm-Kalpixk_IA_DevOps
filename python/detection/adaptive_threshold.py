@@ -91,7 +91,7 @@ class AdversarialDriftGuard:
         window_size: int = 1000,
         z_threshold: float = 3.5,
         alpha: float = 0.1,
-        initial_threshold: float = 0.8
+        initial_threshold: float = 0.8,
     ):
         self.window_size = window_size
         self.z_threshold = z_threshold
@@ -129,7 +129,9 @@ class AdversarialDriftGuard:
         arr = np.array(self.buffer)
         target_threshold = float(np.mean(arr) + self.z_threshold * np.std(arr))
         # Apply dampening to prevent rapid threshold drift
-        self.current_threshold = (1 - self.alpha) * self.current_threshold + self.alpha * target_threshold
+        self.current_threshold = (
+            1 - self.alpha
+        ) * self.current_threshold + self.alpha * target_threshold
 
     def to_dict(self) -> dict:
         with self.lock:
