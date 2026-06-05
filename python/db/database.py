@@ -1,19 +1,27 @@
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 import aiosqlite
 from loguru import logger
 
 # Whitelist of allowed columns for the alerts table to prevent SQL Injection
 ALLOWED_COLUMNS = {
-    "ts", "ip", "anomaly_score", "event_type", "severity",
-    "technique", "confidence", "features_json", "source"
+    "ts",
+    "ip",
+    "anomaly_score",
+    "event_type",
+    "severity",
+    "technique",
+    "confidence",
+    "features_json",
+    "source",
 }
 
 
 def get_db_path():
     return os.getenv("KALPIXK_DB_PATH", "./kalpixk_alerts.db")
+
 
 async def init_db():
     async with aiosqlite.connect(get_db_path()) as db:
@@ -34,6 +42,7 @@ async def init_db():
         await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts DESC)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity)")
         await db.commit()
+
 
 async def insert_alert(alert_dict):
     async with aiosqlite.connect(get_db_path()) as db:
@@ -56,7 +65,7 @@ async def insert_alert(alert_dict):
 
         # Ensure timestamp if not provided
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         columns = ", ".join(filtered_data.keys())
         placeholders = ", ".join([":" + k for k in filtered_data.keys()])
@@ -64,6 +73,7 @@ async def insert_alert(alert_dict):
 
         await db.execute(query, filtered_data)
         await db.commit()
+
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
     db_path = get_db_path()
@@ -129,7 +139,7 @@ async def insert_alerts(alerts_list):
         if isinstance(features, list):
             filtered_data["features_json"] = json.dumps(features)
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         filtered_alerts.append(filtered_data)
 
@@ -142,7 +152,7 @@ async def insert_alerts(alerts_list):
     for a in filtered_alerts:
         all_keys.update(a.keys())
 
-    all_keys = sorted(list(all_keys)) # Deterministic order
+    all_keys = sorted(list(all_keys))  # Deterministic order
     for a in filtered_alerts:
         for k in all_keys:
             if k not in a:

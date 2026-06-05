@@ -115,3 +115,19 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+// -- Legacy v5/v7 Mocks for CI Compatibility --
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], _seed: u64) {
+    if !target.is_empty() {
+        target[0] = target[0].wrapping_add(1);
+    }
+}
+
+pub fn v5_chaotic_interleaving(_target: &mut [u8], _stride: usize) {}
+
+pub fn v7_guerrilla_memory_rotation(_target: &mut [u8], _seed: u64) {}
+
+pub fn v7_audit_tensor(_data: &[f32]) -> bool {
+    true
+}

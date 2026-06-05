@@ -26,10 +26,9 @@ from .adaptive_threshold import AdaptiveThreshold
 
 logger = logging.getLogger("kalpixk.detection.isolation_forest")
 
-MODELS_DIR  = Path(__file__).parent.parent / "models"
-MODEL_PATH  = MODELS_DIR / "isolation_forest.pkl"
-FEATURE_DIM = 32          # Contract with kalpixk-core/src/features.rs
-
+MODELS_DIR = Path(__file__).parent.parent / "models"
+MODEL_PATH = MODELS_DIR / "isolation_forest.pkl"
+FEATURE_DIM = 32  # Contract with kalpixk-core/src/features.rs
 
 
 class KalpixkIsolationForest:
@@ -43,23 +42,23 @@ class KalpixkIsolationForest:
         scores, conf = model.predict(X_new)
     """
 
-    VERSION        = "0.1.0"
-    N_ESTIMATORS   = 200
-    CONTAMINATION  = 0.05   # Expected anomaly rate: 5%
-    MAX_SAMPLES    = "auto"
-    RANDOM_STATE   = 42
+    VERSION = "0.1.0"
+    N_ESTIMATORS = 200
+    CONTAMINATION = 0.05  # Expected anomaly rate: 5%
+    MAX_SAMPLES = "auto"
+    RANDOM_STATE = 42
 
     # ── Init ──────────────────────────────────────────────────────────────────
 
     def __init__(self, device: torch.device, force_cpu: bool = False):
-        self.device     = device
-        self.force_cpu  = force_cpu
-        self._model     = None
-        self._backend   = "none"
+        self.device = device
+        self.force_cpu = force_cpu
+        self._model = None
+        self._backend = "none"
         self._is_trained = False
-        self._score_min  = -0.5  # Calibrated after fit
-        self._score_max  =  0.0
-        self.threshold   = AdaptiveThreshold()
+        self._score_min = -0.5  # Calibrated after fit
+        self._score_max = 0.0
+        self.threshold = AdaptiveThreshold()
 
         self._init_model()
         self._try_load()
@@ -69,7 +68,8 @@ class KalpixkIsolationForest:
         if not self.force_cpu and str(self.device) != "cpu":
             try:
                 from cuml.ensemble import IsolationForest as cuIF  # type: ignore
-                self._model   = cuIF(
+
+                self._model = cuIF(
                     n_estimators=self.N_ESTIMATORS,
                     contamination=self.CONTAMINATION,
                     max_samples=self.MAX_SAMPLES,
@@ -82,7 +82,8 @@ class KalpixkIsolationForest:
                 logger.warning("cuML not available — falling back to sklearn CPU")
 
         from sklearn.ensemble import IsolationForest  # type: ignore
-        self._model   = IsolationForest(
+
+        self._model = IsolationForest(
             n_estimators=self.N_ESTIMATORS,
             contamination=self.CONTAMINATION,
             max_samples=self.MAX_SAMPLES,
@@ -102,10 +103,10 @@ class KalpixkIsolationForest:
                 # SECURITY: pickle.load is insecure if the file is untrusted.
                 # In production, ensure model files are protected by OS permissions.
                 state = pickle.load(f)
-            self._model      = state["model"]
-            self._backend    = state.get("backend", self._backend)
-            self._score_min  = state.get("score_min", -0.5)
-            self._score_max  = state.get("score_max",  0.0)
+            self._model = state["model"]
+            self._backend = state.get("backend", self._backend)
+            self._score_min = state.get("score_min", -0.5)
+            self._score_max = state.get("score_max", 0.0)
             self._is_trained = True
             logger.info(f"Loaded IsolationForest from {MODEL_PATH} (backend={self._backend})")
         except Exception as e:
@@ -131,7 +132,7 @@ class KalpixkIsolationForest:
         self._score_max = float(np.percentile(raw, 99))
 
         elapsed = time.perf_counter() - t0
-        logger.info(f"Training complete in {elapsed*1000:.1f}ms — saving")
+        logger.info(f"Training complete in {elapsed * 1000:.1f}ms — saving")
 
         self._is_trained = True
         self.save()
@@ -148,15 +149,13 @@ class KalpixkIsolationForest:
         # Normal traffic: clustered around 0.2-0.4 range for most features
         X = rng.normal(0.3, 0.1, (n_samples, FEATURE_DIM)).clip(0, 1).astype(np.float32)
         # Spike a few features for realism
-        X[:, 2] = rng.uniform(0, 1, n_samples)    # hour_of_day: uniform
+        X[:, 2] = rng.uniform(0, 1, n_samples)  # hour_of_day: uniform
         X[:, 5] = rng.choice([0, 1], n_samples, p=[0.85, 0.15])  # off_hours: mostly false
         return self.fit(X)
 
     # ── Inference ────────────────────────────────────────────────────────────
 
-    def predict(
-        self, X: np.ndarray
-    ) -> tuple[list[float], list[float], float]:
+    def predict(self, X: np.ndarray) -> tuple[list[float], list[float], float]:
         """
         Score anomaly for each event.
 
@@ -193,11 +192,11 @@ class KalpixkIsolationForest:
     def save(self):
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         state = {
-            "model":      self._model,
-            "backend":    self._backend,
-            "score_min":  self._score_min,
-            "score_max":  self._score_max,
-            "version":    self.VERSION,
+            "model": self._model,
+            "backend": self._backend,
+            "score_min": self._score_min,
+            "score_max": self._score_max,
+            "version": self.VERSION,
         }
         with open(MODEL_PATH, "wb") as f:
             pickle.dump(state, f)

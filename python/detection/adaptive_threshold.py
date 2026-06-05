@@ -78,3 +78,65 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    Hardened adaptive threshold with Z-score windowing and dampened updates
+    to prevent 'boiling frog' poisoning attacks.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 1000,
+        z_threshold: float = 3.5,
+        alpha: float = 0.1,
+        initial_threshold: float = 0.8,
+    ):
+        self.window_size = window_size
+        self.z_threshold = z_threshold
+        self.alpha = alpha  # Dampening factor
+        self.current_threshold = initial_threshold
+        self.buffer = deque(maxlen=window_size)
+        self.lock = threading.Lock()
+
+    def update(self, scores: list[float]) -> float:
+        """
+        Update threshold using a batch of scores.
+        Only scores that pass the Z-score check are added to the buffer.
+        """
+        with self.lock:
+            for score in scores:
+                if len(self.buffer) < 50:
+                    self.buffer.append(score)
+                else:
+                    # Z-score protection
+                    arr = np.array(self.buffer)
+                    mean = np.mean(arr)
+                    std = np.std(arr) + 1e-6
+                    z = abs(score - mean) / std
+
+                    if z < self.z_threshold:
+                        self.buffer.append(score)
+
+            if len(self.buffer) >= 50:
+                self._recalibrate()
+
+            return self.current_threshold
+
+    def _recalibrate(self):
+        """Internal recalibration. MUST be called with lock held."""
+        arr = np.array(self.buffer)
+        target_threshold = float(np.mean(arr) + self.z_threshold * np.std(arr))
+        # Apply dampening to prevent rapid threshold drift
+        self.current_threshold = (
+            1 - self.alpha
+        ) * self.current_threshold + self.alpha * target_threshold
+
+    def to_dict(self) -> dict:
+        with self.lock:
+            return {
+                "current_threshold": round(self.current_threshold, 4),
+                "buffer_len": len(self.buffer),
+                "window_size": self.window_size,
+            }

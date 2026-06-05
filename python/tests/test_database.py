@@ -19,6 +19,7 @@ def tmp_db(monkeypatch, tmp_path):
 async def test_init_db_creates_table(tmp_db):
     """Verifica que init_db crea la tabla alerts."""
     import aiosqlite
+
     await init_db()
     async with aiosqlite.connect(tmp_db) as db:
         async with db.execute(
@@ -31,11 +32,13 @@ async def test_init_db_creates_table(tmp_db):
 @pytest.mark.asyncio
 async def test_insert_and_retrieve_alert(tmp_db):
     await init_db()
-    await insert_alert({
-        "ts": "2023-10-27T10:00:00Z",
-        "anomaly_score": 0.85,
-        "severity": "HIGH",
-    })
+    await insert_alert(
+        {
+            "ts": "2023-10-27T10:00:00Z",
+            "anomaly_score": 0.85,
+            "severity": "HIGH",
+        }
+    )
     alerts, total = await get_alerts(limit=10)
     assert total == 1
     assert alerts[0]["anomaly_score"] == pytest.approx(0.85)
