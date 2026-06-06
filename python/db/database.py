@@ -7,13 +7,21 @@ from loguru import logger
 
 # Whitelist of allowed columns for the alerts table to prevent SQL Injection
 ALLOWED_COLUMNS = {
-    "ts", "ip", "anomaly_score", "event_type", "severity",
-    "technique", "confidence", "features_json", "source"
+    "ts",
+    "ip",
+    "anomaly_score",
+    "event_type",
+    "severity",
+    "technique",
+    "confidence",
+    "features_json",
+    "source",
 }
 
 
 def get_db_path():
     return os.getenv("KALPIXK_DB_PATH", "./kalpixk_alerts.db")
+
 
 async def init_db():
     async with aiosqlite.connect(get_db_path()) as db:
@@ -34,6 +42,7 @@ async def init_db():
         await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts DESC)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity)")
         await db.commit()
+
 
 async def insert_alert(alert_dict):
     async with aiosqlite.connect(get_db_path()) as db:
@@ -65,7 +74,11 @@ async def insert_alert(alert_dict):
         await db.execute(query, filtered_data)
         await db.commit()
 
+
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    # Defense-in-depth: Ensure limit is constrained within database layer
+    limit = max(1, min(500, int(limit)))
+
     db_path = get_db_path()
     query = "SELECT * FROM alerts WHERE 1=1"
     params = []
@@ -142,7 +155,7 @@ async def insert_alerts(alerts_list):
     for a in filtered_alerts:
         all_keys.update(a.keys())
 
-    all_keys = sorted(list(all_keys)) # Deterministic order
+    all_keys = sorted(list(all_keys))  # Deterministic order
     for a in filtered_alerts:
         for k in all_keys:
             if k not in a:
