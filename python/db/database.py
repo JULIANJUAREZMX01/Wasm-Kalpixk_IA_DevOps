@@ -66,6 +66,9 @@ async def insert_alert(alert_dict):
         await db.commit()
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    # Defense-in-depth: Ensure limit is constrained within database layer
+    limit = max(1, min(500, int(limit)))
+
     db_path = get_db_path()
     query = "SELECT * FROM alerts WHERE 1=1"
     params = []

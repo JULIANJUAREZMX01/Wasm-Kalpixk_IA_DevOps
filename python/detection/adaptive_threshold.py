@@ -78,3 +78,77 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    Protects the anomaly detection threshold from 'boiling frog' poisoning attacks.
+    Uses Z-score windowing to filter out outliers from the baseline and dampened
+    updates (exponential smoothing) to ensure stability.
+    """
+
+    def __init__(self, window_size: int = 500, alpha: float = 0.1, z_threshold: float = 3.5):
+        self.window_size = window_size
+        self.alpha = alpha  # Smoothing factor for threshold updates
+        self.z_threshold = z_threshold
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.8  # Conservative initial threshold
+        self._total_updates = 0
+
+    def update(self, scores: list[float]) -> float:
+        """
+        Update the guard with new scores and return the current dampened threshold.
+        Filters out scores that are statistically likely to be malicious poisoning.
+        """
+        with self._lock:
+            for score in scores:
+                if len(self._buffer) < 50:
+                    # Warm-up phase: accept samples to build baseline
+                    if score < 0.9:
+                        self._buffer.append(score)
+                else:
+                    # Z-score outlier detection
+                    data = np.array(self._buffer)
+                    mean = np.mean(data)
+                    std = np.std(data) + 1e-6
+                    z_score = (score - mean) / std
+
+                    # Only add to buffer if it's not an extreme outlier
+                    if z_score < self.z_threshold:
+                        self._buffer.append(score)
+
+                self._total_updates += 1
+
+            if len(self._buffer) >= 50:
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self):
+        """
+        Recalculates the internal threshold target and applies dampening.
+        Assumes self._lock is held.
+        """
+        data = np.array(self._buffer)
+        # Target: mean + 3 sigma
+        new_target = float(np.mean(data) + 3.0 * np.std(data))
+
+        # Apply alpha dampening (exponential moving average)
+        # current = current * (1 - alpha) + target * alpha
+        self._current_threshold = (1.0 - self.alpha) * self._current_threshold + self.alpha * new_target
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "alpha": self.alpha,
+                "total_updates": self._total_updates,
+            }
