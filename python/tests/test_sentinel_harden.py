@@ -1,7 +1,8 @@
 import pytest
-import numpy as np
+
+from python.db.database import get_alerts, init_db, insert_alert
 from python.detection.adaptive_threshold import AdversarialDriftGuard
-from python.db.database import init_db, get_alerts, insert_alert
+
 
 def test_drift_guard_poisoning_protection():
     # alpha=0.1, z_threshold=3.5
@@ -22,6 +23,7 @@ def test_drift_guard_poisoning_protection():
     # Threshold should not have moved UP (poisoned)
     assert guard.current_threshold <= initial_threshold + 0.01
 
+
 def test_drift_guard_gradual_drift():
     guard = AdversarialDriftGuard(window_size=100, alpha=0.1, z_threshold=3.5)
 
@@ -36,6 +38,7 @@ def test_drift_guard_gradual_drift():
     # Should adapt to gradual drift (moves towards 0.15 + 3*0 = 0.15)
     assert t2 < t1
 
+
 @pytest.mark.asyncio
 async def test_get_alerts_limit_hardening(monkeypatch, tmp_path):
     db_file = str(tmp_path / "test_harden.db")
@@ -48,7 +51,7 @@ async def test_get_alerts_limit_hardening(monkeypatch, tmp_path):
 
     # Test negative limit (SQLite bypass attempt)
     alerts, total = await get_alerts(limit=-1)
-    assert len(alerts) == 1 # Clamped to 1
+    assert len(alerts) == 1  # Clamped to 1
 
     # Test zero limit
     alerts, total = await get_alerts(limit=0)

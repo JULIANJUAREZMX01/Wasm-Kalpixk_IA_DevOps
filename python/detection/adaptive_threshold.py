@@ -136,7 +136,9 @@ class AdversarialDriftGuard:
 
         # Apply alpha dampening (exponential moving average)
         # current = current * (1 - alpha) + target * alpha
-        self._current_threshold = (1.0 - self.alpha) * self._current_threshold + self.alpha * new_target
+        self._current_threshold = (
+            1.0 - self.alpha
+        ) * self._current_threshold + self.alpha * new_target
 
     @property
     def current_threshold(self) -> float:
