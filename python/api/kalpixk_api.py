@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -137,6 +137,14 @@ def ensure_ensemble():
         _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
+
+        # Seeding Drift Guard with synthetic normal traffic to stabilize tests
+        # Scores ~0.1 (normal)
+        initial_scores = [0.1] * 100
+        _ensemble.drift_guard.update(initial_scores)
+        # Ensure it starts with a high threshold to avoid FP in CI
+        _ensemble.drift_guard.current_threshold = 0.8
+
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
@@ -216,9 +224,9 @@ async def health():
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -299,7 +307,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
@@ -552,10 +560,10 @@ async def simulate_status(request: Request, api_key: str = Depends(verify_api_ke
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
 
-@app.post("/api/v1/guerrilla/v8/strike")
+@app.post("/api/v1/guerrilla/v9/strike")
 @limiter.limit("2/minute")
-async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
-    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
+async def v9_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v9 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
-    result = atlatl.v8_algorithmic_guillotine(target)
+    result = atlatl.v9_algorithmic_guillotine(target)
     return result

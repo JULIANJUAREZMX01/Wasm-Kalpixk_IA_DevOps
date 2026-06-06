@@ -78,3 +78,36 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    [ATLATL-ORDNANCE] v7+ Adversarial Drift Guard
+    Protects the adaptive threshold from 'boiling frog' poisoning attacks.
+    """
+
+    def __init__(self, alpha: float = 0.1, z_threshold: float = 3.5):
+        self.alpha = alpha
+        self.z_threshold = z_threshold
+        self.buffer = deque(maxlen=1000)
+        self.current_threshold = 0.8
+        self.lock = threading.Lock()
+
+    def update(self, scores: list[float]) -> float:
+        with self.lock:
+            for s in scores:
+                if len(self.buffer) > 10:
+                    mean = np.mean(self.buffer)
+                    std = np.std(self.buffer) + 1e-6
+                    z_score = abs(s - mean) / std
+
+                    if z_score < self.z_threshold:
+                        self.buffer.append(s)
+                        # Dampened threshold update
+                        self.current_threshold = (1 - self.alpha) * self.current_threshold + self.alpha * (
+                            mean + 2 * std
+                        )
+                else:
+                    self.buffer.append(s)
+
+            return float(self.current_threshold)
