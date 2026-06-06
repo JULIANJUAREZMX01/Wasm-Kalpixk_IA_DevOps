@@ -158,7 +158,7 @@ pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
         v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    motor::v8_guerrilla_jit_shield(target, seed);
+    motor::v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
 }
 
 #[wasm_bindgen]
@@ -168,7 +168,7 @@ pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
         v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    motor::v8_quantum_entropy_shredder(target, initial_x);
+    motor::v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
 }
 
 #[wasm_bindgen]
@@ -178,7 +178,7 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
         v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    motor::v8_pointer_poisoning(target, seed);
+    motor::v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
 }
 
 #[wasm_bindgen]
