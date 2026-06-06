@@ -115,3 +115,25 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic LCG + XOCHIMIL XOR for mesh authentication.
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let multiplier: u64 = 6364136223846793005;
+    let increment: u64 = 1;
+    let xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL'
+    seed.wrapping_mul(multiplier).wrapping_add(increment) ^ xochimil
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant for runtime WASM integrity.
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut hash: u64 = 14695981039346656037; // Offset basis
+    let prime: u64 = 1099511628211;
+
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(prime);
+    }
+    hash
+}

@@ -404,6 +404,78 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 9: MESH AUTHENTICATION (v9.0-XOCHIMILCO)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "mesh_sync" {
+        let challenge = event
+            .metadata
+            .get("challenge")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let response = event
+            .metadata
+            .get("response")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        let expected = crate::motor::v9_polymorphic_challenge_gen(challenge);
+
+        if challenge == 0 || response != expected {
+            score = 1.0;
+            techniques.push("T1557".to_string()); // Adversary-in-the-Middle
+        }
+    }
+
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "V9 Polymorphic Mesh Authentication".to_string(),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// NODE 10: INTEGRITY GUARD (v9.0-XOCHIMILCO)
+// ═══════════════════════════════════════════════════════════════════════════════════════
+
+pub fn detect_integrity_guard(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "binary_integrity" {
+        let hash = event
+            .metadata
+            .get("hash")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let expected_hash = event
+            .metadata
+            .get("expected_hash")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        if hash != expected_hash || hash == 0 {
+            score = 1.0;
+            techniques.push("T1542".to_string()); // Pre-OS Boot
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: INTEGRITY_GUARD".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "V9 Binary Integrity Verification".to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -418,6 +490,8 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_mesh_auth(event),
+        detect_integrity_guard(event),
     ]
 }
 
@@ -438,11 +512,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     if score >= 0.7 {
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
-            technique: "TA-GUERRILLA-V8".to_string(),
+            node_id: "WASM-CORE-GUERRILLA-V9".to_string(),
+            technique: "TA-GUERRILLA-V9".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V8_GUERRILLA_SIG".to_string()),
+            signature: Some("V9_XOCHIMILCO_SIG".to_string()),
         });
         return true;
     }

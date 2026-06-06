@@ -121,6 +121,27 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
     return ptr.load(.Monotonic) == expected;
 }
 
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL'
+    return (seed *% multiplier +% increment) ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var hash: u64 = 14695981039346656037;
+    const prime: u64 = 1099511628211;
+    const slice = data_ptr[0..data_len];
+
+    for (slice) |byte| {
+        hash ^= byte;
+        hash *%= prime;
+    }
+    return hash;
+}
+
 /// [ATLATL-ORDNANCE] v7_stealth_poisoning (Legacy Support)
 pub export fn v7_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
