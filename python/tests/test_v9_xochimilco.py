@@ -1,7 +1,6 @@
 import pytest
-import asyncio
-import httpx
 from src.retaliation.atlatl import atlatl
+
 
 @pytest.mark.asyncio
 async def test_v9_retaliation_vectors():
