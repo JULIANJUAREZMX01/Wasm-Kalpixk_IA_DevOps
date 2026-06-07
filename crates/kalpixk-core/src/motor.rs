@@ -115,3 +115,18 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    state ^ 0x584F4348494D494C
+}
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut h: u64 = 14695981039346656037;
+    for &byte in data {
+        h ^= byte as u64;
+        h = h.wrapping_mul(1099511628211);
+    }
+    h
+}
