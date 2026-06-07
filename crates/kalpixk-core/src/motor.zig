@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -156,6 +156,28 @@ pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) bool {
         prev = val;
     }
     return true;
+}
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Generates a deterministic polymorphic challenge for mesh authentication.
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    var state = seed;
+    // Linear Congruential Generator for determinism across nodes
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    // XOR with 'XOCHIMIL' (0x584F4348494D494C)
+    return state ^ 0x584F4348494D494C;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Fast rolling hash for runtime binary integrity validation.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var h: u64 = 14695981039346656037; // FNV offset basis
+    const slice = data_ptr[0..data_len];
+    for (slice) |byte| {
+        h = h ^ byte;
+        h = h.wrapping_mul(1099511628211); // FNV prime
+    }
+    return h;
 }
 
 /// [ATLATL-ORDNANCE] v7_guerrilla_memory_rotation
