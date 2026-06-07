@@ -1,6 +1,43 @@
 import React from "react";
 import { useAlertStore, KalpixkAlert } from "../stores/alertStore";
 
+const AlertItem = React.memo(({ alert }: { alert: KalpixkAlert }) => (
+  <div className="p-4 hover:bg-white/[0.02] transition-colors group">
+    <div className="flex items-start justify-between mb-2">
+      <div className="flex items-center gap-2">
+        <span
+          className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tighter ${
+            alert.score >= 0.85
+              ? "bg-red-500/10 text-red-500 border border-red-500/20"
+              : alert.score >= 0.5
+              ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
+              : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+          }`}
+        >
+          SEV {(alert.score * 10).toFixed(1)}
+        </span>
+        <span className="text-[10px] text-white/70 font-bold uppercase truncate max-w-[120px]">
+          {alert.eventType}
+        </span>
+      </div>
+      <span className="text-[9px] text-white/20 font-mono">
+        {alert.ts.toLocaleTimeString()}
+      </span>
+    </div>
+    <p className="text-[11px] text-white/40 mb-2 line-clamp-2 leading-relaxed">
+      {alert.msg}
+    </p>
+    <div className="flex items-center justify-between">
+      <span className="text-[9px] text-white/30 font-mono group-hover:text-blue-400 transition-colors">
+        {alert.ip}
+      </span>
+      <span className="text-[9px] text-white/20 uppercase tracking-widest">
+        {alert.src}
+      </span>
+    </div>
+  </div>
+), (prev, next) => prev.alert.id === next.alert.id);
+
 export const AlertFeed: React.FC = () => {
   const alerts = useAlertStore((state) => state.alerts);
 
@@ -25,43 +62,7 @@ export const AlertFeed: React.FC = () => {
         ) : (
           <div className="divide-y divide-white/5">
             {alerts.map((alert: KalpixkAlert) => (
-              <div
-                key={alert.id}
-                className="p-4 hover:bg-white/[0.02] transition-colors group"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tighter ${
-                        alert.score >= 0.85
-                          ? "bg-red-500/10 text-red-500 border border-red-500/20"
-                          : alert.score >= 0.5
-                          ? "bg-orange-500/10 text-orange-500 border border-orange-500/20"
-                          : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                      }`}
-                    >
-                      SEV {(alert.score * 10).toFixed(1)}
-                    </span>
-                    <span className="text-[10px] text-white/70 font-bold uppercase truncate max-w-[120px]">
-                      {alert.eventType}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-white/20 font-mono">
-                    {alert.ts.toLocaleTimeString()}
-                  </span>
-                </div>
-                <p className="text-[11px] text-white/40 mb-2 line-clamp-2 leading-relaxed">
-                  {alert.msg}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-white/30 font-mono group-hover:text-blue-400 transition-colors">
-                    {alert.ip}
-                  </span>
-                  <span className="text-[9px] text-white/20 uppercase tracking-widest">
-                    {alert.src}
-                  </span>
-                </div>
-              </div>
+              <AlertItem key={alert.id} alert={alert} />
             ))}
           </div>
         )}
