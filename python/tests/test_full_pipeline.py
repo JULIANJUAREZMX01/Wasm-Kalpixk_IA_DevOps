@@ -36,7 +36,7 @@ def brute_force_features():
 def normal_traffic_features():
     """Feature matrix simulating 100 normal WMS operations."""
     rng = np.random.default_rng(42)
-    X = rng.normal(0.3, 0.05, (100, 32)).clip(0, 1).astype(np.float32)
+    X = rng.normal(0.3, 0.05, (100, 32)).clip(0, 1).astype(np.float32); X[:, 5] = 0.0; X[:, 6] = 1.0
     X[:, 5] = 0.0   # not off-hours
     X[:, 6] = 1.0   # internal IPs
     return X
