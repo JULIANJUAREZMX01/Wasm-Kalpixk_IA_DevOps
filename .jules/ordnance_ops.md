@@ -115,3 +115,8 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V8.1_ABORT] - Conflicting Operating Constraints
+**Vector de Ataque Analizado:** Múltiples directivas con órdenes contradictorias (Ordnance exige intervenciones mayores a 100 líneas, Bolt exige optimizaciones menores a 50 líneas).
+**Defensa Implementada:** Suspensión de actividades para mantener integridad del sistema, siguiendo la directriz terminal de detener operaciones si no es posible la optimización adecuada en los límites impuestos.
+**Contra-Ataque:** No aplicable.
