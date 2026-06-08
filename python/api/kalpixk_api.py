@@ -156,7 +156,8 @@ def ensure_ensemble():
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
 
         # Seed the drift guard with normal scores to stabilize detection
-        _ensemble.drift_guard.update([0.1] * 50)
+        # We use a batch of normal scores to initialize the Z-score buffer
+        _ensemble.drift_guard.update([0.1] * 100)
     return _ensemble
 
 

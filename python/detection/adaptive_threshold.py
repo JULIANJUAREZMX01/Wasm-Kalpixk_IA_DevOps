@@ -87,22 +87,24 @@ class AdversarialDriftGuard:
     """
 
     def __init__(self, window_size: int = 500, z_threshold: float = 3.5, alpha: float = 0.1):
-        self.window_size, self.z_threshold, self.alpha = window_size, z_threshold, alpha
-        self._buffer, self._lock, self._current_threshold = (
-            deque(maxlen=window_size),
-            threading.Lock(),
-            0.5,
-        )
+        self.window_size = window_size
+        self.z_threshold = z_threshold
+        self.alpha = alpha
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
 
     def update(self, scores: list[float]) -> float:
         """Update baseline with Z-score filtering and alpha-dampening."""
         with self._lock:
             if not scores:
                 return self._current_threshold
+
             # Pre-calculate stats for the batch if possible
             if len(self._buffer) >= 20:
                 data = np.array(self._buffer)
-                mean, std = np.mean(data), np.std(data) or 1e-6
+                mean = np.mean(data)
+                std = np.std(data) or 1e-6
             else:
                 mean, std = 0.0, 1.0
 
@@ -113,7 +115,9 @@ class AdversarialDriftGuard:
             if len(self._buffer) >= 20:
                 data = np.array(self._buffer)
                 target = float(np.mean(data) + 3.0 * np.std(data))
-                self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target
+                self._current_threshold = (
+                    (1 - self.alpha) * self._current_threshold + self.alpha * target
+                )
             return self._current_threshold
 
     @property
