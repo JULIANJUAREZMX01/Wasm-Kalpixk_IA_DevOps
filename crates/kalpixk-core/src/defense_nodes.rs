@@ -235,7 +235,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -404,6 +406,56 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "mesh_sync" {
+        let challenge = event.metadata.get("challenge").and_then(|v| v.as_u64());
+        let response = event.metadata.get("response").and_then(|v| v.as_u64());
+
+        if let (Some(c), Some(r)) = (challenge, response) {
+            let expected = crate::motor::v9_polymorphic_challenge_gen(c);
+            if r != expected {
+                score = 1.0;
+                techniques.push("T1557".to_string());
+            }
+        } else {
+            score = 0.8;
+            techniques.push("T1557".to_string());
+        }
+    }
+
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "V9 polymorphic mesh authentication validation".to_string(),
+    }
+}
+
+pub fn detect_integrity_guard(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if let Some(runtime_hash) = event.metadata.get("binary_hash").and_then(|v| v.as_u64()) {
+        let baseline_hash: u64 = 0xDEADBEEFC0FFEE; // In a real system, this would be a constant
+        if runtime_hash != baseline_hash {
+            score = 1.0;
+            techniques.push("T1574".to_string());
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: INTEGRITY_GUARD".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "V9 runtime binary integrity protection".to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -418,6 +470,8 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_mesh_auth(event),
+        detect_integrity_guard(event),
     ]
 }
 

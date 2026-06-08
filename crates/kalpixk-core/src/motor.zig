@@ -81,6 +81,31 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
     }
 }
 
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic challenge generation using LCG and XOCHIMILCO-specific XOR.
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    // LCG: state = (a * state + c)
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimilco_xor: u64 = 0x584F4348494D494C; // 'XOCHIMIL' in hex
+
+    return (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimilco_xor;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant for runtime binary verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var hash: u64 = 14695981039346656037; // Offset basis
+    const prime: u64 = 1099511628211;
+
+    const slice = data_ptr[0..data_len];
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(prime);
+    }
+    return hash;
+}
+
 /// [ATLATL-ORDNANCE] v8_pointer_poisoning
 /// Injects 8-byte traps into target memory to cause CPU exhaustion or crashes.
 pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
