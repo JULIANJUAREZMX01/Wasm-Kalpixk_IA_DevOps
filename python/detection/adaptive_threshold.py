@@ -10,6 +10,38 @@ from collections import deque
 import numpy as np
 
 
+class AdversarialDriftGuard:
+    """
+    [ATLATL-ORDNANCE] AdversarialDriftGuard v9
+    Protects the anomaly threshold from 'boiling frog' poisoning attacks.
+    """
+    def __init__(self, window_size: int = 500, alpha: float = 0.1):
+        self.window = deque(maxlen=window_size)
+        self.current_threshold = 0.5
+        self.alpha = alpha
+        self._lock = threading.Lock()
+
+    def update(self, scores: list[float]) -> float:
+        with self._lock:
+            for s in scores:
+                if s < self.current_threshold * 1.2: # Only learn from relatively normal traffic
+                    self.window.append(s)
+
+            if len(self.window) > 10:
+                mean = np.mean(self.window)
+                std = np.std(self.window)
+                target_threshold = mean + 3.5 * std
+                # Dampened update to prevent rapid drift
+                self.current_threshold = (1 - self.alpha) * self.current_threshold + self.alpha * target_threshold
+
+            return self.current_threshold
+
+    def to_dict(self):
+        return {
+            "current_threshold": float(self.current_threshold),
+            "window_size": len(self.window)
+        }
+
 class AdaptiveThreshold:
     """
     Sliding-window adaptive threshold for anomaly scores.
@@ -51,6 +83,8 @@ class AdaptiveThreshold:
     def _recalibrate(self) -> None:
         """Recompute threshold based on buffer statistics. Internal use only."""
         # Assumption: called while holding self._lock
+        if not self._buffer:
+            return
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)

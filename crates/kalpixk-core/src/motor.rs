@@ -66,6 +66,25 @@ pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
     }
 }
 
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let multiplier: u64 = 6364136223846793005;
+    let increment: u64 = 1;
+    let xochimilco_xor: u64 = 0x584F4348494D494C; // 'XOCHIMIL' in hex
+
+    (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimilco_xor
+}
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut hash: u64 = 14695981039346656037; // Offset basis
+    let prime: u64 = 1099511628211;
+
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(prime);
+    }
+    hash
+}
+
 pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
     if target.len() < 8 {
         return;
