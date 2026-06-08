@@ -88,3 +88,28 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+@pytest.mark.asyncio
+async def test_pagination_hardening(tmp_db):
+    await init_db()
+    from python.api.kalpixk_api import app
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app)
+    # The API key verification logic in kalpixk_api.py allows any key in development
+    # or specific key if KALPIXK_API_KEY is set.
+    headers = {"X-Kalpixk-Key": "development_secret"}
+
+    # Seed data
+    for i in range(10):
+        await insert_alert({"ip": f"1.1.1.{i}", "anomaly_score": 0.1, "ts": f"2023-10-27T12:00:0{i}Z"})
+
+    # Test limit -1 (should be clamped to 1)
+    response = client.get("/api/alerts?limit=-1", headers=headers)
+    assert response.status_code == 200
+    assert len(response.json()["alerts"]) == 1
+
+    # Test limit 1000 (should be clamped to 500, but we only have 10)
+    response = client.get("/api/alerts?limit=1000", headers=headers)
+    assert response.status_code == 200
+    assert len(response.json()["alerts"]) == 10
