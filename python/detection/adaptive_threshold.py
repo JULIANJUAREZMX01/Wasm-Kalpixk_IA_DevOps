@@ -40,7 +40,7 @@ class AdaptiveThreshold:
         Only updates buffer if is_confirmed_benign or score < current_threshold.
         """
         with self._lock:
-            if is_confirmed_benign or score < self._current_threshold:
+            if is_confirmed_benign or float(score) < float(self._current_threshold):
                 self._buffer.append(score)
                 self._updates_since_recalc += 1
                 self._total_updates += 1
@@ -60,7 +60,7 @@ class AdaptiveThreshold:
     def is_anomaly(self, score: float) -> bool:
         """Return True if score exceeds adaptive threshold."""
         with self._lock:
-            return score > self._current_threshold
+            return float(score) > float(self._current_threshold)
 
     @property
     def current_threshold(self) -> float:
