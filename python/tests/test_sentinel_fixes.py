@@ -92,8 +92,9 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
 @pytest.mark.asyncio
 async def test_pagination_hardening(tmp_db):
     await init_db()
-    from python.api.kalpixk_api import app
     from fastapi.testclient import TestClient
+
+    from python.api.kalpixk_api import app
 
     client = TestClient(app)
     # The API key verification logic in kalpixk_api.py allows any key in development

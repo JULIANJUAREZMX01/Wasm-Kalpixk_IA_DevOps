@@ -1,7 +1,6 @@
 
-import numpy as np
-import pytest
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_drift_guard_poisoning_protection():
     # alpha=0.1 means threshold moves 10% towards target
