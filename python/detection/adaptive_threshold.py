@@ -78,3 +78,93 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    Hardened adaptive threshold with protection against 'boiling frog' poisoning.
+
+    Features:
+      - Z-score filtering: Ignores suspicious scores that would bias the mean.
+      - Dampened updates: New threshold is a moving average (alpha=0.1).
+      - Optimized batch updates.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 1000,
+        z_threshold: float = 3.5,
+        alpha: float = 0.1,
+        initial_threshold: float = 0.95
+    ):
+        self.window_size = window_size
+        self.z_threshold = z_threshold
+        self.alpha = alpha  # Smoothing factor for threshold updates
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = initial_threshold
+        self._total_updates = 0
+
+    def update(self, scores: float | list[float]) -> float:
+        """
+        Add new scores and return the current (possibly updated) threshold.
+        Uses Z-score filtering to prevent adversarial poisoning of the baseline.
+        """
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            if not self._buffer:
+                # Seed buffer if empty
+                self._buffer.extend(scores)
+                self._total_updates += len(scores)
+                self._recalibrate()
+                return self._current_threshold
+
+            # Optimization: Calculate stats once per batch
+            data = np.array(self._buffer)
+            mean = np.mean(data)
+            std = np.std(data) + 1e-9
+
+            valid_scores = []
+            for s in scores:
+                z = abs(s - mean) / std
+                # Only accept scores that aren't extreme outliers (potential poisoning)
+                if z < self.z_threshold:
+                    valid_scores.append(s)
+
+            if valid_scores:
+                self._buffer.extend(valid_scores)
+                self._total_updates += len(valid_scores)
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Recompute threshold with dampening. Assumption: lock is held."""
+        if len(self._buffer) < 10:
+            return
+
+        data = np.array(self._buffer)
+        # Use a high percentile for the raw threshold (e.g. 99th)
+        raw_target = float(np.percentile(data, 99))
+
+        # Dampened update: T_new = (1-alpha)*T_old + alpha*T_target
+        # This prevents the threshold from jumping too quickly
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * raw_target
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "total_updates": self._total_updates,
+                "z_threshold": self.z_threshold
+            }
