@@ -90,9 +90,7 @@ class AdversarialDriftGuard(AdaptiveThreshold):
       - EMA dampening: Updates to current_threshold are dampened (alpha=0.1).
     """
 
-    def __init__(
-        self, window_size: int = 500, z_threshold: float = 3.5, alpha: float = 0.1
-    ):
+    def __init__(self, window_size: int = 500, z_threshold: float = 3.5, alpha: float = 0.1):
         super().__init__(window_size=window_size, k=3.0, recalibrate_every=50)
         self.z_threshold = z_threshold
         self.alpha = alpha

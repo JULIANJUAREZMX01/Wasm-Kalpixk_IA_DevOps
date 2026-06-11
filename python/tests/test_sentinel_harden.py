@@ -1,9 +1,9 @@
-
-import numpy as np
 import pytest
-from python.detection.adaptive_threshold import AdversarialDriftGuard
 from fastapi.testclient import TestClient
+
 from python.api.kalpixk_api import app
+from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_drift_guard_poisoning_protection():
     # alpha=0.1, z_threshold=3.5
@@ -32,8 +32,10 @@ def test_drift_guard_poisoning_protection():
     final_threshold = guard.current_threshold
     assert final_threshold == drifted_threshold, "Threshold moved by outliers!"
 
+
 client = TestClient(app)
 client.headers = {"X-Kalpixk-Key": "development_secret"}
+
 
 @pytest.mark.asyncio
 async def test_pagination_hardening():
