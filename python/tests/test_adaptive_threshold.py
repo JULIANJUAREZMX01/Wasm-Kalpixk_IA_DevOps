@@ -14,7 +14,7 @@ def test_adaptive_threshold_initialization():
     assert at.window_size == 100
     assert at.k == 2.0
     assert at.recalibrate_every == 10
-    assert at.current_threshold == 0.5
+    assert at.current_threshold == 0.95
 
 
 def test_adaptive_threshold_recalibration():
@@ -24,7 +24,7 @@ def test_adaptive_threshold_recalibration():
     # Feed 9 benign scores (no recalibration yet because < 10 updates)
     for _ in range(9):
         at.update(0.1)
-    assert at.current_threshold == 0.5
+    assert at.current_threshold == 0.95
 
     # 10th update triggers recalibration
     at.update(0.1)
@@ -36,9 +36,9 @@ def test_adaptive_threshold_no_move_on_anomalies():
     at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
     initial_threshold = at.current_threshold
 
-    # Feed anomalous scores (> 0.5)
+    # Feed anomalous scores (> current_threshold, which is 0.95)
     for _ in range(20):
-        at.update(0.9)
+        at.update(0.99)
 
     # Threshold should not have moved because scores were > current_threshold
     assert at.current_threshold == initial_threshold
@@ -78,9 +78,10 @@ def test_adaptive_threshold_to_dict():
 
 def test_is_anomaly():
     at = AdaptiveThreshold()
-    # Initial threshold is 0.5
+    # Initial threshold is 0.95
     assert not at.is_anomaly(0.4)
-    assert at.is_anomaly(0.6)
+    assert not at.is_anomaly(0.6)
+    assert at.is_anomaly(0.99)
 
     # Recalibrate to lower threshold
     for _ in range(50):

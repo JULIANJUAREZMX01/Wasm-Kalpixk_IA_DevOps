@@ -151,6 +151,14 @@ def ensure_ensemble():
         _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
+
+        # Always seed DriftGuard to stabilize initial threshold, especially in CI
+        # where models might be pre-trained but DriftGuard state is not persisted.
+        if _ensemble.drift_guard.to_dict()["buffer_len"] < 20:
+            _ensemble.drift_guard.update([0.1] * 100)
+            _ensemble.drift_guard._current_threshold = 0.7
+            _ensemble.iso_forest.threshold._current_threshold = 0.7
+
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
             rng = np.random.default_rng(42)
@@ -161,11 +169,7 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Seed DriftGuard with normal scores to stabilize initial threshold
-            _ensemble.drift_guard.update([0.1] * 100)
-            # Force initial threshold to be stable for CI
-            _ensemble.iso_forest.threshold._current_threshold = 0.95
-            _ensemble.drift_guard._current_threshold = 0.95
+            # Seeding already handled above for new ensembles
     return _ensemble
 
 

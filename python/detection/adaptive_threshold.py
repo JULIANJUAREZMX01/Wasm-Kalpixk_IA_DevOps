@@ -30,7 +30,7 @@ class AdaptiveThreshold:
 
         self._buffer = deque(maxlen=window_size)
         self._lock = threading.RLock()
-        self._current_threshold = 0.5  # Initial baseline
+        self._current_threshold = 0.95  # Initial baseline [v9-stabilized]
         self._updates_since_recalc = 0
         self._total_updates = 0
 
