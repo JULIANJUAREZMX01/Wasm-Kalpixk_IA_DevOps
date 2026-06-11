@@ -258,8 +258,11 @@ async def get_kalpixk_alerts(
     since: str | None = None,
     api_key: str = Depends(verify_api_key)
 ):
-    if limit > 500:
-        limit = 500
+    # Hardened: Clamp limit to [1, 500] to prevent DoS via LIMIT -1 bypass
+    try:
+        limit = max(1, min(500, int(limit)))
+    except (ValueError, TypeError):
+        limit = 100
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}
@@ -299,7 +302,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
