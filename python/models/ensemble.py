@@ -43,5 +43,5 @@ class DetectionEnsemble:
             ensemble_scores.tolist(),
             methods,
             confidences,
-            adaptive_threshold,
+            float(current_threshold),
         )
