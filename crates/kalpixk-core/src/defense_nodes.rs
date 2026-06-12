@@ -5,8 +5,8 @@
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
 //! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
-//! Node-9: MESH_AUTH (v9.0.0-XOCHIMILCO)
-//! Node-10: INTEGRITY_GUARD (v9.0.0-XOCHIMILCO)
+//! - Node-9: MESH_AUTH (v9.0.0-XOCHIMILCO)
+//! - Node-10: INTEGRITY_GUARD (v9.0.0-XOCHIMILCO)
 //!
 //! [ATLATL-ORDNANCE] Version 9.0: Xochimilco Guerrilla Hardening
 
