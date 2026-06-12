@@ -107,6 +107,36 @@ pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u
     return hash;
 }
 
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(entropy_seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        const shift = rand.int(u3) % 8;
+        byte.* = (byte.* << @intCast(shift)) | (byte.* >> @intCast(8 - shift));
+        byte.* ^= rand.int(u8);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving
+pub export fn v5_chaotic_interleaving(ptr_a: [*]u8, ptr_b: [*]u8, len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice_a = ptr_a[0..len];
+    const slice_b = ptr_b[0..len];
+
+    var i: usize = 0;
+    while (i < len) : (i += 1) {
+        if (rand.boolean()) {
+            const temp = slice_a[i];
+            slice_a[i] = slice_b[i];
+            slice_b[i] = temp;
+        }
+    }
+}
+
 /// [ATLATL-ORDNANCE] v8_pointer_poisoning
 /// Injects 8-byte traps into target memory to cause CPU exhaustion or crashes.
 pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
