@@ -1,9 +1,11 @@
 import pytest
-from python.api.kalpixk_api import app
 from fastapi.testclient import TestClient
+
+from python.api.kalpixk_api import app
 
 client = TestClient(app)
 client.headers = {"X-Kalpixk-Key": "development_secret"}
+
 
 @pytest.mark.asyncio
 async def test_get_alerts_pagination_hardening():

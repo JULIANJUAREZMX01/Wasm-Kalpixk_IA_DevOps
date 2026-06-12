@@ -1,10 +1,11 @@
-import numpy as np
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_drift_guard_initialization():
     guard = AdversarialDriftGuard(window_size=100, z_threshold=3.0, recalibrate_every=10, alpha=0.5)
     assert guard.window_size == 100
     assert guard.current_threshold == 0.95
+
 
 def test_drift_guard_batch_update_and_recalibrate():
     # Recalibrate every 10 updates, alpha=1.0 for immediate change in test
@@ -18,6 +19,7 @@ def test_drift_guard_batch_update_and_recalibrate():
     # Recalibration should have happened: mean=0.1, std=0.0 -> threshold = 0.1 + 3.0*0 = 0.1
     assert new_threshold == 0.1
     assert guard.current_threshold == 0.1
+
 
 def test_drift_guard_poisoning_protection():
     guard = AdversarialDriftGuard(window_size=500, z_threshold=3.0, recalibrate_every=10, alpha=1.0)
@@ -33,6 +35,7 @@ def test_drift_guard_poisoning_protection():
 
     # Threshold should NOT change
     assert guard.current_threshold == 0.1
+
 
 def test_drift_guard_dampening():
     # alpha = 0.1 (dampened)
