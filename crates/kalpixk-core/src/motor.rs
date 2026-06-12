@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -110,6 +110,26 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
         }
         i += 8;
     }
+}
+
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let multiplier: u64 = 6364136223846793005;
+    let increment: u64 = 1;
+    let xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL'
+
+    let next = seed.wrapping_mul(multiplier).wrapping_add(increment);
+    next ^ xochimil
+}
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut hash: u64 = 14695981039346656037;
+    let prime: u64 = 1099511628211;
+
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(prime);
+    }
+    hash
 }
 
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {

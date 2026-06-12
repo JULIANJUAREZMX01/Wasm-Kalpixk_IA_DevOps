@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -79,6 +79,32 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
         x = r * x * (1.0 - x);
         byte.* = @intFromFloat(x * 255.0);
     }
+}
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic challenge generation for mesh authentication.
+/// Uses a Linear Congruential Generator XORed with 'XOCHIMIL'.
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL' in hex
+
+    const next = seed.wrapping_mul(multiplier).wrapping_add(increment);
+    return next ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant for runtime binary verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var hash: u64 = 14695981039346656037; // Offset basis
+    const prime: u64 = 1099511628211;
+    const slice = data_ptr[0..data_len];
+
+    for (slice) |byte| {
+        hash ^= byte;
+        hash = hash.wrapping_mul(prime);
+    }
+    return hash;
 }
 
 /// [ATLATL-ORDNANCE] v8_pointer_poisoning
@@ -205,4 +231,22 @@ test "v8 pointer poisoning" {
         }
     }
     try std.testing.expect(changed);
+}
+
+test "v9 polymorphic challenge gen" {
+    const c1 = v9_polymorphic_challenge_gen(12345);
+    const c2 = v9_polymorphic_challenge_gen(12345);
+    try std.testing.expect(c1 == c2);
+    try std.testing.expect(c1 != 12345);
+}
+
+test "v9 binary integrity hash" {
+    const data = "XOCHIMILCO_v9_CORE";
+    const h1 = v9_binary_integrity_hash(data.ptr, data.len);
+    const h2 = v9_binary_integrity_hash(data.ptr, data.len);
+    try std.testing.expect(h1 == h2);
+
+    const data2 = "XOCHIMILCO_v9_CORF";
+    const h3 = v9_binary_integrity_hash(data2.ptr, data2.len);
+    try std.testing.expect(h1 != h3);
 }
