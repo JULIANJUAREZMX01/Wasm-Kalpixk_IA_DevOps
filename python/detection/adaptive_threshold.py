@@ -35,19 +35,24 @@ class AdversarialDriftGuard:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, score: float, is_confirmed_benign: bool = False) -> None:
+    def update(self, score: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
-        Add score to buffer.
+        Add score(s) to buffer.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
+        Returns the current threshold.
         """
-        with self._lock:
-            if is_confirmed_benign or score < self._current_threshold:
-                self._buffer.append(score)
-                self._updates_since_recalc += 1
-                self._total_updates += 1
+        scores = score if isinstance(score, list) else [score]
 
-                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
-                    self._recalibrate()
+        with self._lock:
+            for s in scores:
+                if is_confirmed_benign or s < self._current_threshold:
+                    self._buffer.append(s)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+                    if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                        self._recalibrate()
+            return self._current_threshold
 
     def _recalibrate(self) -> None:
         """Recompute threshold based on buffer statistics. Internal use only."""

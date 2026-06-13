@@ -59,7 +59,6 @@ class KalpixkIsolationForest:
         self._is_trained = False
         self._score_min  = -0.5  # Calibrated after fit
         self._score_max  =  0.0
-        self.threshold   = AdversarialDriftGuard()
 
         self._init_model()
         self._try_load()
@@ -156,14 +155,13 @@ class KalpixkIsolationForest:
 
     def predict(
         self, X: np.ndarray
-    ) -> tuple[list[float], list[float], float]:
+    ) -> tuple[list[float], list[float]]:
         """
         Score anomaly for each event.
 
         Returns:
             scores      [N] in [0,1] — 1.0 = most anomalous
             confidences [N] in [0,1] — model confidence
-            threshold   float — current adaptive threshold
         """
         if not self._is_trained:
             logger.warning("Model not trained — fitting synthetic baseline first")
@@ -179,14 +177,10 @@ class KalpixkIsolationForest:
         # Scores > 0.5 are anomalies, scores < 0.5 are normal.
         normalized = np.clip(0.5 - (raw * 2.0), 0.0, 1.0)
 
-        # Update adaptive threshold
-        for score in normalized:
-            self.threshold.update(float(score))
-
         # Confidence: distance from the 0.5 boundary
         confidences = np.clip(np.abs(normalized - 0.5) * 2, 0.3, 1.0)
 
-        return normalized.tolist(), confidences.tolist(), self.threshold.current_threshold
+        return normalized.tolist(), confidences.tolist()
 
     # ── Persistence ───────────────────────────────────────────────────────────
 

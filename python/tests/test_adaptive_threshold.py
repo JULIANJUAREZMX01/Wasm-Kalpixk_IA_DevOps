@@ -93,3 +93,16 @@ def test_is_anomaly():
     assert new_threshold < 0.5
     assert not at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adaptive_threshold_list_update():
+    at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
+    # Update with a list of 10 benign scores
+    scores = [0.1] * 10
+    new_thresh = at.update(scores)
+
+    # Threshold should have recalibrated
+    # initial 0.5, alpha 0.1, target 0.1 -> 0.46
+    assert abs(new_thresh - 0.46) < 1e-6
+    assert at.current_threshold == new_thresh
+    assert at.to_dict()["total_updates"] == 10
