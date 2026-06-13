@@ -205,7 +205,7 @@ class TestIsolationForest:
         model = KalpixkIsolationForest(torch.device("cpu"), force_cpu=True)
         X = np.random.default_rng(0).normal(0.3, 0.1, (200, 32)).clip(0, 1).astype(np.float32)
         model.fit(X)
-        scores, confs, thresh = model.predict(X[:10])
+        scores, confs = model.predict(X[:10])
         assert len(scores) == 10
         assert all(0.0 <= s <= 1.0 for s in scores)
         assert all(0.0 <= c <= 1.0 for c in confs)
@@ -232,8 +232,8 @@ class TestIsolationForest:
         X_outlier[:, 5] = 1.0    # off hours
         X_outlier[:, 16] = 1.0   # destructive op
 
-        normal_scores, _, _ = model.predict(X_normal[:20])
-        outlier_scores, _, _ = model.predict(X_outlier)
+        normal_scores, _ = model.predict(X_normal[:20])
+        outlier_scores, _ = model.predict(X_outlier)
 
         assert np.mean(outlier_scores) > np.mean(normal_scores), \
             "Outlier scores should be higher than normal scores on average"

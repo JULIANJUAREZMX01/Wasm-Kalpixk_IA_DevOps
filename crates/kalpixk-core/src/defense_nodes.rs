@@ -1,14 +1,17 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 8 nodes for detecting Red Team techniques:
+//! 10 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
 //! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
+//! - Node-9: MESH_AUTH (v9.0.0-XOCHIMILCO)
+//! - Node-10: INTEGRITY_GUARD (v9.0.0-XOCHIMILCO)
 //!
-//! [ATLATL-ORDNANCE] Version 8.0: Guerrilla Mesh Coordination
+//! [ATLATL-ORDNANCE] Version 9.0: Xochimilco Guerrilla Hardening
 
 use crate::event::KalpixkEvent;
+use crate::motor;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
@@ -55,7 +58,7 @@ impl SeverityScore {
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v8-ghost-{}", node_id),
+            format!("v9-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
@@ -235,7 +238,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -404,6 +409,64 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "mesh_sync" {
+        let challenge = event
+            .metadata
+            .get("challenge")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let response = event
+            .metadata
+            .get("response")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        if challenge != 0 {
+            let expected = motor::v9_polymorphic_challenge_gen(challenge);
+            if response != expected {
+                score = 1.0;
+                techniques.push("T1557".to_string());
+            }
+        } else {
+            score = 0.5; // Missing challenge
+        }
+    }
+
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "V9 polymorphic mesh authentication validation".to_string(),
+    }
+}
+
+pub fn detect_integrity_guard(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if let Some(runtime_hash) = event.metadata.get("runtime_hash").and_then(|v| v.as_u64()) {
+        if let Some(baseline_hash) = event.metadata.get("baseline_hash").and_then(|v| v.as_u64()) {
+            if runtime_hash != baseline_hash {
+                score = 1.0;
+                techniques.push("T1574".to_string());
+            }
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: INTEGRITY_GUARD".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "V9 runtime binary integrity verification".to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -418,6 +481,8 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_mesh_auth(event),
+        detect_integrity_guard(event),
     ]
 }
 
@@ -438,11 +503,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     if score >= 0.7 {
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
-            technique: "TA-GUERRILLA-V8".to_string(),
+            node_id: "WASM-CORE-XOCHIMILCO-V9".to_string(),
+            technique: "TA-XOCHIMILCO-V9".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V8_GUERRILLA_SIG".to_string()),
+            signature: Some("V9_XOCHIMILCO_SIG".to_string()),
         });
         return true;
     }

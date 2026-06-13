@@ -54,6 +54,7 @@ pub enum RetaliationType {
     GarbageInjection,
     RecursiveZipBomb,
     C2Corruption,
+    HardwarePanic,
 }
 
 pub fn get_redteam_mapping(raw_log: &str) -> Option<RedTeamMapping> {

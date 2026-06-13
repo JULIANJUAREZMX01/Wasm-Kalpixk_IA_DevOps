@@ -63,6 +63,11 @@ pub fn execute_retaliation(
 
     let action = format!("{:?}", state.retaliation);
 
+    // [ATLATL-ORDNANCE] v9 Stage 9 Retaliation Logic
+    if score > 0.95 {
+        state.retaliation = RetaliationType::HardwarePanic;
+    }
+
     // Simular generación de payload (en WASM esto se pasaría al host JS)
     let result = serde_json::json!({
         "target": state.ip,
@@ -71,6 +76,7 @@ pub fn execute_retaliation(
         "retaliation_action": action,
         "node": state.last_node,
         "threat_count": state.threat_count,
+        "v9_strike": score > 0.95,
         "timestamp": chrono::Utc::now().timestamp_millis(),
     });
 
