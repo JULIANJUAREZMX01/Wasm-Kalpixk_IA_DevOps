@@ -115,3 +115,25 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let multiplier: u64 = 6364136223846793005;
+    let increment: u64 = 1;
+    let xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL' in hex
+    (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil
+}
+
+pub fn v9_binary_integrity_hash(data_ptr: *const u8, data_len: usize) -> u64 {
+    let fnv_offset_basis: u64 = 14695981039346656037;
+    let fnv_prime: u64 = 1099511628211;
+
+    let mut hash: u64 = fnv_offset_basis;
+    let slice = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
+
+    for &byte in slice {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(fnv_prime);
+    }
+
+    hash
+}

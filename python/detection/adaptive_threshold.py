@@ -23,10 +23,11 @@ class AdaptiveThreshold:
       5. Thread-safe (uses threading.Lock)
     """
 
-    def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50):
+    def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50, alpha: float = 0.1):
         self.window_size = window_size
         self.k = k
         self.recalibrate_every = recalibrate_every
+        self.alpha = alpha  # Smoothing factor for dampened updates (v9 hardening)
 
         self._buffer = deque(maxlen=window_size)
         self._lock = threading.Lock()
@@ -54,7 +55,12 @@ class AdaptiveThreshold:
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)
-        self._current_threshold = float(mean + self.k * std)
+        new_threshold = float(mean + self.k * std)
+
+        # [ATLATL-ORDNANCE] Dampened update (v9 hardening)
+        # Prevents "boiling frog" attacks by limiting the rate of change.
+        self._current_threshold = (1.0 - self.alpha) * self._current_threshold + self.alpha * new_threshold
+
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:

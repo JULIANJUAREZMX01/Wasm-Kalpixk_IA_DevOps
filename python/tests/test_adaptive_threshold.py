@@ -29,7 +29,8 @@ def test_adaptive_threshold_recalibration():
     # 10th update triggers recalibration
     at.update(0.1)
     # mean=0.1, std=0.0, threshold = 0.1 + 3.0*0.0 = 0.1
-    assert at.current_threshold == 0.1
+    # v9 dampening (alpha=0.1): 0.9 * 0.5 + 0.1 * 0.1 = 0.45 + 0.01 = 0.46
+    assert abs(at.current_threshold - 0.46) < 1e-6
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
@@ -83,10 +84,12 @@ def test_is_anomaly():
     assert at.is_anomaly(0.6)
 
     # Recalibrate to lower threshold
+    # Each recalibration moves the threshold by 10% towards 0.1
+    # after 50 updates (1 recalibration), threshold = 0.46
     for _ in range(50):
         at.update(0.1)
 
     new_threshold = at.current_threshold
-    assert new_threshold < 0.2
-    assert at.is_anomaly(0.3)
+    assert new_threshold < 0.5
+    assert not at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
