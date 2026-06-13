@@ -85,11 +85,12 @@ class AdversarialDriftGuard(AdaptiveThreshold):
     Hardened version of AdaptiveThreshold that protects against 'boiling frog' poisoning.
     It uses a more conservative update policy and Z-score outlier rejection for the buffer itself.
     """
+
     def __init__(self, window_size: int = 1000, z_threshold: float = 3.5, alpha: float = 0.1):
         super().__init__(window_size=window_size, recalibrate_every=20)
         self.z_threshold = z_threshold
         self.alpha = alpha  # Smoothing factor for threshold updates
-        self._current_threshold = 0.5 # Start more conservative
+        self._current_threshold = 0.5  # Start more conservative
 
     def update(self, scores: float | list[float]) -> float:
         if isinstance(scores, (float, int)):
