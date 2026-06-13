@@ -89,7 +89,7 @@ class AdversarialDriftGuard(AdaptiveThreshold):
         super().__init__(window_size=window_size, recalibrate_every=20)
         self.z_threshold = z_threshold
         self.alpha = alpha  # Smoothing factor for threshold updates
-        self._current_threshold = 0.7 # Start more conservative
+        self._current_threshold = 0.5 # Start more conservative
 
     def update(self, scores: float | list[float]) -> float:
         if isinstance(scores, (float, int)):
