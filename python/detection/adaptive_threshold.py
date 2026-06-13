@@ -78,3 +78,47 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard(AdaptiveThreshold):
+    """
+    Hardened version of AdaptiveThreshold that protects against 'boiling frog' poisoning.
+    It uses a more conservative update policy and Z-score outlier rejection for the buffer itself.
+    """
+    def __init__(self, window_size: int = 1000, z_threshold: float = 3.5, alpha: float = 0.1):
+        super().__init__(window_size=window_size, recalibrate_every=20)
+        self.z_threshold = z_threshold
+        self.alpha = alpha  # Smoothing factor for threshold updates
+        self._current_threshold = 0.7 # Start more conservative
+
+    def update(self, scores: float | list[float]) -> float:
+        if isinstance(scores, (float, int)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for score in scores:
+                # Reject extreme outliers from the threshold buffer itself
+                if len(self._buffer) > 20:
+                    data = np.array(self._buffer)
+                    mean = np.mean(data)
+                    std = np.std(data)
+                    z_score = abs(score - mean) / (std + 1e-9)
+                    if z_score > self.z_threshold:
+                        continue
+
+                if score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+        return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        data = np.array(self._buffer)
+        new_base = float(np.mean(data) + 3.0 * np.std(data))
+        # Exponential smoothing to prevent abrupt jumps
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * new_base
+        self._updates_since_recalc = 0
