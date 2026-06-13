@@ -26,3 +26,6 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+## 2026-06-13 - [Optimize API insertions with bulk executemany]
+**Learning:** Found that `predict` method in `DetectionEnsemble` uses native Python list comprehensions to convert numpy array into lists, but the return is unpacked dynamically in the `/api/detect` endpoint which assumes the fourth element `adaptive_threshold` is returned, though the `AdaptiveThreshold` class doesn't return anything. Instead we needed to retrieve the threshold value using the `current_threshold` property.
+**Action:** When updating adaptive threshold, call `.update(score)` iteratively instead of unpacking directly into `.tolist()`, then get the `.current_threshold` property and unpack properly.
