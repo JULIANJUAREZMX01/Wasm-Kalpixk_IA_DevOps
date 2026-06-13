@@ -147,6 +147,12 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
+
+            # Seed the drift_guard with baseline scores to stabilize early detection
+            # Scores are ~0.1 on normal traffic
+            baseline_scores = rng.normal(0.1, 0.02, 100).tolist()
+            _ensemble.drift_guard.update(baseline_scores, is_confirmed_benign=True)
+
             # Calibration: Set threshold to 2x the max error on normal training data
             # to ensure integration tests pass with high confidence.
             with torch.no_grad():
@@ -234,7 +240,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -258,8 +264,8 @@ async def get_kalpixk_alerts(
     since: str | None = None,
     api_key: str = Depends(verify_api_key)
 ):
-    if limit > 500:
-        limit = 500
+    # Hardened: Clamp limit to [1, 500] to prevent DoS or negative index errors
+    limit = max(1, min(500, int(limit)))
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}
@@ -299,7 +305,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
