@@ -6,11 +6,11 @@ import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
-    at = AdaptiveThreshold(window_size=100, k=2.0, recalibrate_every=10)
+    at = AdversarialDriftGuard(window_size=100, k=2.0, recalibrate_every=10)
     assert at.window_size == 100
     assert at.k == 2.0
     assert at.recalibrate_every == 10
@@ -19,7 +19,7 @@ def test_adaptive_threshold_initialization():
 
 def test_adaptive_threshold_recalibration():
     # recalibrate_every = 10, window_size = 100
-    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
+    at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
 
     # Feed 9 benign scores (no recalibration yet because < 10 updates)
     for _ in range(9):
@@ -34,7 +34,7 @@ def test_adaptive_threshold_recalibration():
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
-    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
+    at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
     initial_threshold = at.current_threshold
 
     # Feed anomalous scores (> 0.5)
@@ -46,7 +46,7 @@ def test_adaptive_threshold_no_move_on_anomalies():
 
 
 def test_adaptive_threshold_thread_safety():
-    at = AdaptiveThreshold(window_size=1000, k=3.0, recalibrate_every=50)
+    at = AdversarialDriftGuard(window_size=1000, k=3.0, recalibrate_every=50)
 
     def worker():
         for _ in range(100):
@@ -65,7 +65,7 @@ def test_adaptive_threshold_thread_safety():
 
 
 def test_adaptive_threshold_to_dict():
-    at = AdaptiveThreshold(window_size=500, k=3.0, recalibrate_every=50)
+    at = AdversarialDriftGuard(window_size=500, k=3.0, recalibrate_every=50)
     for _ in range(10):
         at.update(0.2)
 
@@ -78,7 +78,7 @@ def test_adaptive_threshold_to_dict():
 
 
 def test_is_anomaly():
-    at = AdaptiveThreshold()
+    at = AdversarialDriftGuard()
     # Initial threshold is 0.5
     assert not at.is_anomaly(0.4)
     assert at.is_anomaly(0.6)

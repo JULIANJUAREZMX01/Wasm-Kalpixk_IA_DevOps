@@ -238,18 +238,18 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/guerrilla/v8/strike", {
+                  const res = await fetch("/api/v1/guerrilla/v9/strike", {
                     method: "POST",
                     headers: { "X-Kalpixk-Key": apiKey }
                   });
                   const data = await res.json();
                   setTerminalOutput(prev => [
                     ...prev,
-                    `[STRIKE] v8 ALGORITHMIC GUILLOTINE ENGAGED.`,
+                    `[STRIKE] v9 ALGORITHMIC GUILLOTINE ENGAGED.`,
                     `[STRIKE] STATUS: ${data.status}`,
                     ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
                   ]);
-                  alert("v7 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  alert("v9 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
                 } catch (e) {
                   console.error("Strike failed", e);
                 }

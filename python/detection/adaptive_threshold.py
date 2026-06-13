@@ -10,7 +10,7 @@ from collections import deque
 import numpy as np
 
 
-class AdaptiveThreshold:
+class AdversarialDriftGuard:
     """
     Sliding-window adaptive threshold for anomaly scores.
 

@@ -58,7 +58,7 @@ impl SeverityScore {
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v8-ghost-{}", node_id),
+            format!("v9-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
@@ -503,11 +503,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     if score >= 0.7 {
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
-            technique: "TA-GUERRILLA-V8".to_string(),
+            node_id: "WASM-CORE-XOCHIMILCO-V9".to_string(),
+            technique: "TA-XOCHIMILCO-V9".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V8_GUERRILLA_SIG".to_string()),
+            signature: Some("V9_XOCHIMILCO_SIG".to_string()),
         });
         return true;
     }
