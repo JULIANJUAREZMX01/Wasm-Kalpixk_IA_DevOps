@@ -4,6 +4,7 @@ Tests for AdversarialDriftGuard.
 
 import numpy as np
 import pytest
+
 from python.detection.adaptive_threshold import AdversarialDriftGuard
 
 
@@ -36,7 +37,6 @@ def test_drift_guard_dampened_updates():
 
     # 50 normal scores at 0.1
     guard.update([0.1] * 50, is_confirmed_benign=True)
-    initial_threshold = guard.current_threshold
     # Recalibrate is triggered. Since all are 0.1, mean=0.1, std=0.0, target=0.1
     # current = 0.5 (initial) -> (0.9 * 0.5) + (0.1 * 0.1) = 0.45 + 0.01 = 0.46
     assert guard.current_threshold == pytest.approx(0.46)
@@ -55,4 +55,4 @@ def test_drift_guard_batch_processing():
 
     assert len(guard._buffer) == 100
     assert guard._total_updates == 100
-    assert threshold < 0.5 # Should have dropped due to recalibration
+    assert threshold < 0.5  # Should have dropped due to recalibration
