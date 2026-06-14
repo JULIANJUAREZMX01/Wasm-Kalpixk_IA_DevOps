@@ -25,6 +25,62 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
     entropy
 }
 
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < stride * 2 {
+        return;
+    }
+    let mut i = 0;
+    while i + stride < target.len() {
+        for j in 0..stride {
+            if i + j + stride < target.len() {
+                target.swap(i + j, i + j + stride);
+            }
+        }
+        i += stride * 2;
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.len() < 16 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let stride = ((state as usize) % (target.len() / 4)) + 1;
+
+    let mut i = 0;
+    while i + stride < target.len() {
+        let j = (i + stride) % target.len();
+        target.swap(i, j);
+        i += stride;
+    }
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        if (val - prev).abs() > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
+
 pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
     let mut state = seed;
     let mut i = 0;
