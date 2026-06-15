@@ -150,7 +150,7 @@ pub fn v7_audit_tensor(data: &[f32]) -> bool {
             return false;
         }
         // Check for suspicious "roughness" or range violations
-        if val < -100.0 || val > 100.0 {
+        if !(-100.0..=100.0).contains(&val) {
             return false;
         }
     }
