@@ -1,7 +1,7 @@
 
-import pytest
-from fastapi.testclient import TestClient
 import numpy as np
+from fastapi.testclient import TestClient
+
 from python.api.kalpixk_api import app
 
 client = TestClient(app)
@@ -32,8 +32,9 @@ def test_detect_no_nameerror():
     assert "adaptive_threshold" in data["results"][0]
 
 def test_ensemble_returns_drift_guard_threshold():
-    from python.models.ensemble import DetectionEnsemble
     import torch
+
+    from python.models.ensemble import DetectionEnsemble
 
     ens = DetectionEnsemble(device=torch.device("cpu"))
     # Seed drift guard with some values to change threshold from 0.5
