@@ -78,3 +78,71 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard(AdaptiveThreshold):
+    """
+    Adversarial Drift Guard — Hardened adaptive threshold.
+    Adds Z-score windowing and dampened updates to protect against
+    'boiling frog' poisoning attacks.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 500,
+        z_threshold: float = 3.5,
+        alpha: float = 0.1,
+        recalibrate_every: int = 50,
+    ):
+        super().__init__(window_size=window_size, recalibrate_every=recalibrate_every)
+        self.z_threshold = z_threshold
+        self.alpha = alpha  # Smoothing factor for threshold updates
+        self._target_threshold = 0.5
+
+    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
+        """
+        Process new scores and update the adaptive threshold.
+        Implements Z-score rejection to prevent poisoning by outliers.
+        """
+        if isinstance(scores, (float, int)):
+            scores = [float(scores)]
+
+        with self._lock:
+            valid_scores = []
+            if len(self._buffer) < 10:
+                # Bootstrap phase: accept all scores
+                valid_scores = scores
+            else:
+                # Z-score filtering: reject scores that are too far from the mean
+                data = np.array(self._buffer)
+                mean = np.mean(data)
+                std = np.std(data) + 1e-6
+
+                for s in scores:
+                    z = (s - mean) / std
+                    if is_confirmed_benign or z < self.z_threshold:
+                        valid_scores.append(s)
+
+            for s in valid_scores:
+                self._buffer.append(s)
+                self._updates_since_recalc += 1
+                self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every:
+                self._recalibrate()
+                # Dampen the threshold movement
+                self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * self._target_threshold
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Internal recalibration logic."""
+        if len(self._buffer) < 10:
+            return
+
+        data = np.array(self._buffer)
+        mean = np.mean(data)
+        std = np.std(data)
+        # Target threshold based on window statistics
+        self._target_threshold = float(mean + 3.0 * std)
+        self._updates_since_recalc = 0
