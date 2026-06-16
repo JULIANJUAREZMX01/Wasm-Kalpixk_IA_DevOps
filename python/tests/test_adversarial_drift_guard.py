@@ -2,9 +2,10 @@
 Tests for AdversarialDriftGuard.
 """
 
-import numpy as np
 import pytest
+
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_adversarial_drift_guard_initialization():
     guard = AdversarialDriftGuard(window_size=100, z_threshold=3.5, recalibrate_every=10, alpha=0.1)
