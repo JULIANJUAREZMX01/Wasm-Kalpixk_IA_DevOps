@@ -115,3 +115,34 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || stride >= target.len() {
+        return;
+    }
+    for i in (0..target.len()).step_by(stride * 2) {
+        if i + stride < target.len() {
+            let (left, right) = target.split_at_mut(i + stride);
+            let len = stride.min(right.len());
+            for j in 0..len {
+                std::mem::swap(&mut left[i + j], &mut right[j]);
+            }
+        }
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.is_empty() {
+        return;
+    }
+    let shift = (seed % target.len() as u64) as usize;
+    target.rotate_left(shift);
+}
