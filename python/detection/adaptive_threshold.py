@@ -29,7 +29,7 @@ class AdaptiveThreshold:
         self.recalibrate_every = recalibrate_every
 
         self._buffer = deque(maxlen=window_size)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._current_threshold = 0.5  # Initial baseline
         self._updates_since_recalc = 0
         self._total_updates = 0
@@ -78,3 +78,103 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+class AdversarialDriftGuard:
+    """
+    Hardened adaptive threshold with Z-score protection and dampened updates.
+    Specifically designed to mitigate 'boiling frog' poisoning attacks where
+    an attacker slowly increases anomaly scores to drift the threshold.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 500,
+        z_threshold: float = 3.5,
+        recalibrate_every: int = 50,
+        alpha: float = 0.1,
+    ):
+        self.window_size = window_size
+        self.z_threshold = z_threshold
+        self.recalibrate_every = recalibrate_every
+        self.alpha = alpha
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.RLock()
+        self._current_threshold = 0.5
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "z_threshold": self.z_threshold,
+                "alpha": self.alpha,
+                "buffer_len": len(self._buffer),
+                "total_updates": self._total_updates,
+            }
+
+    def update(self, scores: float | list[float]) -> float:
+        """
+        Process new anomaly scores and potentially recalibrate the threshold.
+        Accepts a single float or a list of floats (batch update).
+        Returns the current threshold.
+        """
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for score in scores:
+                # Basic protection: only use scores that are not extreme anomalies
+                # to avoid rapid poisoning.
+                if score < self._current_threshold * 1.5:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """
+        Hardened recalibration with Z-score protection and alpha-dampening.
+        """
+        # Assumption: called while holding self._lock
+        data = np.array(self._buffer)
+        if len(data) < 10:
+            return
+
+        mu = np.mean(data)
+        sigma = np.std(data)
+
+        # Z-score protection: Filter out potential poisoning outliers
+        if sigma > 0:
+            z_scores = np.abs((data - mu) / sigma)
+            clean_data = data[z_scores < self.z_threshold]
+            if len(clean_data) < 5:  # Fallback
+                clean_data = data
+        else:
+            clean_data = data
+
+        target_mu = np.mean(clean_data)
+        target_sigma = np.std(clean_data)
+
+        # Target threshold (standard 3.5 sigma)
+        new_target = float(target_mu + 3.5 * target_sigma)
+
+        # Alpha dampening: prevent sudden jumps
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * new_target
+        self._updates_since_recalc = 0
+
+    def is_anomaly(self, score: float) -> bool:
+        """Return True if score exceeds adaptive threshold."""
+        with self._lock:
+            return score > self._current_threshold
