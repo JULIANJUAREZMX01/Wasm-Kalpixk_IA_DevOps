@@ -25,6 +25,18 @@ export function sync_threats_wasm(json_threats: string): string;
 
 export function trigger_v4_retaliation(json_target: string): string;
 
+export function v7_audit_tensor_wasm(tensor_data: Float32Array): boolean;
+
+export function v8_ghost_heartbeat(node_id: string, encrypted_payload: string): string;
+
+export function v8_guerrilla_jit_shield_wasm(target: Uint8Array, seed: bigint): void;
+
+export function v8_guerrilla_process(payload_json: string): string;
+
+export function v8_pointer_poisoning_wasm(target: Uint8Array, seed: bigint): void;
+
+export function v8_quantum_entropy_shredder_wasm(target: Uint8Array, initial_x: number): void;
+
 export function version(): string;
 
 export function wasm_lockdown(node: string, score: number, event_json: string): string;
@@ -47,6 +59,12 @@ export interface InitOutput {
     readonly process_batch: (a: number, b: number, c: number, d: number) => [number, number];
     readonly sync_threats_wasm: (a: number, b: number) => [number, number];
     readonly trigger_v4_retaliation: (a: number, b: number) => [number, number];
+    readonly v7_audit_tensor_wasm: (a: number, b: number) => number;
+    readonly v8_ghost_heartbeat: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly v8_guerrilla_jit_shield_wasm: (a: number, b: number, c: any, d: bigint) => void;
+    readonly v8_guerrilla_process: (a: number, b: number) => [number, number];
+    readonly v8_pointer_poisoning_wasm: (a: number, b: number, c: any, d: bigint) => void;
+    readonly v8_quantum_entropy_shredder_wasm: (a: number, b: number, c: any, d: number) => void;
     readonly version: () => [number, number];
     readonly wasm_lockdown: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly cabi_realloc: (a: number, b: number, c: number, d: number) => number;
