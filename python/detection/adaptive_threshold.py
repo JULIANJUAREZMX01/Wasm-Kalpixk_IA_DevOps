@@ -78,3 +78,70 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard(AdaptiveThreshold):
+    """
+    Hardened version of AdaptiveThreshold that protects against 'boiling frog'
+    poisoning attacks where an attacker slowly increases scores to shift the threshold.
+
+    Features:
+    - Z-score filtering: Ignores scores that are too far (Z > 3.5) from current window.
+    - Dampened updates: Threshold shifts are smoothed via alpha (0.1) factor.
+    - Batch support: Efficiently handles lists of scores.
+    """
+
+    def __init__(self, window_size: int = 500, k: float = 3.5, recalibrate_every: int = 50, alpha: float = 0.1):
+        super().__init__(window_size, k, recalibrate_every)
+        self.alpha = alpha
+
+    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
+        """
+        Add scores to buffer with adversarial filtering.
+        Returns the current threshold.
+        """
+        if isinstance(scores, (float, int)):
+            scores_list = [float(scores)]
+        else:
+            scores_list = [float(s) for s in scores]
+
+        with self._lock:
+            # Optimization: Calculate stats once for the batch if buffer is large enough
+            mean = 0.5
+            std = 0.1
+            has_stats = len(self._buffer) >= 10
+            if has_stats:
+                data = np.array(self._buffer)
+                mean = np.mean(data)
+                std = max(np.std(data), 1e-6)
+
+            for score in scores_list:
+                # 1. Adversarial filtering: Z-score check
+                if has_stats and not is_confirmed_benign:
+                    z = abs(score - mean) / std
+                    if z > 3.5:
+                        # Potentially poisoning or legitimate anomaly, don't drift the threshold
+                        continue
+
+                # 2. Standard filtering: Only learn from benign-looking samples
+                if is_confirmed_benign or score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Recompute threshold with dampened update (Alpha stacking)."""
+        # Assumption: called while holding self._lock
+        data = np.array(self._buffer)
+        target_mean = np.mean(data)
+        target_std = np.std(data)
+        target_threshold = float(target_mean + self.k * target_std)
+
+        # Dampened update: move towards target but don't jump to prevent rapid poisoning
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target_threshold
+        self._updates_since_recalc = 0
