@@ -11,6 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
+        self.systemic_collapse = SystemicCollapse()
         logger.info("🏹 ATLATL-ORDNANCE v9.0.0-XOCHIMILCO: Sistema de represalia cargado.")
 
     def initiate(self, vector_name: str, target: str):
@@ -68,7 +69,7 @@ class Atlatl:
         logger.error(f"🔥 Triggering hardware panic on {target} infrastructure via v9 malformed instructions.")
 
         # 3. Systemic Collapse
-        collapse_results = systemic_collapse.initiate(target)
+        collapse_results = self.systemic_collapse.initiate(target)
 
         return {
             "status": "XOCHIMILCO_STRIKE_EXECUTED",
@@ -94,7 +95,7 @@ class Atlatl:
         logger.error(f"☣️  Injecting adversarial tensors into {target} neural inference engine.")
 
         # 3. Systemic Collapse
-        collapse_results = systemic_collapse.initiate(target)
+        collapse_results = self.systemic_collapse.initiate(target)
 
         return {
             "status": "GUILLOTINE_EXECUTED_V8",

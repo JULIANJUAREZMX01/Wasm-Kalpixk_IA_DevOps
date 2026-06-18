@@ -237,7 +237,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -433,7 +435,11 @@ pub fn detect_integrity_guard(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if let Some(integrity) = event.metadata.get("integrity_hash").and_then(|v| v.as_str()) {
+    if let Some(integrity) = event
+        .metadata
+        .get("integrity_hash")
+        .and_then(|v| v.as_str())
+    {
         if integrity == "INVALID" {
             score = 1.0;
             techniques.push("T1565".to_string());
