@@ -50,13 +50,19 @@ class AdversarialDriftGuard:
 
     def _recalibrate(self) -> None:
         """Dampened Z-score recalibration."""
+        if not self._buffer:
+            return
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)
         target = float(mean + self.z_threshold * std)
 
-        # Exponential smoothing to prevent rapid poisoning
-        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target
+        if not np.isnan(target):
+            # Exponential smoothing to prevent rapid poisoning
+            self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target
+
+        if np.isnan(self._current_threshold):
+            self._current_threshold = 0.5
         self._updates_since_recalc = 0
 
     def to_dict(self) -> dict:
@@ -110,10 +116,14 @@ class AdaptiveThreshold:
     def _recalibrate(self) -> None:
         """Recompute threshold based on buffer statistics. Internal use only."""
         # Assumption: called while holding self._lock
+        if not self._buffer:
+            return
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)
-        self._current_threshold = float(mean + self.k * std)
+        target = float(mean + self.k * std)
+        if not np.isnan(target):
+            self._current_threshold = target
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:
