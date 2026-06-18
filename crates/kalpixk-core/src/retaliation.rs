@@ -55,6 +55,7 @@ pub fn execute_retaliation(
         m.recommended_retaliation.clone()
     } else {
         match level {
+            OffenseLevel::Xochimilco => RetaliationType::XochimilcoStrike,
             OffenseLevel::Exterminio => RetaliationType::RecursiveZipBomb,
             OffenseLevel::Critical => RetaliationType::PoisonPointers,
             _ => RetaliationType::Block,

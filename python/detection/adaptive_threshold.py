@@ -10,6 +10,65 @@ from collections import deque
 import numpy as np
 
 
+class AdversarialDriftGuard:
+    """
+    [ATLATL-ORDNANCE] AdversarialDriftGuard
+    Protects the detection threshold using Z-score windowing and dampened updates.
+    """
+    def __init__(self, window_size: int = 500, alpha: float = 0.1, z_threshold: float = 3.5, recalibrate_every: int = 50):
+        self.window_size = window_size
+        self.alpha = alpha
+        self.z_threshold = z_threshold
+        self.recalibrate_every = recalibrate_every
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+
+    def update(self, scores: float | list[float]) -> float:
+        """
+        Process new scores and update the adaptive threshold.
+        Accepts single float or list of floats.
+        """
+        if isinstance(scores, (float, int)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for score in scores:
+                # Basic protection: only use 'normal' looking scores for drift window
+                if score < self._current_threshold * 1.5:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Dampened Z-score recalibration."""
+        data = np.array(self._buffer)
+        mean = np.mean(data)
+        std = np.std(data)
+        target = float(mean + self.z_threshold * std)
+
+        # Exponential smoothing to prevent rapid poisoning
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target
+        self._updates_since_recalc = 0
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "buffer_len": len(self._buffer),
+                "alpha": self.alpha,
+                "z_threshold": self.z_threshold,
+                "total_updates": self._total_updates,
+            }
+
 class AdaptiveThreshold:
     """
     Sliding-window adaptive threshold for anomaly scores.
