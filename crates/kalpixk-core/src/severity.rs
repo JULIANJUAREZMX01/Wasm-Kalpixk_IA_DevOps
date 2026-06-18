@@ -16,13 +16,17 @@ pub enum OffenseLevel {
     Anomaly = 2,
     /// 0.70 - 0.89: Intento de compromiso grave. Inicio de contramedidas.
     Critical = 3,
-    /// 0.90 - 1.0: Exfiltración o Ransomware detectado. Exterminio de infraestructura.
+    /// 0.90 - 0.94: Exfiltración o Ransomware detectado. Exterminio de infraestructura.
     Exterminio = 4,
+    /// 0.95 - 1.0: Amenaza estructural nivel Xochimilco. Colapso sistémico total.
+    Xochimilco = 5,
 }
 
 impl From<f64> for OffenseLevel {
     fn from(score: f64) -> Self {
-        if score >= 0.90 {
+        if score >= 0.95 {
+            OffenseLevel::Xochimilco
+        } else if score >= 0.90 {
             OffenseLevel::Exterminio
         } else if score >= 0.70 {
             OffenseLevel::Critical
@@ -54,6 +58,7 @@ pub enum RetaliationType {
     GarbageInjection,
     RecursiveZipBomb,
     C2Corruption,
+    XochimilcoStrike,
 }
 
 pub fn get_redteam_mapping(raw_log: &str) -> Option<RedTeamMapping> {
