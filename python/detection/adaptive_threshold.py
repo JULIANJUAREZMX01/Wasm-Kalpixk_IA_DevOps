@@ -96,7 +96,7 @@ class AdversarialDriftGuard(AdaptiveThreshold):
         super().__init__(window_size, k, recalibrate_every)
         self.alpha = alpha  # Dampening factor
 
-    def update(self, scores: float | list[float]) -> float:
+    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
         Batch update support and adversarial filtering.
         Returns the current threshold.
@@ -108,7 +108,7 @@ class AdversarialDriftGuard(AdaptiveThreshold):
             for score in scores:
                 # Adversarial filtering: only update with benign-looking samples
                 # to prevent rapid threshold poisoning.
-                if score < self._current_threshold:
+                if is_confirmed_benign or score < self._current_threshold:
                     self._buffer.append(float(score))
                     self._updates_since_recalc += 1
                     self._total_updates += 1
