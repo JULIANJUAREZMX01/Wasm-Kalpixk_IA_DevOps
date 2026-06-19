@@ -2,9 +2,8 @@
 Tests for AdversarialDriftGuard.
 """
 
-import numpy as np
-import pytest
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_adversarial_drift_guard_dampening():
     # recalibrate_every=10, alpha=0.1
