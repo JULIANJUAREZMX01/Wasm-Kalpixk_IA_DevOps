@@ -78,3 +78,78 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard(AdaptiveThreshold):
+    """
+    Hardened version of AdaptiveThreshold to prevent 'Boiling Frog' attacks.
+    Uses Z-score outlier removal and dampening to ensure threshold stability.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 500,
+        k: float = 3.5,
+        recalibrate_every: int = 50,
+        alpha: float = 0.1
+    ):
+        super().__init__(window_size, k, recalibrate_every)
+        self.alpha = alpha  # Dampening factor
+
+    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
+        """
+        Batch update support and adversarial filtering.
+        Returns the current threshold.
+        """
+        if isinstance(scores, (float, int, np.float32)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for score in scores:
+                # Adversarial filtering: only update with benign-looking samples
+                # to prevent rapid threshold poisoning.
+                if is_confirmed_benign or score < self._current_threshold:
+                    self._buffer.append(float(score))
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Robust recalibration with dampening and Z-score filtering."""
+        # Assumption: called while holding self._lock
+        data = np.array(self._buffer)
+        if len(data) == 0:
+            self._current_threshold = 0.5
+            return
+
+        # Filter out potential poisoning samples in the buffer using a strict Z-score
+        mean_raw = np.mean(data)
+        std_raw = np.std(data)
+
+        if std_raw > 1e-6:
+            z_scores = np.abs((data - mean_raw) / std_raw)
+            clean_data = data[z_scores < 3.5]
+            if len(clean_data) >= 5:
+                data = clean_data
+
+        target_mean = np.mean(data)
+        target_std = np.std(data)
+        target_threshold = float(target_mean + self.k * target_std)
+
+        # Dampening: prevents rapid shifts in threshold (Boiling Frog protection)
+        # New Threshold = Old + Alpha * (Target - Old)
+        self._current_threshold = (
+            self._current_threshold + self.alpha * (target_threshold - self._current_threshold)
+        )
+
+        # Ensure threshold stays within valid bounds [0.01, 0.99]
+        self._current_threshold = max(0.01, min(0.99, self._current_threshold))
+
+        if np.isnan(self._current_threshold):
+            self._current_threshold = 0.5
+
+        self._updates_since_recalc = 0
