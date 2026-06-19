@@ -9,3 +9,8 @@
 **Vulnerability:** JIT Spraying and Buffer Deduplication Evasion in decentralized nodes.
 **Learning:** Standard entropy storms can be mitigated by deduplicating network appliances. JIT probing requires polymorphic instruction noise to disrupt shellcode alignment.
 **Prevention:** Implement non-linear chaotic entropy (Logistic Map) and polymorphic instruction padding (JIT Shield) at the metal layer (Zig/Rust).
+
+## 2024-06-19 - [v9 Adversarial Poisoning]
+**Vulnerability:** 'Boiling Frog' poisoning of adaptive detection thresholds.
+**Learning:** Attackers can slowly raise detection thresholds by injecting near-boundary benign-looking samples, eventually blinding the system to sharp anomalies.
+**Prevention:** Implement `AdversarialDriftGuard` with update dampening (alpha-factor) and Z-score windowing to reject outlier-driven threshold shifts.
