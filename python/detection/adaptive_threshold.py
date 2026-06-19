@@ -6,7 +6,6 @@ Sliding-window adaptive threshold for anomaly scores.
 
 import threading
 from collections import deque
-from typing import List, Union
 
 import numpy as np
 
@@ -36,7 +35,7 @@ class AdversarialDriftGuard:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, scores: Union[float, List[float]]) -> float:
+    def update(self, scores: float | list[float]) -> float:
         """
         Add new scores to the buffer and return current threshold.
         Applies update dampening to the threshold during recalibration.

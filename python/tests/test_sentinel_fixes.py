@@ -58,8 +58,9 @@ async def test_insert_alert_only_invalid_fields(tmp_db):
 @pytest.mark.asyncio
 async def test_ensemble_drift_guard_integration():
     import torch
-    from python.models.ensemble import DetectionEnsemble
+
     from python.detection.adaptive_threshold import AdversarialDriftGuard
+    from python.models.ensemble import DetectionEnsemble
 
     device = torch.device("cpu")
     ensemble = DetectionEnsemble(device=device)
@@ -75,6 +76,7 @@ async def test_ensemble_drift_guard_integration():
 @pytest.mark.asyncio
 async def test_api_status_reports_drift_guard():
     import httpx
+
     from python.api.kalpixk_api import app
     async with httpx.AsyncClient(headers={"X-Kalpixk-Key": "development_secret"},
                                 transport=httpx.ASGITransport(app=app),
@@ -91,6 +93,7 @@ async def test_api_status_reports_drift_guard():
 @pytest.mark.asyncio
 async def test_analyze_detect_no_name_error():
     import httpx
+
     from python.api.kalpixk_api import app
     # This specifically tests the fix for 'threshold' vs 'adaptive_threshold' NameError
     payload = {

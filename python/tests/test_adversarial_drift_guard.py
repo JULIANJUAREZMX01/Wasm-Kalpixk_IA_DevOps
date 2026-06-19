@@ -1,6 +1,8 @@
 
 import numpy as np
+
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_drift_guard_initialization():
     guard = AdversarialDriftGuard(window_size=100, z_score=3.0, recalibrate_every=10, alpha=0.1)
