@@ -33,6 +33,7 @@ from fastapi import (
 from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
+from loguru import logger
 from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -55,7 +56,6 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
     except Exception as e:
-        from loguru import logger
         logger.error(f"Failed to initialize database: {e}")
     yield
     # Shutdown
@@ -74,20 +74,22 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
-async def verify_api_key(api_key: str = Security(api_key_header)):
+async def verify_api_key(request: Request, api_key: str = Security(api_key_header)):
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
+    client_ip = request.client.host if request.client else "unknown"
 
     if env == "production":
         if not expected_key:
-            from loguru import logger
             logger.error("KALPIXK_API_KEY not set in production!")
             raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
         if not api_key or not secrets.compare_digest(api_key, expected_key):
+            logger.warning(f"Unauthorized access attempt from {client_ip}")
             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
         if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            logger.warning(f"Unauthorized access attempt from {client_ip} (development)")
+            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -212,7 +214,8 @@ class AnomalyResponse(BaseModel):
 
 
 @app.get("/api/health")
-async def health():
+@limiter.limit("20/minute")
+async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
@@ -260,6 +263,8 @@ async def get_kalpixk_alerts(
 ):
     if limit > 500:
         limit = 500
+    if limit < 1:
+        limit = 1
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}
@@ -439,7 +444,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             data = await ws.receive_bytes()
             payload = msgpack.unpackb(data, raw=False)
             features = payload.get("features", [])
-            if len(features) == 32:
+            if isinstance(features, list) and len(features) == 32:
                 arr = np.array([features], dtype=np.float32)
                 # Convert to tensor and fix result unpacking
                 features_array = torch.from_numpy(arr).to(_device)
