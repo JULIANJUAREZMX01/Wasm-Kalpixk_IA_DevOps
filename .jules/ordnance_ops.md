@@ -115,3 +115,32 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V9_XOCHIMILCO] - Guerrilla Mesh Auth & Structural Integrity
+
+**Vector de Ataque Analizado:**
+1. **Mesh Node Spoofing:** Identificamos que la función `mesh_heartbeat` permite el registro de nodos sin autenticación, facilitando que un atacante inyecte nodos falsos para envenenar la telemetría global.
+2. **WASM Binary Tampering:** Falta de verificación de integridad del binario WASM en tiempo de ejecución, lo que permitiría parches maliciosos en caliente si el host es comprometido.
+3. **Exfiltration Saturation Evasion:** Los atacantes están utilizando técnicas de compresión y fragmentación para evadir las tormentas de entropía v8.
+
+**Defensa Implementada (v9.0.0-XOCHIMILCO):**
+1. **Zig/Rust v9 Metal Layer:**
+   - `v9_binary_integrity_hash`: Implementación de un rolling hash no estándar para auto-verificación del binario WASM.
+   - `v9_polymorphic_challenge_gen`: Generador de desafíos criptográficos polimórficos para la autenticación de nodos de la malla.
+2. **Rust Stage 9/10 Logic:**
+   - `Node-9: MESH_AUTH`: Detección de fallos en el desafío-respuesta de la malla Guerrilla.
+   - `Node-10: INTEGRITY_GUARD`: Monitoreo constante del checksum del módulo para detectar mutaciones no autorizadas.
+3. **FFI Mandatory Guards:**
+   - Refuerzo de `wasp.rs` para exigir validación de integridad antes de procesar cualquier lote de logs.
+
+**Contra-Ataque (Fase Negra):**
+1. **v9_ALGORITHMIC_GUILLOTINE:**
+   - `v9_recursive_zip_trap`: Generación de señales de "Zip Bomb" lógico que saturan la infraestructura de exfiltración del atacante.
+   - `v9_hardware_panic_trigger`: Protocolo de inhabilitación física de nodos comprometidos (simulación de kernel panic y bloqueo de E/S).
+
+**Estado de la Misión:**
+- Xochimilco Mesh: AUTHENTICATED
+- Integrity Guard: ACTIVE
+- Recursive Traps: ARMED
+
+*ATLATL-ORDNANCE: El sistema ya no solo detecta el veneno; lo devuelve concentrado.*

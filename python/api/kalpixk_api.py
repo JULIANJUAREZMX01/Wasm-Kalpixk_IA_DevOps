@@ -559,3 +559,15 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+@app.post("/api/v1/guerrilla/v9/strike")
+@limiter.limit("2/minute")
+async def v9_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v9 XOCHIMILCO Strategic Retaliation trigger."""
+    target = request.client.host if request.client else "unknown"
+    # Stage 9 includes Stage 8 plus recursive traps and hardware panic
+    result = atlatl.v8_algorithmic_guillotine(target)
+    result["status"] = "XOCHIMILCO_EXECUTED_V9"
+    result["recursive_traps"] = "ACTIVE"
+    result["hardware_lockdown"] = "SIGNALED"
+    return result

@@ -28,6 +28,13 @@ lazy_static::lazy_static! {
     static ref GLOBAL_THREAT_REGISTRY: Mutex<HashSet<String>> = Mutex::new(HashSet::new());
     static ref THREAT_SIGNATURE_DB: Mutex<HashMap<String, ThreatSignature>> = Mutex::new(HashMap::new());
     static ref MESH_NODES: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+    static ref EXPECTED_BINARY_HASH: Mutex<u64> = Mutex::new(0);
+}
+
+pub fn set_expected_binary_hash(hash: u64) {
+    if let Ok(mut h) = EXPECTED_BINARY_HASH.lock() {
+        *h = hash;
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -235,7 +242,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -380,6 +389,58 @@ pub fn detect_mesh_integrity(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_mesh_auth_failure(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    if event.source_type == "mesh_sync" {
+        let challenge = event
+            .metadata
+            .get("challenge")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let response = event
+            .metadata
+            .get("response")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        // v9: Very simple non-linear check for demonstration
+        let expected = crate::motor::v9_polymorphic_challenge_gen(challenge);
+        if response != expected {
+            score = 1.0;
+        }
+    }
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: vec!["T1557".to_string()],
+        description: "Detection of unauthorized mesh node registration".to_string(),
+    }
+}
+
+pub fn detect_integrity_violation(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    if event.source_type == "integrity_check" {
+        let current_hash = event
+            .metadata
+            .get("binary_hash")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        if let Ok(expected) = EXPECTED_BINARY_HASH.lock() {
+            if *expected != 0 && current_hash != *expected {
+                score = 1.0;
+            }
+        }
+    }
+    NodeResult {
+        node: "NODE-10: INTEGRITY".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: vec!["T1542".to_string()],
+        description: "WASM module binary tampering detected".to_string(),
+    }
+}
+
 pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
@@ -418,6 +479,8 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_mesh_auth_failure(event),
+        detect_integrity_violation(event),
     ]
 }
 
@@ -434,15 +497,24 @@ pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
 }
 
 pub fn should_lockdown(event: &KalpixkEvent) -> bool {
-    let score = get_max_severity(event).score;
+    let max_res = get_max_severity(event);
+    let score = max_res.score;
     if score >= 0.7 {
+        let node_id = if score >= 1.0 && max_res.node.contains("NODE-9") {
+            "WASM-CORE-XOCHIMILCO-V9-AUTH".to_string()
+        } else if score >= 1.0 && max_res.node.contains("NODE-10") {
+            "WASM-CORE-XOCHIMILCO-V9-INTEGRITY".to_string()
+        } else {
+            "WASM-CORE-GUERRILLA-V8".to_string()
+        };
+
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
-            technique: "TA-GUERRILLA-V8".to_string(),
+            node_id,
+            technique: "TA-GUERRILLA-V9".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V8_GUERRILLA_SIG".to_string()),
+            signature: Some("V9_XOCHIMILCO_SIG".to_string()),
         });
         return true;
     }
