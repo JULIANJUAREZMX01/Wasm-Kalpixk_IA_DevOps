@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -82,12 +82,21 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not expected_key:
             from loguru import logger
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error"
+            )
         if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials"
+            )
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+        # Hardened: In development, still require a key. Use KALPIXK_API_KEY if set,
+        # otherwise fallback to "development_secret".
+        effective_key = expected_key if expected_key else "development_secret"
+        if not api_key or not secrets.compare_digest(api_key, effective_key):
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials"
+            )
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -256,10 +265,11 @@ async def get_kalpixk_alerts(
     limit: int = 100,
     severity: str | None = None,
     since: str | None = None,
-    api_key: str = Depends(verify_api_key)
+    api_key: str = Depends(verify_api_key),
 ):
-    if limit > 500:
-        limit = 500
+    # Hardened: Constraint limit to [1, 500] to prevent bypass (e.g. limit=-1)
+    # and resource exhaustion.
+    limit = max(1, min(500, int(limit)))
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}
@@ -311,7 +321,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -362,7 +372,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -450,7 +460,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",

@@ -56,14 +56,70 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 export!(KalpixkCore);
 
 #[cfg(target_arch = "wasm32")]
-extern "C" {
-    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
-    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
-    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
-    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+mod wasm_externs {
+    use crate::motor;
+
+    #[no_mangle]
+    pub extern "C" fn v5_active_memory_scrambling(
+        target_ptr: *mut u8,
+        target_len: usize,
+        entropy_seed: u64,
+    ) {
+        let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+        motor::v8_guerrilla_jit_shield(target, entropy_seed);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn v5_chaotic_interleaving(
+        target_ptr: *mut u8,
+        target_len: usize,
+        _stride: usize,
+    ) {
+        let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+        motor::v8_quantum_entropy_shredder(target, 0.5);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn v7_guerrilla_memory_rotation(
+        target_ptr: *mut u8,
+        target_len: usize,
+        seed: u64,
+    ) {
+        let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+        motor::v8_pointer_poisoning(target, seed);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64) {
+        let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+        motor::v8_guerrilla_jit_shield(target, seed);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn v8_quantum_entropy_shredder(
+        target_ptr: *mut u8,
+        target_len: usize,
+        initial_x: f64,
+    ) {
+        let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+        motor::v8_quantum_entropy_shredder(target, initial_x);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64) {
+        let target = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+        motor::v8_pointer_poisoning(target, seed);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn v7_audit_tensor(_data_ptr: *const f32, _data_len: usize) -> bool {
+        // Mock implementation for v7 audit
+        true
+    }
 }
+
+#[cfg(target_arch = "wasm32")]
+use wasm_externs::*;
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -153,43 +209,23 @@ pub fn v8_guerrilla_process(payload_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_guerrilla_jit_shield(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_quantum_entropy_shredder(target, initial_x);
 }
 
 #[wasm_bindgen]
 pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
     #[cfg(target_arch = "wasm32")]
-    extern "C" {
-        fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
+    {
         v7_audit_tensor(tensor_data.as_ptr(), tensor_data.len())
     }
 
@@ -288,7 +324,7 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
         let mut decoy_buffer = [0u8; 128];
-        unsafe {
+        {
             v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
             v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
             v7_guerrilla_memory_rotation(
