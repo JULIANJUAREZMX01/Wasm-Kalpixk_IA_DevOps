@@ -7,7 +7,6 @@ Protects against 'boiling frog' poisoning attacks via dampened updates.
 
 import threading
 from collections import deque
-from typing import Union, List
 
 import numpy as np
 
@@ -26,7 +25,7 @@ class AdversarialDriftGuard:
     def __init__(
         self,
         window_size: int = 500,
-        k: float = 3.5,
+        k: float = 3.0,
         recalibrate_every: int = 50,
         alpha: float = 0.1  # Update dampening factor (0.1 = 10% move towards target)
     ):
@@ -43,7 +42,7 @@ class AdversarialDriftGuard:
 
     def update(
         self,
-        score: Union[float, List[float]],
+        score: float | list[float],
         is_confirmed_benign: bool = False
     ) -> float:
         """

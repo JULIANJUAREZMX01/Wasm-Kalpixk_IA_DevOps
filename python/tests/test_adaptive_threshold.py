@@ -3,8 +3,11 @@ Tests for AdversarialDriftGuard.
 """
 
 import threading
+
 import numpy as np
+
 from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 
 def test_drift_guard_initialization():
     dg = AdversarialDriftGuard(window_size=100, k=2.0, recalibrate_every=10, alpha=0.5)
@@ -25,7 +28,6 @@ def test_drift_guard_batch_update():
 def test_drift_guard_dampening():
     # alpha=0.1 means it only moves 10% towards target
     dg = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10, alpha=0.1)
-    initial = dg.current_threshold # 0.5
 
     dg.update([0.1] * 10)
     # target = 0.1
