@@ -147,6 +147,16 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
+
+            # Seed AdversarialDriftGuard with baseline normal scores
+            with torch.no_grad():
+                X_tensor = torch.from_numpy(X).to(_device)
+                scores, _, _, _ = _ensemble.predict(X_tensor)
+                # Seed with confirmed benign samples
+                _ensemble.drift_guard.update(scores, is_confirmed_benign=True)
+                # Force a recalibration based on baseline
+                _ensemble.drift_guard._recalibrate()
+
             # Calibration: Set threshold to 2x the max error on normal training data
             # to ensure integration tests pass with high confidence.
             with torch.no_grad():
