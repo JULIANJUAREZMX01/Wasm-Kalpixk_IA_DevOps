@@ -418,7 +418,49 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_node9_mesh_auth(event),
+        detect_node10_integrity_guard(event),
     ]
+}
+
+pub fn detect_node9_mesh_auth(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "mesh_sync" {
+        if !event.metadata.contains_key("v9_auth_token") {
+            score = 0.95;
+            techniques.push("T1557".to_string());
+        }
+    }
+
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Mutual mesh authentication validation v9".to_string(),
+    }
+}
+
+pub fn detect_node10_integrity_guard(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if let Some(integrity_score) = event.metadata.get("integrity_score").and_then(|v| v.as_f64()) {
+        if integrity_score < 1.0 {
+            score = 1.0;
+            techniques.push("T1574".to_string());
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: INTEGRITY_GUARD".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Runtime integrity verification of core primitives v9".to_string(),
+    }
 }
 
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
