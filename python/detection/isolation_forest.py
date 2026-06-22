@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .adaptive_threshold import AdaptiveThreshold
+from .adaptive_threshold import AdversarialDriftGuard
 
 logger = logging.getLogger("kalpixk.detection.isolation_forest")
 
@@ -59,7 +59,7 @@ class KalpixkIsolationForest:
         self._is_trained = False
         self._score_min  = -0.5  # Calibrated after fit
         self._score_max  =  0.0
-        self.threshold   = AdaptiveThreshold()
+        self.threshold   = AdversarialDriftGuard()
 
         self._init_model()
         self._try_load()
