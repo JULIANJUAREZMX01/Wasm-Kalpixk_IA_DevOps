@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -158,6 +158,18 @@ pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) bool {
     return true;
 }
 
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant for deterministic code verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    var hash: u64 = 14695981039346656037;
+    const slice = data_ptr[0..data_len];
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(1099511628211);
+    }
+    return hash;
+}
+
 /// [ATLATL-ORDNANCE] v7_guerrilla_memory_rotation
 pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     if (target_len < 16) return;
@@ -205,4 +217,16 @@ test "v8 pointer poisoning" {
         }
     }
     try std.testing.expect(changed);
+}
+
+test "v9 binary integrity hash" {
+    const data = "ATLATL-ORDNANCE-V9";
+    const h1 = v9_binary_integrity_hash(data.ptr, data.len);
+    const h2 = v9_binary_integrity_hash(data.ptr, data.len);
+    try std.testing.expect(h1 == h2);
+    try std.testing.expect(h1 != 0);
+
+    const data2 = "ATLATL-ORDNANCE-v9";
+    const h3 = v9_binary_integrity_hash(data2.ptr, data2.len);
+    try std.testing.expect(h1 != h3);
 }

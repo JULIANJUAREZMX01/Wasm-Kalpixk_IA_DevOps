@@ -10,7 +10,7 @@ from collections import deque
 import numpy as np
 
 
-class AdaptiveThreshold:
+class AdversarialDriftGuard:
     """
     Sliding-window adaptive threshold for anomaly scores.
 
@@ -49,12 +49,34 @@ class AdaptiveThreshold:
                     self._recalibrate()
 
     def _recalibrate(self) -> None:
-        """Recompute threshold based on buffer statistics. Internal use only."""
+        """
+        Recompute threshold based on buffer statistics. Internal use only.
+        v9: Uses robust statistics (median and MAD) to prevent slow-burn poisoning.
+        """
         # Assumption: called while holding self._lock
         data = np.array(self._buffer)
-        mean = np.mean(data)
-        std = np.std(data)
-        self._current_threshold = float(mean + self.k * std)
+        if len(data) < 10:
+            return
+
+        # Robust statistics: Median instead of Mean
+        median = np.median(data)
+
+        # Median Absolute Deviation (MAD) as a robust scale estimator
+        # MAD = median(|x_i - median(x)|)
+        mad = np.median(np.abs(data - median))
+
+        # Consistency factor for normal distribution (approx 1.4826)
+        # But we use a direct robust Z-score approach with k
+        # Standard deviation approx 1.4826 * MAD
+        robust_std = 1.4826 * mad if mad > 0 else np.std(data)
+
+        # New threshold calculation
+        new_threshold = float(median + self.k * robust_std)
+
+        # Dampening update (alpha=0.2) to prevent sudden jumps
+        alpha = 0.2
+        self._current_threshold = (1 - alpha) * self._current_threshold + alpha * new_threshold
+
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:
@@ -78,3 +100,7 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+# Legacy alias
+AdaptiveThreshold = AdversarialDriftGuard

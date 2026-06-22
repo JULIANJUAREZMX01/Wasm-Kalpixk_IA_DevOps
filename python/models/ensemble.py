@@ -16,7 +16,8 @@ class DetectionEnsemble:
         self.iso_forest = KalpixkIsolationForest(device)
         self.autoencoder = KalpixkAutoencoder(device)
         self.drift_guard = AdversarialDriftGuard()
-        logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
+        self.version = "9.0.0-XOCHIMILCO"
+        logger.info(f"Ensemble v9.0.0-XOCHIMILCO inicializado en {device} with Robust DriftGuard")
 
     def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float], float]:
         features_np = features.cpu().numpy()
