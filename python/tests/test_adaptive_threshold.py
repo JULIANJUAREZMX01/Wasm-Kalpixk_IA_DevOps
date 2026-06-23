@@ -5,7 +5,6 @@ Tests for AdversarialDriftGuard (AdaptiveThreshold).
 import threading
 
 import numpy as np
-import pytest
 
 from python.detection.adaptive_threshold import AdversarialDriftGuard as AdaptiveThreshold
 
@@ -90,7 +89,7 @@ def test_is_anomaly():
     # Target is ~0.1. With alpha=0.1, it takes many recalibrations to get very close to 0.1.
     # 1st recalc: 0.46
     # 2nd recalc: 0.9*0.46 + 0.1*0.1 = 0.414 + 0.01 = 0.424
-    for _ in range(100): # Triggers 2 recalibrations (every 50)
+    for _ in range(100):  # Triggers 2 recalibrations (every 50)
         at.update(0.1)
 
     assert at.current_threshold < 0.45
