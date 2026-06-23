@@ -165,26 +165,6 @@ def ensure_ensemble():
             # to ensure integration tests pass with high confidence.
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
-                # Seed drift guard with baseline normal samples
-                if_scores, _, _ = _ensemble.iso_forest.predict(X.astype(np.float32))
-                ae_scores, _ = _ensemble.autoencoder.predict(X.astype(np.float32))
-                scores = 0.45 * np.asarray(if_scores) + 0.55 * np.asarray(ae_scores)
-
-                _ensemble.drift_guard.update(scores.tolist(), is_confirmed_benign=True)
-
-                # Force immediate recalibration (bypassing dampening) on startup
-                # to stabilize detection thresholds and prevent high false-positive rates.
-                data = np.array(_ensemble.drift_guard._buffer)
-                if len(data) >= 10:
-                    median = np.median(data)
-                    mad = np.median(np.abs(data - median))
-                    # Ensure threshold is at least higher than the max score seen in the baseline
-                    baseline_max = float(np.max(scores))
-                    calculated = float(median + _ensemble.drift_guard.k * (mad * 1.4826))
-                    _ensemble.drift_guard._current_threshold = max(
-                        0.7, calculated, baseline_max + 0.1
-                    )
-
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
@@ -271,7 +251,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.drift_guard.to_dict(),
+        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
     }
 
 
