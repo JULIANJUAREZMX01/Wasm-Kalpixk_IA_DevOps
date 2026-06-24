@@ -297,6 +297,8 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
                 seed ^ 0xDEADBEEF,
             );
             v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
+            v8_pointer_poisoning(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+            v8_quantum_entropy_shredder(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 3.1415);
         }
 
         if anomaly_count > 5 {
