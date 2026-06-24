@@ -18,8 +18,8 @@ def test_adaptive_threshold_initialization():
 
 
 def test_adaptive_threshold_recalibration():
-    # recalibrate_every = 10, window_size = 100
-    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
+    # recalibrate_every = 10, window_size = 100, alpha = 0.1
+    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10, alpha=0.1)
 
     # Feed 9 benign scores (no recalibration yet because < 10 updates)
     for _ in range(9):
@@ -28,8 +28,9 @@ def test_adaptive_threshold_recalibration():
 
     # 10th update triggers recalibration
     at.update(0.1)
-    # mean=0.1, std=0.0, threshold = 0.1 + 3.0*0.0 = 0.1
-    assert at.current_threshold == 0.1
+    # median=0.1, mad=0.0, target_threshold = 0.1
+    # damped_threshold = (1-0.1)*0.5 + 0.1*0.1 = 0.45 + 0.01 = 0.46
+    assert round(at.current_threshold, 2) == 0.46
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
@@ -59,8 +60,8 @@ def test_adaptive_threshold_thread_safety():
 
     # Verify that total updates is 1000
     assert at.to_dict()["total_updates"] == 1000
-    # Threshold should be significantly lower than 0.5
-    assert at.current_threshold < 0.4
+    # Threshold should be lower than 0.5 due to many small scores
+    assert at.current_threshold < 0.5
 
 
 def test_adaptive_threshold_to_dict():
@@ -77,16 +78,18 @@ def test_adaptive_threshold_to_dict():
 
 
 def test_is_anomaly():
-    at = AdaptiveThreshold()
+    at = AdaptiveThreshold(recalibrate_every=10, alpha=0.5)
     # Initial threshold is 0.5
     assert not at.is_anomaly(0.4)
     assert at.is_anomaly(0.6)
 
     # Recalibrate to lower threshold
-    for _ in range(50):
+    for _ in range(10):
         at.update(0.1)
 
+    # target = 0.1
+    # damped = 0.5 * 0.5 + 0.5 * 0.1 = 0.25 + 0.05 = 0.3
     new_threshold = at.current_threshold
-    assert new_threshold < 0.2
-    assert at.is_anomaly(0.3)
-    assert not at.is_anomaly(0.05)
+    assert round(new_threshold, 2) == 0.3
+    assert at.is_anomaly(0.35)
+    assert not at.is_anomaly(0.25)

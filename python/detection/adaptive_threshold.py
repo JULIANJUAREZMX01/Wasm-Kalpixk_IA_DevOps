@@ -10,23 +10,17 @@ from collections import deque
 import numpy as np
 
 
-class AdaptiveThreshold:
+class AdversarialDriftGuard:
     """
-    Sliding-window adaptive threshold for anomaly scores.
-
-    Algorithm:
-      1. Maintains a ring buffer of the last N benign scores (default N=500)
-      2. Every `recalibrate_every` new samples, recomputes:
-           threshold = mean(buffer) + k * std(buffer)   (default k=3.0)
-      3. Exposes is_anomaly(score) -> bool
-      4. Exposes current_threshold property
-      5. Thread-safe (uses threading.Lock)
+    Robust sliding-window adaptive threshold for anomaly scores.
+    Uses Median and MAD (Median Absolute Deviation) to resist adversarial poisoning.
     """
 
-    def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50):
+    def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50, alpha: float = 0.1):
         self.window_size = window_size
         self.k = k
         self.recalibrate_every = recalibrate_every
+        self.alpha = alpha  # Dampening factor
 
         self._buffer = deque(maxlen=window_size)
         self._lock = threading.Lock()
@@ -34,27 +28,41 @@ class AdaptiveThreshold:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, score: float, is_confirmed_benign: bool = False) -> None:
+    def update(self, score: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
-        Add score to buffer.
+        Add score(s) to buffer.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
+        Returns the current threshold.
         """
-        with self._lock:
-            if is_confirmed_benign or score < self._current_threshold:
-                self._buffer.append(score)
-                self._updates_since_recalc += 1
-                self._total_updates += 1
+        scores = [score] if isinstance(score, (int, float)) else score
 
-                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
-                    self._recalibrate()
+        with self._lock:
+            for s in scores:
+                if is_confirmed_benign or s < self._current_threshold:
+                    self._buffer.append(s)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
 
     def _recalibrate(self) -> None:
-        """Recompute threshold based on buffer statistics. Internal use only."""
-        # Assumption: called while holding self._lock
+        """Recompute threshold based on robust statistics (Median/MAD)."""
         data = np.array(self._buffer)
-        mean = np.mean(data)
-        std = np.std(data)
-        self._current_threshold = float(mean + self.k * std)
+        if len(data) == 0:
+            return
+
+        median = np.median(data)
+        mad = np.median(np.abs(data - median))
+
+        # Robust threshold estimation: median + k * 1.4826 * mad
+        # (1.4826 makes MAD a consistent estimator of std dev for normal distribution)
+        target_threshold = float(median + self.k * 1.4826 * mad)
+
+        # Apply update dampening (alpha) to prevent rapid threshold shifts
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target_threshold
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:
@@ -77,4 +85,8 @@ class AdaptiveThreshold:
                 "buffer_len": len(self._buffer),
                 "k": self.k,
                 "total_updates": self._total_updates,
+                "alpha": self.alpha,
             }
+
+# Backward compatibility alias
+AdaptiveThreshold = AdversarialDriftGuard
