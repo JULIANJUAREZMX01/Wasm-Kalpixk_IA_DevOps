@@ -26,3 +26,6 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+## 2026-06-24 - [Unmemoized Components Under High-Frequency Intervals]
+**Learning:** When a parent component uses high-frequency intervals (like a 70ms CRT scanline animation in `Dashboard`), it can cause frequent re-renders. If child components or expensive derived state computations are not memoized, this causes a severe CPU bottleneck due to continuous O(N) operations and full re-renders of the DOM.
+**Action:** Always wrap components with `React.memo()` and derived state calculations with `React.useMemo()` when they exist in a component tree subject to high-frequency state updates, ensuring the render cascade stops and expensive computations are only run when their dependencies change.
