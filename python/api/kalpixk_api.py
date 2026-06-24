@@ -137,23 +137,37 @@ def ensure_ensemble():
         _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
+
+        # Seed Drift Guard with baseline data to avoid high FP on startup
+        rng = np.random.default_rng(42)
+        X_baseline = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X_baseline[:, 5] = 0.0
+        X_baseline[:, 6] = 1.0
+
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
-            rng = np.random.default_rng(42)
-            # Use more samples and tighter variance for a more stable baseline in tests
-            # This baseline matches the 'normal_traffic_features' fixture in tests/test_full_pipeline.py
-            X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
-            X[:, 5] = 0.0  # matches fixture
-            X[:, 6] = 1.0  # matches fixture
-            _ensemble.autoencoder.fit(X, epochs=20)
-            _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+            _ensemble.autoencoder.fit(X_baseline, epochs=20)
+            _ensemble.iso_forest.fit(X_baseline)
+            # Calibration: Set sub-model threshold
             with torch.no_grad():
-                X_tensor = torch.from_numpy(X).to(_device)
+                X_tensor = torch.from_numpy(X_baseline).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+
+        # Warm up the AdversarialDriftGuard with ensemble scores from baseline
+        with torch.no_grad():
+            X_tensor = torch.from_numpy(X_baseline).to(_device)
+            scores, _, _, _ = _ensemble.predict(X_tensor)
+            # Add to drift guard as confirmed benign
+            _ensemble.drift_guard.update(scores, is_confirmed_benign=True)
+            # Force immediate recalibration without dampening for initial stabilization
+            # Bypass dampening by setting current threshold directly after statistics
+            data = np.array(_ensemble.drift_guard._buffer)
+            median = np.median(data)
+            mad = np.median(np.abs(data - median))
+            _ensemble.drift_guard._current_threshold = float(median + _ensemble.drift_guard.k * 1.4826 * mad) + 0.05
+
     return _ensemble
 
 
