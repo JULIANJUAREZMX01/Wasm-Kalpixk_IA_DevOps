@@ -60,9 +60,6 @@ extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
     fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
-    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
 }
 
 #[wasm_bindgen]
@@ -153,31 +150,16 @@ pub fn v8_guerrilla_process(payload_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_guerrilla_jit_shield(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_quantum_entropy_shredder(target, initial_x);
 }
 
 #[wasm_bindgen]
 pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
 }
 
@@ -296,8 +278,10 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
                 decoy_buffer.len(),
                 seed ^ 0xDEADBEEF,
             );
-            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
         }
+        motor::v8_guerrilla_jit_shield(&mut decoy_buffer, seed ^ 0x1337);
+        motor::v8_pointer_poisoning(&mut decoy_buffer, seed);
+        motor::v8_quantum_entropy_shredder(&mut decoy_buffer, 3.1415);
 
         if anomaly_count > 5 {
             v5_trap::arm_traps();
