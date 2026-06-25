@@ -6,7 +6,6 @@ Sliding-window adaptive threshold for anomaly scores with adversarial hardening.
 
 import threading
 from collections import deque
-from typing import Union
 
 import numpy as np
 
@@ -29,7 +28,7 @@ class AdversarialDriftGuard:
         window_size: int = 1000,
         k: float = 3.5,
         recalibrate_every: int = 50,
-        alpha: float = 0.1
+        alpha: float = 0.1,
     ):
         self.window_size = window_size
         self.k = k
@@ -42,7 +41,7 @@ class AdversarialDriftGuard:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, scores: Union[float, list[float]], is_confirmed_benign: bool = False) -> float:
+    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
         Add score(s) to buffer and return current threshold.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
@@ -60,7 +59,11 @@ class AdversarialDriftGuard:
                     self._updates_since_recalc += 1
                     added_any = True
 
-            if added_any and self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+            if (
+                added_any
+                and self._updates_since_recalc >= self.recalibrate_every
+                and len(self._buffer) >= 10
+            ):
                 self._recalibrate()
 
             return self._current_threshold
@@ -82,7 +85,9 @@ class AdversarialDriftGuard:
         target_threshold = float(median + self.k * robust_std)
 
         # Update dampening (alpha-smoothing) to prevent "boiling frog" poisoning
-        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target_threshold
+        self._current_threshold = (
+            1 - self.alpha
+        ) * self._current_threshold + self.alpha * target_threshold
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:
@@ -107,6 +112,7 @@ class AdversarialDriftGuard:
                 "alpha": self.alpha,
                 "total_updates": self._total_updates,
             }
+
 
 # Backward compatibility alias
 AdaptiveThreshold = AdversarialDriftGuard
