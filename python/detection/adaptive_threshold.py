@@ -6,27 +6,30 @@ Sliding-window adaptive threshold for anomaly scores.
 
 import threading
 from collections import deque
+from typing import Union
 
 import numpy as np
 
 
-class AdaptiveThreshold:
+class AdversarialDriftGuard:
     """
-    Sliding-window adaptive threshold for anomaly scores.
-
-    Algorithm:
-      1. Maintains a ring buffer of the last N benign scores (default N=500)
-      2. Every `recalibrate_every` new samples, recomputes:
-           threshold = mean(buffer) + k * std(buffer)   (default k=3.0)
-      3. Exposes is_anomaly(score) -> bool
-      4. Exposes current_threshold property
-      5. Thread-safe (uses threading.Lock)
+    Robust sliding-window adaptive threshold for anomaly scores.
+    Designed to resist 'boiling frog' poisoning attacks by using:
+      1. Median and MAD (Median Absolute Deviation) instead of Mean/Std.
+      2. Dampened updates (alpha=0.1) to prevent rapid threshold jumps.
     """
 
-    def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50):
+    def __init__(
+        self,
+        window_size: int = 500,
+        k: float = 3.0,
+        recalibrate_every: int = 50,
+        alpha: float = 0.1
+    ):
         self.window_size = window_size
         self.k = k
         self.recalibrate_every = recalibrate_every
+        self.alpha = alpha
 
         self._buffer = deque(maxlen=window_size)
         self._lock = threading.Lock()
@@ -34,27 +37,43 @@ class AdaptiveThreshold:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, score: float, is_confirmed_benign: bool = False) -> None:
+    def update(self, score: Union[float, list[float]], is_confirmed_benign: bool = False) -> float:
         """
-        Add score to buffer.
-        Only updates buffer if is_confirmed_benign or score < current_threshold.
+        Add score(s) to buffer and return the current threshold.
         """
-        with self._lock:
-            if is_confirmed_benign or score < self._current_threshold:
-                self._buffer.append(score)
-                self._updates_since_recalc += 1
-                self._total_updates += 1
+        if isinstance(score, (float, int, np.float32)):
+            scores = [score]
+        else:
+            scores = score
 
-                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
-                    self._recalibrate()
+        with self._lock:
+            for s in scores:
+                if is_confirmed_benign or s < self._current_threshold:
+                    self._buffer.append(float(s))
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
 
     def _recalibrate(self) -> None:
-        """Recompute threshold based on buffer statistics. Internal use only."""
+        """Recompute threshold using robust statistics and dampening."""
         # Assumption: called while holding self._lock
         data = np.array(self._buffer)
-        mean = np.mean(data)
-        std = np.std(data)
-        self._current_threshold = float(mean + self.k * std)
+        if len(data) == 0:
+            return
+
+        median = np.median(data)
+        # Robust scale estimator: 1.4826 * Median Absolute Deviation
+        mad = np.median(np.abs(data - median))
+        robust_std = 1.4826 * mad
+
+        target_threshold = float(median + self.k * robust_std)
+
+        # Dampening: move towards target slowly to prevent rapid poisoning
+        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target_threshold
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:
@@ -77,4 +96,8 @@ class AdaptiveThreshold:
                 "buffer_len": len(self._buffer),
                 "k": self.k,
                 "total_updates": self._total_updates,
+                "alpha": self.alpha,
             }
+
+# Backward compatibility alias
+AdaptiveThreshold = AdversarialDriftGuard
