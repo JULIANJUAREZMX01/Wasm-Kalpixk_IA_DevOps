@@ -1,7 +1,7 @@
 // motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
 // Ensures build compatibility in environments without a Zig compiler.
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::Ordering;
 
 pub fn shannon_entropy(data: &[u8]) -> f64 {
     if data.is_empty() {
