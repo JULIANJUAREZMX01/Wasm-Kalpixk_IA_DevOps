@@ -121,6 +121,25 @@ pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool
     return ptr.load(.Monotonic) == expected;
 }
 
+/// [ATLATL-ORDNANCE] v9_recursive_zip_trap
+pub export fn v9_recursive_zip_trap(target_ptr: [*]u8, target_len: usize, depth: u8) void {
+    if (target_len < 4) return;
+    const slice = target_ptr[0..target_len];
+    slice[0] = 0x50;
+    slice[1] = 0x4B;
+    slice[2] = 0x03;
+    slice[3] = 0x04;
+    for (slice[4..], 0..) |*byte, i| {
+        byte.* = @as(u8, @intCast(i % 256)) *% depth;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_hardware_panic_trigger
+pub export fn v9_hardware_panic_trigger(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    @memset(slice, 0x0F); // UD2
+}
+
 /// [ATLATL-ORDNANCE] v7_stealth_poisoning (Legacy Support)
 pub export fn v7_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
