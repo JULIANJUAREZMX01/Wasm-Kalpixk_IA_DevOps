@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 
-from python.detection.adaptive_threshold import AdversarialDriftGuard
+from python.detection.adaptive_threshold import AdaptiveThreshold
 from python.detection.autoencoder import KalpixkAutoencoder
 from python.detection.isolation_forest import KalpixkIsolationForest
 
@@ -15,10 +15,10 @@ class DetectionEnsemble:
         self.device = device
         self.iso_forest = KalpixkIsolationForest(device)
         self.autoencoder = KalpixkAutoencoder(device)
-        self.drift_guard = AdversarialDriftGuard()
-        logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
+        self.drift_guard = AdaptiveThreshold()
+        logger.info(f"Ensemble inicializado en {device} with AdaptiveThreshold")
 
-    def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float], float]:
+    def predict(self, features: torch.Tensor) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         features_np = features.cpu().numpy()
 
         # Inferencia
@@ -26,22 +26,22 @@ class DetectionEnsemble:
         ae_scores, ae_conf = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
-        if_scores_np = np.asarray(if_scores)
-        ae_scores_np = np.asarray(ae_scores)
-        ensemble_scores = 0.45 * if_scores_np + 0.55 * ae_scores_np
+        ensemble_scores = 0.45 * if_scores + 0.55 * ae_scores
 
         # Determinar método dominante y confianza
-        methods = np.where(if_scores_np > ae_scores_np, "isolation_forest", "autoencoder").tolist()
+        methods = np.where(if_scores > ae_scores, "isolation_forest", "autoencoder")
 
         # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
-        confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
+        confidences = (if_conf + ae_conf) / 2.0
 
         # Update and get adaptive threshold
-        current_threshold = self.drift_guard.update(ensemble_scores.tolist())
+        for score in ensemble_scores:
+            self.drift_guard.update(float(score))
+        current_threshold = self.drift_guard.current_threshold
 
         return (
-            ensemble_scores.tolist(),
+            ensemble_scores,
             methods,
             confidences,
-            adaptive_threshold,
+            current_threshold,
         )
