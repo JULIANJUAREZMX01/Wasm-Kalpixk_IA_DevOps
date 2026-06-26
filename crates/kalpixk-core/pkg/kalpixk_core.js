@@ -208,6 +208,88 @@ export function trigger_v4_retaliation(json_target) {
 }
 
 /**
+ * @param {Float32Array} tensor_data
+ * @returns {boolean}
+ */
+export function v7_audit_tensor_wasm(tensor_data) {
+    const ptr0 = passArrayF32ToWasm0(tensor_data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.v7_audit_tensor_wasm(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
+ * @param {string} node_id
+ * @param {string} encrypted_payload
+ * @returns {string}
+ */
+export function v8_ghost_heartbeat(node_id, encrypted_payload) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const ptr0 = passStringToWasm0(node_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(encrypted_payload, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.v8_ghost_heartbeat(ptr0, len0, ptr1, len1);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * @param {Uint8Array} target
+ * @param {bigint} seed
+ */
+export function v8_guerrilla_jit_shield_wasm(target, seed) {
+    var ptr0 = passArray8ToWasm0(target, wasm.__wbindgen_malloc);
+    var len0 = WASM_VECTOR_LEN;
+    wasm.v8_guerrilla_jit_shield_wasm(ptr0, len0, target, seed);
+}
+
+/**
+ * @param {string} payload_json
+ * @returns {string}
+ */
+export function v8_guerrilla_process(payload_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(payload_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.v8_guerrilla_process(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {Uint8Array} target
+ * @param {bigint} seed
+ */
+export function v8_pointer_poisoning_wasm(target, seed) {
+    var ptr0 = passArray8ToWasm0(target, wasm.__wbindgen_malloc);
+    var len0 = WASM_VECTOR_LEN;
+    wasm.v8_pointer_poisoning_wasm(ptr0, len0, target, seed);
+}
+
+/**
+ * @param {Uint8Array} target
+ * @param {number} initial_x
+ */
+export function v8_quantum_entropy_shredder_wasm(target, initial_x) {
+    var ptr0 = passArray8ToWasm0(target, wasm.__wbindgen_malloc);
+    var len0 = WASM_VECTOR_LEN;
+    wasm.v8_quantum_entropy_shredder_wasm(ptr0, len0, target, initial_x);
+}
+
+/**
  * @returns {string}
  */
 export function version() {
@@ -245,11 +327,13 @@ export function wasm_lockdown(node, score, event_json) {
         wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
 }
-import * as import1 from "env"
 
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
+        __wbg___wbindgen_copy_to_typed_array_a4db337751e0b328: function(arg0, arg1, arg2) {
+            new Uint8Array(arg2.buffer, arg2.byteOffset, arg2.byteLength).set(getArrayU8FromWasm0(arg0, arg1));
+        },
         __wbg___wbindgen_is_function_49868bde5eb1e745: function(arg0) {
             const ret = typeof(arg0) === 'function';
             return ret;
@@ -366,7 +450,6 @@ function __wbg_get_imports() {
     return {
         __proto__: null,
         "./kalpixk_core_bg.js": import0,
-        "env": import1,
     };
 }
 
@@ -437,6 +520,20 @@ function handleError(f, args) {
 
 function isLikeNone(x) {
     return x === undefined || x === null;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
+function passArrayF32ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 4, 4) >>> 0;
+    getFloat32ArrayMemory0().set(arg, ptr / 4);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {
