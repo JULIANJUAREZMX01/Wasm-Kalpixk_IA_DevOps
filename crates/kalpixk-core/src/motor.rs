@@ -128,8 +128,8 @@ pub fn v9_recursive_zip_trap(target: &mut [u8], depth: u8) {
     target[2] = 0x03;
     target[3] = 0x04;
 
-    for i in 4..target.len() {
-        target[i] = (i as u8).wrapping_mul(depth);
+    for (i, byte) in target.iter_mut().enumerate().skip(4) {
+        *byte = (i as u8).wrapping_mul(depth);
     }
 }
 
