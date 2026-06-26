@@ -327,13 +327,6 @@ export function wasm_lockdown(node, score, event_json) {
         wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
 }
-import * as import1 from "env"
-import * as import2 from "env"
-import * as import3 from "env"
-import * as import4 from "env"
-import * as import5 from "env"
-import * as import6 from "env"
-import * as import7 from "env"
 
 function __wbg_get_imports() {
     const import0 = {
@@ -457,13 +450,6 @@ function __wbg_get_imports() {
     return {
         __proto__: null,
         "./kalpixk_core_bg.js": import0,
-        "env": import1,
-        "env": import2,
-        "env": import3,
-        "env": import4,
-        "env": import5,
-        "env": import6,
-        "env": import7,
     };
 }
 
