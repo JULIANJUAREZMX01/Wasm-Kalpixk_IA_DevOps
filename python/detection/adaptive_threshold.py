@@ -57,8 +57,8 @@ class AdversarialDriftGuard:
 
             return self._current_threshold
 
-    def _recalibrate(self) -> None:
-        """Recompute threshold using robust statistics and dampening."""
+    def _recalibrate(self, use_dampening: bool = True) -> None:
+        """Recompute threshold using robust statistics and optional dampening."""
         # Assumption: called while holding self._lock
         data = np.array(self._buffer)
         if len(data) == 0:
@@ -71,9 +71,19 @@ class AdversarialDriftGuard:
 
         target_threshold = float(median + self.k * robust_std)
 
-        # Dampening: move towards target slowly to prevent rapid poisoning
-        self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target_threshold
+        if use_dampening:
+            # Dampening: move towards target slowly to prevent rapid poisoning
+            self._current_threshold = (1 - self.alpha) * self._current_threshold + self.alpha * target_threshold
+        else:
+            self._current_threshold = target_threshold
+
         self._updates_since_recalc = 0
+
+    def force_recalibrate(self) -> float:
+        """Force an immediate recalibration bypassing dampening."""
+        with self._lock:
+            self._recalibrate(use_dampening=False)
+            return self._current_threshold
 
     def is_anomaly(self, score: float) -> bool:
         """Return True if score exceeds adaptive threshold."""
