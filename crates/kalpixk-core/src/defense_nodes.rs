@@ -5,8 +5,10 @@
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
 //! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
+//! - Node-9: MESH_AUTH (v9.0.0-XOCHIMILCO)
+//! - Node-10: INTEGRITY_GUARD (v9.0.0-XOCHIMILCO)
 //!
-//! [ATLATL-ORDNANCE] Version 8.0: Guerrilla Mesh Coordination
+//! [ATLATL-ORDNANCE] Version 9.0: XOCHIMILCO Offensive Defense
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -404,6 +406,49 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if event.source_type == "mesh_sync" {
+        match event.metadata.get("auth_v9") {
+            Some(v) if v.as_str() == Some("XOCHIMILCO_VERIFIED") => score = 0.0,
+            _ => {
+                score = 0.95;
+                techniques.push("T1557".to_string());
+            }
+        }
+    }
+
+    NodeResult {
+        node: "NODE-9: MESH_AUTH".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Mutual mesh authentication validation (v9)".to_string(),
+    }
+}
+
+pub fn detect_integrity_violation(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+
+    if let Some(integrity) = event.metadata.get("runtime_integrity") {
+        if integrity.as_f64().unwrap_or(1.0) < 0.99 {
+            score = 1.0;
+            techniques.push("T1542".to_string());
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: INTEGRITY_GUARD".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Runtime security primitive integrity guard (v9)".to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -418,6 +463,8 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_exfiltration(event, &raw_lower, &user_lower, &source_lower),
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
+        detect_mesh_auth(event),
+        detect_integrity_violation(event),
     ]
 }
 

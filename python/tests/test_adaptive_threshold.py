@@ -28,8 +28,9 @@ def test_adaptive_threshold_recalibration():
 
     # 10th update triggers recalibration
     at.update(0.1)
-    # mean=0.1, std=0.0, threshold = 0.1 + 3.0*0.0 = 0.1
-    assert at.current_threshold == 0.1
+    # Target: median=0.1, mad=0.0, target_threshold = 0.1
+    # New threshold = 0.9 * 0.5 + 0.1 * 0.1 = 0.45 + 0.01 = 0.46
+    assert round(at.current_threshold, 2) == 0.46
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
@@ -82,11 +83,18 @@ def test_is_anomaly():
     assert not at.is_anomaly(0.4)
     assert at.is_anomaly(0.6)
 
-    # Recalibrate to lower threshold
-    for _ in range(50):
+    # Recalibrate to lower threshold (needs multiple recalibrations due to alpha=0.1)
+    # Recalibration happens every 100 updates.
+    for _ in range(500):
         at.update(0.1)
 
     new_threshold = at.current_threshold
-    assert new_threshold < 0.2
-    assert at.is_anomaly(0.3)
+    # Initial 0.5.
+    # 1st (100): 0.9*0.5 + 0.1*0.1 = 0.46
+    # 2nd (200): 0.9*0.46 + 0.1*0.1 = 0.414 + 0.01 = 0.424
+    # 3rd (300): 0.9*0.424 + 0.1*0.1 = 0.3816 + 0.01 = 0.3916
+    # 4th (400): 0.9*0.3916 + 0.1*0.1 = 0.35244 + 0.01 = 0.36244
+    # 5th (500): 0.9*0.36244 + 0.1*0.1 = 0.326196 + 0.01 = 0.336196
+    assert new_threshold < 0.45
+    assert at.is_anomaly(0.45)
     assert not at.is_anomaly(0.05)

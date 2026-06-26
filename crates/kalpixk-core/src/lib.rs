@@ -63,11 +63,13 @@ extern "C" {
     fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
     fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
     fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v9_recursive_zip_trap(target_ptr: *mut u8, target_len: usize, depth: u8);
+    fn v9_hardware_panic_trigger(target_ptr: *mut u8, target_len: usize);
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "8.0.0-GUERRILLA".to_string()
+    "9.0.0-XOCHIMILCO".to_string()
 }
 
 #[wasm_bindgen]
@@ -77,7 +79,7 @@ pub fn get_security_telemetry() -> String {
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
         "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
-        "v8_status": "GUERRILLA_ACTIVE"
+        "v9_status": "XOCHIMILCO_ACTIVE"
     }).to_string()
 }
 
@@ -179,6 +181,26 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v9_recursive_zip_trap_wasm(target: &mut [u8], depth: u8) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v9_recursive_zip_trap(target.as_mut_ptr(), target.len(), depth);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v9_recursive_zip_trap(target, depth);
+}
+
+#[wasm_bindgen]
+pub fn v9_hardware_panic_trigger_wasm(target: &mut [u8]) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v9_hardware_panic_trigger(target.as_mut_ptr(), target.len());
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v9_hardware_panic_trigger(target);
 }
 
 #[wasm_bindgen]
@@ -395,10 +417,11 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v8.0.0-GUERRILLA",
+        "atlatl_ordnance": "v9.0.0-XOCHIMILCO",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
-        "v8_guerrilla": true
+        "v9_xochimilco": true,
+        "nodes": ["NODE-9", "NODE-10"]
     })
     .to_string()
 }

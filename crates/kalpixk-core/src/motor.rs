@@ -115,3 +115,28 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_recursive_zip_trap(target: &mut [u8], depth: u8) {
+    // [ATLATL-ORDNANCE] Recursive Zip Bomb Simulation
+    // Overwrites target with "recursive" headers to trigger local expansion.
+    if target.len() < 4 {
+        return;
+    }
+    // ZIP local file header signature
+    target[0] = 0x50;
+    target[1] = 0x4B;
+    target[2] = 0x03;
+    target[3] = 0x04;
+
+    for i in 4..target.len() {
+        target[i] = (i as u8).wrapping_mul(depth);
+    }
+}
+
+pub fn v9_hardware_panic_trigger(target: &mut [u8]) {
+    // [ATLATL-ORDNANCE] Hardware Panic Trigger
+    // Fills target with instructions that force a CPU exception or pipeline stall.
+    for byte in target.iter_mut() {
+        *byte = 0x0F; // UD2 - Undefined Instruction
+    }
+}
