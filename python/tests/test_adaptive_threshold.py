@@ -36,7 +36,6 @@ def test_adaptive_threshold_recalibration():
 def test_adaptive_threshold_dampening():
     # alpha = 0.1 (default)
     at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10, alpha=0.1)
-    initial_threshold = at.current_threshold # 0.5
 
     # Feed 10 benign scores of 0.1
     # target_threshold = 0.1 + 3.0*0.0 = 0.1
