@@ -116,6 +116,25 @@ pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
 
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        let diff = (val - prev).abs();
+        if diff > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
+
 pub fn v9_recursive_zip_trap(target: &mut [u8], depth: u8) {
     // [ATLATL-ORDNANCE] Recursive Zip Bomb Simulation
     // Overwrites target with "recursive" headers to trigger local expansion.
