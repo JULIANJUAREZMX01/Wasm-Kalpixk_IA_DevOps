@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Xochimilco)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -78,6 +78,31 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
     for (slice) |*byte| {
         x = r * x * (1.0 - x);
         byte.* = @intFromFloat(x * 255.0);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_recursive_zip_trap
+/// Overwrites target buffer with nested zip signatures (0x04034b50) to saturate
+/// exfiltration analysis and storage.
+pub export fn v9_recursive_zip_trap(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + 4 <= target_len) : (i += 4) {
+        slice[i] = 0x50;
+        slice[i + 1] = 0x4B;
+        slice[i + 2] = 0x03;
+        slice[i + 3] = 0x04;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_hardware_panic_trigger
+/// Injects UD2 (0x0F 0x0B) undefined instructions to trigger hardware exceptions.
+pub export fn v9_hardware_panic_trigger(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + 2 <= target_len) : (i += 2) {
+        slice[i] = 0x0F;
+        slice[i + 1] = 0x0B;
     }
 }
 

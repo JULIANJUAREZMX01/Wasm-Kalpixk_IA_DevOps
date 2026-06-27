@@ -18,8 +18,8 @@ def test_adaptive_threshold_initialization():
 
 
 def test_adaptive_threshold_recalibration():
-    # recalibrate_every = 10, window_size = 100
-    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
+    # Use alpha=1.0 for immediate recalibration in this test
+    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10, alpha=1.0)
 
     # Feed 9 benign scores (no recalibration yet because < 10 updates)
     for _ in range(9):
@@ -28,8 +28,19 @@ def test_adaptive_threshold_recalibration():
 
     # 10th update triggers recalibration
     at.update(0.1)
-    # mean=0.1, std=0.0, threshold = 0.1 + 3.0*0.0 = 0.1
-    assert at.current_threshold == 0.1
+    # target_threshold: median=0.1, robust_std=0.0 -> 0.1
+    assert abs(at.current_threshold - 0.1) < 1e-6
+
+
+def test_adaptive_threshold_dampening():
+    # Test v9 dampening behavior
+    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10, alpha=0.1)
+
+    for _ in range(10):
+        at.update(0.1)
+
+    # New = 0.5 + 0.1 * (0.1 - 0.5) = 0.46
+    assert abs(at.current_threshold - 0.46) < 1e-6
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
@@ -77,7 +88,7 @@ def test_adaptive_threshold_to_dict():
 
 
 def test_is_anomaly():
-    at = AdaptiveThreshold()
+    at = AdaptiveThreshold(alpha=1.0) # Immediate for test
     # Initial threshold is 0.5
     assert not at.is_anomaly(0.4)
     assert at.is_anomaly(0.6)
