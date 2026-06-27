@@ -11,7 +11,7 @@ import random
 class Atlatl:
     def __init__(self):
         self.threat_history = []
-        logger.info("🏹 ATLATL-ORDNANCE v8.0.0-GUERRILLA: Sistema de represalia cargado.")
+        logger.info("🏹 ATLATL-ORDNANCE v9.0.0-XOCHIMILCO: Sistema de represalia cargado.")
 
     def initiate(self, vector_name: str, target: str):
         """Dinamically execute strike vectors."""

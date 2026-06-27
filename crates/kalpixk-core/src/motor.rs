@@ -86,33 +86,6 @@ pub fn v9_hardware_panic_trigger(target: &mut [u8]) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_v9_recursive_zip_trap() {
-        let mut buffer = [0u8; 16];
-        v9_recursive_zip_trap(&mut buffer);
-        for i in (0..16).step_by(4) {
-            assert_eq!(buffer[i], 0x50);
-            assert_eq!(buffer[i + 1], 0x4B);
-            assert_eq!(buffer[i + 2], 0x03);
-            assert_eq!(buffer[i + 3], 0x04);
-        }
-    }
-
-    #[test]
-    fn test_v9_hardware_panic_trigger() {
-        let mut buffer = [0u8; 16];
-        v9_hardware_panic_trigger(&mut buffer);
-        for i in (0..16).step_by(2) {
-            assert_eq!(buffer[i], 0x0F);
-            assert_eq!(buffer[i + 1], 0x0B);
-        }
-    }
-}
-
 pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
     if target.len() < 8 {
         return;
@@ -161,4 +134,31 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_v9_recursive_zip_trap() {
+        let mut buffer = [0u8; 16];
+        v9_recursive_zip_trap(&mut buffer);
+        for i in (0..16).step_by(4) {
+            assert_eq!(buffer[i], 0x50);
+            assert_eq!(buffer[i + 1], 0x4B);
+            assert_eq!(buffer[i + 2], 0x03);
+            assert_eq!(buffer[i + 3], 0x04);
+        }
+    }
+
+    #[test]
+    fn test_v9_hardware_panic_trigger() {
+        let mut buffer = [0u8; 16];
+        v9_hardware_panic_trigger(&mut buffer);
+        for i in (0..16).step_by(2) {
+            assert_eq!(buffer[i], 0x0F);
+            assert_eq!(buffer[i + 1], 0x0B);
+        }
+    }
 }
