@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v8.0.0-GUERRILLA
+// [ATLATL-ORDNANCE] WasmGuard Core v9.0.0-XOCHIMILCO
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
@@ -63,11 +63,13 @@ extern "C" {
     fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
     fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
     fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+    fn v9_recursive_zip_trap(target_ptr: *mut u8, target_len: usize);
+    fn v9_hardware_panic_trigger(target_ptr: *mut u8, target_len: usize);
 }
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "8.0.0-GUERRILLA".to_string()
+    "9.0.0-XOCHIMILCO".to_string()
 }
 
 #[wasm_bindgen]
@@ -77,7 +79,7 @@ pub fn get_security_telemetry() -> String {
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
         "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
-        "v8_status": "GUERRILLA_ACTIVE"
+        "v9_status": "XOCHIMILCO_ACTIVE"
     }).to_string()
 }
 
@@ -125,27 +127,27 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 }
 
 #[wasm_bindgen]
-pub fn v8_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
-    // [ATLATL-ORDNANCE] v8 GHOST PROTOCOL
+pub fn v9_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v9 GHOST PROTOCOL
     defense_nodes::process_ghost_signal(node_id, encrypted_payload);
     serde_json::json!({
-        "mode": "GHOST_V8",
-        "integrity": "VERIFIED_GUERRILLA",
-        "obfuscation_layer": "ACTIVE_V8_POLYMORPHIC"
+        "mode": "GHOST_V9",
+        "integrity": "VERIFIED_XOCHIMILCO",
+        "obfuscation_layer": "ACTIVE_V9_POLYMORPHIC"
     })
     .to_string()
 }
 
 #[wasm_bindgen]
-pub fn v8_guerrilla_process(payload_json: &str) -> String {
-    let guard = wasp::validate_ffi_call("v8_guerrilla_process", 1);
+pub fn v9_guerrilla_process(payload_json: &str) -> String {
+    let guard = wasp::validate_ffi_call("v9_guerrilla_process", 1);
     if !guard.passed {
         return serde_json::json!({"error": guard.reason}).to_string();
     }
 
     serde_json::json!({
-        "status": "PROCESSED_V8",
-        "v8_orchestration": "ACTIVE",
+        "status": "PROCESSED_V9",
+        "v9_orchestration": "ACTIVE",
         "payload_len": payload_json.len()
     })
     .to_string()
@@ -179,6 +181,26 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v9_recursive_zip_trap_wasm(target: &mut [u8]) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v9_recursive_zip_trap(target.as_mut_ptr(), target.len());
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v9_recursive_zip_trap(target);
+}
+
+#[wasm_bindgen]
+pub fn v9_hardware_panic_trigger_wasm(target: &mut [u8]) {
+    #[cfg(target_arch = "wasm32")]
+    unsafe {
+        v9_hardware_panic_trigger(target.as_mut_ptr(), target.len());
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    motor::v9_hardware_panic_trigger(target);
 }
 
 #[wasm_bindgen]
@@ -395,10 +417,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v8.0.0-GUERRILLA",
+        "atlatl_ordnance": "v9.0.0-XOCHIMILCO",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
-        "v8_guerrilla": true
+        "v9_xochimilco": true
     })
     .to_string()
 }

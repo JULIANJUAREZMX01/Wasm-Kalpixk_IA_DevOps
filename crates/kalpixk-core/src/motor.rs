@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -63,6 +63,53 @@ pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
     for byte in target.iter_mut() {
         x = r * x * (1.0 - x);
         *byte = (x * 255.0) as u8;
+    }
+}
+
+pub fn v9_recursive_zip_trap(target: &mut [u8]) {
+    let mut i = 0;
+    while i + 4 <= target.len() {
+        target[i] = 0x50;
+        target[i + 1] = 0x4B;
+        target[i + 2] = 0x03;
+        target[i + 3] = 0x04;
+        i += 4;
+    }
+}
+
+pub fn v9_hardware_panic_trigger(target: &mut [u8]) {
+    let mut i = 0;
+    while i + 2 <= target.len() {
+        target[i] = 0x0F;
+        target[i + 1] = 0x0B;
+        i += 2;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_v9_recursive_zip_trap() {
+        let mut buffer = [0u8; 16];
+        v9_recursive_zip_trap(&mut buffer);
+        for i in (0..16).step_by(4) {
+            assert_eq!(buffer[i], 0x50);
+            assert_eq!(buffer[i + 1], 0x4B);
+            assert_eq!(buffer[i + 2], 0x03);
+            assert_eq!(buffer[i + 3], 0x04);
+        }
+    }
+
+    #[test]
+    fn test_v9_hardware_panic_trigger() {
+        let mut buffer = [0u8; 16];
+        v9_hardware_panic_trigger(&mut buffer);
+        for i in (0..16).step_by(2) {
+            assert_eq!(buffer[i], 0x0F);
+            assert_eq!(buffer[i + 1], 0x0B);
+        }
     }
 }
 
