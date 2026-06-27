@@ -237,7 +237,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -423,7 +425,10 @@ pub fn detect_mesh_auth(event: &KalpixkEvent) -> NodeResult {
 pub fn detect_integrity_guard(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     let raw = event.raw.to_lowercase();
-    if raw.contains("segmentation fault") || raw.contains("stack smashing") || raw.contains("corrupted double-linked list") {
+    if raw.contains("segmentation fault")
+        || raw.contains("stack smashing")
+        || raw.contains("corrupted double-linked list")
+    {
         score = 1.0;
     }
     NodeResult {
