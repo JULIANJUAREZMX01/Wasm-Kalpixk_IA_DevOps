@@ -6,7 +6,7 @@ import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdversarialDriftGuard, AdaptiveThreshold
+from python.detection.adaptive_threshold import AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
