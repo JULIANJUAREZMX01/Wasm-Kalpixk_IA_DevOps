@@ -78,11 +78,11 @@ pub fn v9_recursive_zip_trap(target: &mut [u8]) {
 }
 
 pub fn v9_hardware_panic_trigger(target: &mut [u8]) {
-    for i in 0..target.len() {
+    for (i, byte) in target.iter_mut().enumerate() {
         if i % 2 == 0 {
-            target[i] = 0x0F;
+            *byte = 0x0F;
         } else {
-            target[i] = 0x0B;
+            *byte = 0x0B;
         }
     }
 }
