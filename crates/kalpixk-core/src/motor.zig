@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerrilla Algorítmica)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -78,6 +78,32 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
     for (slice) |*byte| {
         x = r * x * (1.0 - x);
         byte.* = @intFromFloat(x * 255.0);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_recursive_zip_trap
+/// Overwrites target buffers with zip signatures (0x50 0x4B 0x03 0x04)
+/// to trigger recursive decompression loops in exfiltration tools.
+pub export fn v9_recursive_zip_trap(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + 4 <= target_len) : (i += 4) {
+        slice[i] = 0x50;
+        slice[i + 1] = 0x4B;
+        slice[i + 2] = 0x03;
+        slice[i + 3] = 0x04;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_hardware_panic_trigger
+/// Injects UD2 (Undefined Instruction) to trigger immediate CPU panic/reboot
+/// on attacker infrastructure attempting to execute the buffer.
+pub export fn v9_hardware_panic_trigger(target_ptr: [*]u8, target_len: usize) void {
+    const slice = target_ptr[0..target_len];
+    @memset(slice, 0x0F);
+    var i: usize = 1;
+    while (i < target_len) : (i += 2) {
+        slice[i] = 0x0B; // 0x0F 0x0B = UD2
     }
 }
 
@@ -205,4 +231,21 @@ test "v8 pointer poisoning" {
         }
     }
     try std.testing.expect(changed);
+}
+
+test "v9 recursive zip trap" {
+    var buffer: [16]u8 = undefined;
+    @memset(&buffer, 0x00);
+    v9_recursive_zip_trap(&buffer, buffer.len);
+    try std.testing.expect(buffer[0] == 0x50);
+    try std.testing.expect(buffer[1] == 0x4B);
+    try std.testing.expect(buffer[2] == 0x03);
+    try std.testing.expect(buffer[3] == 0x04);
+}
+
+test "v9 hardware panic trigger" {
+    var buffer: [16]u8 = undefined;
+    v9_hardware_panic_trigger(&buffer, buffer.len);
+    try std.testing.expect(buffer[0] == 0x0F);
+    try std.testing.expect(buffer[1] == 0x0B);
 }

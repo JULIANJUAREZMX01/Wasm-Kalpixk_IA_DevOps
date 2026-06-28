@@ -10,7 +10,7 @@ from collections import deque
 import numpy as np
 
 
-class AdaptiveThreshold:
+class AdversarialDriftGuard:
     """
     Sliding-window adaptive threshold for anomaly scores.
 
@@ -34,20 +34,6 @@ class AdaptiveThreshold:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, score: float, is_confirmed_benign: bool = False) -> None:
-        """
-        Add score to buffer.
-        Only updates buffer if is_confirmed_benign or score < current_threshold.
-        """
-        with self._lock:
-            if is_confirmed_benign or score < self._current_threshold:
-                self._buffer.append(score)
-                self._updates_since_recalc += 1
-                self._total_updates += 1
-
-                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
-                    self._recalibrate()
-
     def _recalibrate(self) -> None:
         """Recompute threshold based on buffer statistics. Internal use only."""
         # Assumption: called while holding self._lock
@@ -68,6 +54,25 @@ class AdaptiveThreshold:
         with self._lock:
             return self._current_threshold
 
+    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
+        """
+        Add score(s) to buffer and return current threshold.
+        """
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for score in scores:
+                if is_confirmed_benign or score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                self._recalibrate()
+
+            return self._current_threshold
+
     def to_dict(self) -> dict:
         """Serializable state for /api/status endpoint."""
         with self._lock:
@@ -78,3 +83,7 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+# Backward compatibility
+AdaptiveThreshold = AdversarialDriftGuard

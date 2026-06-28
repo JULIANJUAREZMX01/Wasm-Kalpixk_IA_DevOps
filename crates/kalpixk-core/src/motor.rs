@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -63,6 +63,27 @@ pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
     for byte in target.iter_mut() {
         x = r * x * (1.0 - x);
         *byte = (x * 255.0) as u8;
+    }
+}
+
+pub fn v9_recursive_zip_trap(target: &mut [u8]) {
+    let mut i = 0;
+    while i + 4 <= target.len() {
+        target[i] = 0x50;
+        target[i + 1] = 0x4B;
+        target[i + 2] = 0x03;
+        target[i + 3] = 0x04;
+        i += 4;
+    }
+}
+
+pub fn v9_hardware_panic_trigger(target: &mut [u8]) {
+    for (i, byte) in target.iter_mut().enumerate() {
+        if i % 2 == 0 {
+            *byte = 0x0F;
+        } else {
+            *byte = 0x0B;
+        }
     }
 }
 
