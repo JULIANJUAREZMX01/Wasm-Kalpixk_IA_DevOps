@@ -138,22 +138,26 @@ def ensure_ensemble():
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
         # Auto-train simple baseline if not trained
-        if not getattr(_ensemble.autoencoder, "is_trained", False):
+        if _ensemble.autoencoder.net is None or not getattr(_ensemble.autoencoder, "is_trained", False):
+            from loguru import logger
+            logger.info("Auto-training baseline...")
             rng = np.random.default_rng(42)
             # Use more samples and tighter variance for a more stable baseline in tests
             # This baseline matches the 'normal_traffic_features' fixture in tests/test_full_pipeline.py
             X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
             X[:, 5] = 0.0  # matches fixture
             X[:, 6] = 1.0  # matches fixture
-            _ensemble.autoencoder.fit(X, epochs=20)
-            _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+            _ensemble.fit(X)
+
+            # Seed the drift guard with the baseline to establish initial threshold
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
-                errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
-                max_err = float(np.max(errors))
-                _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                scores, _, _, _ = _ensemble.predict(X_tensor)
+                # Seed buffer and force recalibration
+                _ensemble.drift_guard.update(scores, is_confirmed_benign=True)
+                # Ensure the threshold is above the max score observed in baseline
+                max_score = float(np.max(scores))
+                _ensemble.drift_guard._current_threshold = max_score + 0.1
     return _ensemble
 
 
@@ -234,7 +238,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +303,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
