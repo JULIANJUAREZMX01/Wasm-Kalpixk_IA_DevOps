@@ -7,7 +7,6 @@ Uses Median/MAD and update dampening to prevent threshold poisoning.
 
 import threading
 from collections import deque
-from typing import List, Union
 
 import numpy as np
 
@@ -41,7 +40,7 @@ class AdversarialDriftGuard:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, score: Union[float, List[float]], is_confirmed_benign: bool = False) -> float:
+    def update(self, score: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
         Add score(s) to buffer and return current threshold.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
