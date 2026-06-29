@@ -7,7 +7,6 @@ Uses Median/MAD and update dampening to prevent adversarial poisoning.
 
 import threading
 from collections import deque
-from typing import List, Union
 
 import numpy as np
 
@@ -44,7 +43,7 @@ class AdversarialDriftGuard:
 
     def update(
         self,
-        scores: Union[float, List[float]],
+        scores: float | list[float],
         is_confirmed_benign: bool = False,
         force_recalibrate: bool = False,
     ) -> float:
