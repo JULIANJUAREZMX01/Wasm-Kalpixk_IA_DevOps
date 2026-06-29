@@ -147,8 +147,23 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+
+            # [SEC-V9] AdversarialDriftGuard Baseline Seeding
+            # Seed the drift guard with baseline normal scores for stability
+            with torch.no_grad():
+                # Get scores for baseline samples
+                if_scores, _, _ = _ensemble.iso_forest.predict(X)
+                ae_scores, _ = _ensemble.autoencoder.predict(X)
+                ensemble_scores = 0.45 * np.asarray(if_scores) + 0.55 * np.asarray(ae_scores)
+
+                # Force recalibration immediately with baseline samples
+                _ensemble.drift_guard.update(
+                    ensemble_scores.tolist(), is_confirmed_benign=True, force_recalibrate=True
+                )
+                # Set initial threshold with buffer over max baseline for high stability
+                _ensemble.drift_guard._current_threshold = max(0.5, float(np.max(ensemble_scores)) + 0.1)
+
+            # Calibration: Set AE threshold to 2x the max error on normal training data
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
@@ -234,7 +249,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +314,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
