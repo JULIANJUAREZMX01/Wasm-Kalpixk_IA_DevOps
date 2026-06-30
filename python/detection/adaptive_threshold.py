@@ -45,7 +45,12 @@ class AdversarialDriftGuard:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
+    def update(
+        self,
+        scores: float | list[float],
+        is_confirmed_benign: bool = False,
+        force_recalibrate: bool = False
+    ) -> float:
         """
         Add score(s) to buffer and return current threshold.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
@@ -60,7 +65,9 @@ class AdversarialDriftGuard:
                     self._updates_since_recalc += 1
                     self._total_updates += 1
 
-            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+            if force_recalibrate or (
+                self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
+            ):
                 self._recalibrate()
 
             return self._current_threshold
@@ -94,6 +101,12 @@ class AdversarialDriftGuard:
         """Current threshold value."""
         with self._lock:
             return self._current_threshold
+
+    @current_threshold.setter
+    def current_threshold(self, value: float) -> None:
+        """Set current threshold value. Thread-safe."""
+        with self._lock:
+            self._current_threshold = value
 
     def to_dict(self) -> dict[str, Any]:
         """Serializable state for /api/status endpoint."""
