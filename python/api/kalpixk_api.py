@@ -86,7 +86,10 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
+        # In development, use KALPIXK_API_KEY if set, otherwise default to 'development_secret'
+        # This prevents unauthenticated access even in dev mode.
+        effective_expected_key = expected_key or "development_secret"
+        if not api_key or not secrets.compare_digest(api_key, effective_expected_key):
              raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
@@ -147,13 +150,19 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+
+            # Calibration: Use combined scores from the 1000 normal baseline samples
+            # to seed the AdversarialDriftGuard.
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
-                errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
-                max_err = float(np.max(errors))
-                _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                # DetectionEnsemble.predict(X_tensor) returns (scores, methods, confidences, threshold)
+                scores, _, _, _ = _ensemble.predict(X_tensor)
+                # Seed the drift guard with the baseline scores and recalibrate
+                _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+
+                # Set initial threshold with a small safety buffer above max baseline
+                max_baseline_score = float(np.max(scores))
+                _ensemble.drift_guard.set_threshold(max_baseline_score + 0.1)
     return _ensemble
 
 
@@ -299,7 +308,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
