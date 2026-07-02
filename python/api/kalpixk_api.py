@@ -148,14 +148,18 @@ def ensure_ensemble():
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
 
-            # Recalibrate AdversarialDriftGuard with baseline scores
-            with torch.no_grad():
-                X_tensor = torch.from_numpy(X).to(_device)
-                scores, _, _, _ = _ensemble.predict(X_tensor)
-                max_score = float(np.max(scores))
-                # Seed the buffer and set threshold slightly above max baseline score
-                _ensemble.drift_guard.update(scores, is_confirmed_benign=True)
-                _ensemble.drift_guard.set_threshold(max_score + 0.1)
+        # ALWAYS calibrate AdversarialDriftGuard on startup to ensure baseline alignment
+        rng = np.random.default_rng(42)
+        X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X[:, 5] = 0.0
+        X[:, 6] = 1.0
+        with torch.no_grad():
+            X_tensor = torch.from_numpy(X).to(_device)
+            scores, _, _, _ = _ensemble.predict(X_tensor)
+            max_score = float(np.max(scores))
+            # Seed the buffer and set threshold slightly above max baseline score
+            _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+            _ensemble.drift_guard.set_threshold(max_score + 0.1)
     return _ensemble
 
 

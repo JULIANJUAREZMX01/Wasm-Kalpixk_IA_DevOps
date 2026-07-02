@@ -46,7 +46,12 @@ class AdversarialDriftGuard:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, scores: float | list[float], is_confirmed_benign: bool = False) -> float:
+    def update(
+        self,
+        scores: float | list[float],
+        is_confirmed_benign: bool = False,
+        force_recalibrate: bool = False,
+    ) -> float:
         """
         Add score(s) to buffer and re-evaluate threshold.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
@@ -63,8 +68,12 @@ class AdversarialDriftGuard:
                     self._updates_since_recalc += 1
                     self._total_updates += 1
 
-            if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+            if force_recalibrate and len(self._buffer) >= 2:
                 self._recalibrate()
+            else:
+                # Process multiple recalibration cycles if a large batch was added
+                while self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                    self._recalibrate()
 
             return self._current_threshold
 
@@ -84,9 +93,11 @@ class AdversarialDriftGuard:
 
         # Apply update dampening (Alpha smoothing)
         # Prevents "Threshold Jumping" attacks
-        self._current_threshold = (self.alpha * target_threshold) + ((1 - self.alpha) * self._current_threshold)
+        self._current_threshold = (self.alpha * target_threshold) + (
+            (1 - self.alpha) * self._current_threshold
+        )
 
-        self._updates_since_recalc = 0
+        self._updates_since_recalc = max(0, self._updates_since_recalc - self.recalibrate_every)
 
     def is_anomaly(self, score: float) -> bool:
         """Return True if score exceeds adaptive threshold."""
@@ -114,8 +125,9 @@ class AdversarialDriftGuard:
                 "k": self.k,
                 "total_updates": self._total_updates,
                 "alpha": self.alpha,
-                "robust": True
+                "robust": True,
             }
+
 
 # Backward compatibility alias
 AdaptiveThreshold = AdversarialDriftGuard
