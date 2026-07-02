@@ -147,13 +147,15 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+
+            # Recalibrate AdversarialDriftGuard with baseline scores
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
-                errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
-                max_err = float(np.max(errors))
-                _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                scores, _, _, _ = _ensemble.predict(X_tensor)
+                max_score = float(np.max(scores))
+                # Seed the buffer and set threshold slightly above max baseline score
+                _ensemble.drift_guard.update(scores, is_confirmed_benign=True)
+                _ensemble.drift_guard.set_threshold(max_score + 0.1)
     return _ensemble
 
 
@@ -234,7 +236,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +301,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
