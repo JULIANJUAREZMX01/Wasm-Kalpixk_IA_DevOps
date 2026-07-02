@@ -26,6 +26,3 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
-## 2026-07-02 - List Rendering Optimization with React.memo in AlertFeed
-**Learning:** In a real-time SIEM dashboard, rendering prepended lists with array index as keys or passing complex objects as props causes React to re-render every single row in `AlertFeed.tsx` whenever a new alert arrives. This creates an O(N) rendering bottleneck.
-**Action:** Always extract the list item into a separate component wrapped with `React.memo()` with a custom equality function (`prev.alert.id === next.alert.id`) to skip re-rendering rows that haven't changed.
