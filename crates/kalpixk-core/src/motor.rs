@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -114,4 +114,68 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
+}
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    v9_active_memory_scrambling(target, seed);
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    v9_chaotic_interleaving(target, stride);
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.len() < 16 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let stride = (state as usize % (target.len() / 4)) + 1;
+
+    let mut i = 0;
+    while i + stride < target.len() {
+        let j = (i + stride) % target.len();
+        target.swap(i, j);
+        i += stride;
+    }
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        if (val - prev).abs() > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
+
+pub fn v9_active_memory_scrambling(target: &mut [u8], entropy_seed: u64) {
+    if target.len() < 2 {
+        return;
+    }
+    let mut state = entropy_seed;
+    for i in (1..target.len()).rev() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let j = (state as usize) % (i + 1);
+        target.swap(i, j);
+    }
+}
+
+pub fn v9_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if target.len() < 2 || stride == 0 {
+        return;
+    }
+    for (i, byte) in target.iter_mut().enumerate() {
+        let rotation = ((i * stride) % 8) as u32;
+        *byte = byte.rotate_left(rotation);
+        *byte ^= (stride & 0xFF) as u8;
+    }
 }
