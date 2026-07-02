@@ -78,16 +78,23 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
-    if env == "production":
-        if not expected_key:
+    # SECURITY: strictly default to 'development_secret' if KALPIXK_API_KEY is unset,
+    # even in development mode, to prevent unauthenticated access.
+    if not expected_key:
+        if env == "production":
             from loguru import logger
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-        if not api_key or not secrets.compare_digest(api_key, expected_key):
-            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
-    else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error"
+            )
+        expected_key = "development_secret"
+
+    if not api_key or not secrets.compare_digest(api_key, expected_key):
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_403_FORBIDDEN,
+            detail="Invalid credentials"
+        )
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -299,7 +306,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
