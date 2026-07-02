@@ -154,6 +154,13 @@ class KalpixkIsolationForest:
 
     # ── Inference ────────────────────────────────────────────────────────────
 
+    def score_samples(self, X: np.ndarray) -> np.ndarray:
+        """Return normalized anomaly scores in [0, 1]."""
+        if not self._is_trained:
+            self.fit_synthetic()
+        raw = self._model.decision_function(X.astype(np.float32))
+        return np.clip(0.5 - raw, 0.0, 1.0)
+
     def predict(
         self, X: np.ndarray
     ) -> tuple[list[float], list[float], float]:
@@ -175,9 +182,13 @@ class KalpixkIsolationForest:
         raw = self._model.decision_function(X)
 
         # Normalize to [0, 1]
-        # 0.5 is the decision boundary.
-        # Scores > 0.5 are anomalies, scores < 0.5 are normal.
-        normalized = np.clip(0.5 - (raw * 2.0), 0.0, 1.0)
+        # decision_function output: negative = anomalous, positive = normal.
+        # sklearn's decision_function for IsolationForest:
+        # scores are centered at 0.0 for the contamination threshold.
+
+        # Mapping to [0, 1] where 1.0 is most anomalous.
+        # scores are typically in [-0.5, 0.5].
+        normalized = np.clip(0.5 - raw, 0.0, 1.0)
 
         # Update adaptive threshold
         for score in normalized:

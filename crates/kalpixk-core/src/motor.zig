@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerra Espectral)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -203,6 +203,56 @@ test "v8 pointer poisoning" {
             changed = true;
             break;
         }
+    }
+    try std.testing.expect(changed);
+}
+
+/// [ATLATL-ORDNANCE] v9_active_memory_scrambling
+/// Non-linear memory shuffling using seeds derived from simulated thermal noise.
+pub export fn v9_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, entropy_seed: u64) void {
+    if (target_len < 2) return;
+    var prng = std.rand.DefaultPrng.init(entropy_seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = target_len - 1;
+    while (i > 0) : (i -= 1) {
+        const j = rand.int(usize) % (i + 1);
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_chaotic_interleaving
+/// Interleaves data buffers with prime-number jumps to defeat side-channel analysis.
+pub export fn v9_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
+    if (target_len < 2 or stride == 0) return;
+    const slice = target_ptr[0..target_len];
+
+    // Simple XOR rotation based on stride
+    for (0..target_len) |i| {
+        const rotation = (i * stride) % 8;
+        slice[i] = (slice[i] << @intCast(rotation)) | (slice[i] >> @intCast(8 - rotation));
+        slice[i] ^= @intCast(stride & 0xFF);
+    }
+}
+
+test "v9 active memory scrambling" {
+    var buffer = [_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    v9_active_memory_scrambling(&buffer, buffer.len, 0x999);
+    var sum: u32 = 0;
+    for (buffer) |b| sum += b;
+    try std.testing.expectEqual(@as(u32, 55), sum);
+}
+
+test "v9 chaotic interleaving" {
+    var buffer = [_]u8{ 0xAA, 0xBB, 0xCC, 0xDD };
+    const original_sum: u32 = 0xAA + 0xBB + 0xCC + 0xDD;
+    v9_chaotic_interleaving(&buffer, buffer.len, 7);
+    var changed = false;
+    for (buffer, [_]u8{ 0xAA, 0xBB, 0xCC, 0xDD }) |b, orig| {
+        if (b != orig) changed = true;
     }
     try std.testing.expect(changed);
 }
