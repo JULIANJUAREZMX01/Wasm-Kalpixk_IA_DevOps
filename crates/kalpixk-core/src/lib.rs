@@ -55,15 +55,6 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
-#[cfg(target_arch = "wasm32")]
-extern "C" {
-    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
-    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
-    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
-    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
-}
 
 #[wasm_bindgen]
 pub fn version() -> String {
@@ -153,51 +144,22 @@ pub fn v8_guerrilla_process(payload_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_guerrilla_jit_shield(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_quantum_entropy_shredder(target, initial_x);
 }
 
 #[wasm_bindgen]
 pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
-    #[cfg(target_arch = "wasm32")]
-    extern "C" {
-        fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v7_audit_tensor(tensor_data.as_ptr(), tensor_data.len())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = tensor_data;
-        true
-    }
+    motor::v7_audit_tensor(tensor_data)
 }
 
 #[wasm_bindgen]
@@ -282,30 +244,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
     let threshold = 0.5f64;
 
     // [ATLATL-ORDNANCE] Active Memory Scrambling & Chaotic Interleaving v5/v8
-    #[cfg(target_arch = "wasm32")]
     if lines.len() > 10 {
-        let mut seed_buf = [0u8; 8];
-        getrandom::getrandom(&mut seed_buf).unwrap_or_default();
-        let seed = u64::from_le_bytes(seed_buf);
         let mut decoy_buffer = [0u8; 128];
-        unsafe {
-            v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-            v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
-            v7_guerrilla_memory_rotation(
-                decoy_buffer.as_mut_ptr(),
-                decoy_buffer.len(),
-                seed ^ 0xDEADBEEF,
-            );
-            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
-        }
-
-        if anomaly_count > 5 {
-            v5_trap::arm_traps();
-        }
-
-        if v5_trap::is_trap_active() {
-            v5_trap::execute_trap_sequence();
-        }
+        motor::v5_active_memory_scrambling(&mut decoy_buffer, 0x1234);
+        motor::v5_chaotic_interleaving(&mut decoy_buffer, 16);
+        motor::v7_guerrilla_memory_rotation(&mut decoy_buffer, 0x5678);
     }
 
     for line in &lines {
