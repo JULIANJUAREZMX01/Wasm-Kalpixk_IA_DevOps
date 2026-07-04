@@ -6,7 +6,6 @@ Adversarial-robust sliding-window adaptive threshold.
 
 import threading
 from collections import deque
-from typing import List, Union
 
 import numpy as np
 
@@ -45,7 +44,7 @@ class AdversarialDriftGuard:
         self._total_updates = 0
         self._initialized = False
 
-    def update(self, score: Union[float, List[float]], is_confirmed_benign: bool = False) -> float:
+    def update(self, score: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
         Add score(s) to buffer and return the current threshold.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
