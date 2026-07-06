@@ -9,20 +9,19 @@ class AdversarialDriftGuard:
     """Resists threshold poisoning via Median/MAD and alpha-dampening."""
     def __init__(self, window_size=1000, k=3.5, recalibrate_every=100, alpha=0.1):
         self.window_size, self.k, self.recalibrate_every, self.alpha = window_size, k, recalibrate_every, alpha
-        self._buffer = deque(maxlen=window_size)
-        self._lock = threading.Lock()
+        self._buffer, self._lock = deque(maxlen=window_size), threading.Lock()
         self._current_threshold = self._median = 0.5
         self._mad, self._updates, self._total, self._initialized = 0.1, 0, 0, False
 
-    def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
+    def update(self, scores, force_recalibrate=False):
         if isinstance(scores, (int, float)):
-            scores = [float(scores)]
+            scores = [scores]
         with self._lock:
             for s in scores:
                 self._buffer.append(s)
                 self._updates += 1
                 self._total += 1
-            if force_recalibrate or (self._updates >= self.recalibrate_every and len(self._buffer) >= 20):
+            if force_recalibrate or (self._updates >= self.recalibrate_every and len(self._buffer) >= 10):
                 self._recalibrate()
             return self._current_threshold
 
@@ -38,24 +37,19 @@ class AdversarialDriftGuard:
         self._current_threshold = float(self._median + self.k * (self._mad * 1.4826))
         self._updates = 0
 
-    def is_anomaly(self, score: float) -> bool:
+    def is_anomaly(self, score):
         with self._lock:
             return score > self._current_threshold
-    def set_threshold(self, value: float):
+    def set_threshold(self, value):
         with self._lock:
             self._current_threshold = value
     @property
-    def current_threshold(self) -> float:
+    def current_threshold(self):
         with self._lock:
             return self._current_threshold
-    def to_dict(self) -> dict:
+    def to_dict(self):
         with self._lock:
-            return {
-                "current_threshold": round(self._current_threshold, 4),
-                "median": round(self._median, 4),
-                "mad": round(self._mad, 4),
-                "buffer_len": len(self._buffer),
-                "total_updates": self._total
-            }
+            return {"current_threshold": round(self._current_threshold, 4), "median": round(self._median, 4),
+                    "mad": round(self._mad, 4), "buffer_len": len(self._buffer), "total_updates": self._total}
 
 AdaptiveThreshold = AdversarialDriftGuard
