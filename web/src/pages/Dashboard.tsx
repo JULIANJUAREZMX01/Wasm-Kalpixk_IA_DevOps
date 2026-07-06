@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v9.0.0-XOCHIMILCO initialized.", "[SYSTEM] Mesh operating in SPECTRAL MODE v9.", "[SYSTEM] Awaiting spectral aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -170,7 +170,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v8.0.0-GUERRILLA · AMD MI300X MESH
+              GUERRA ESPECTRAL · v9.0.0-XOCHIMILCO · AMD MI300X SPECTRAL MESH
             </div>
           </div>
         </div>
@@ -238,18 +238,18 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/guerrilla/v8/strike", {
+                  const res = await fetch("/api/v1/guerrilla/v9/strike", {
                     method: "POST",
                     headers: { "X-Kalpixk-Key": apiKey }
                   });
                   const data = await res.json();
                   setTerminalOutput(prev => [
                     ...prev,
-                    `[STRIKE] v8 ALGORITHMIC GUILLOTINE ENGAGED.`,
+                    `[STRIKE] v9 XOCHIMILCO STRIKE ENGAGED.`,
                     `[STRIKE] STATUS: ${data.status}`,
                     ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
                   ]);
-                  alert("v7 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  alert("v9 XOCHIMILCO STRIKE ENGAGED: SPECTRAL NEUTRALIZATION INITIATED");
                 } catch (e) {
                   console.error("Strike failed", e);
                 }
@@ -313,7 +313,7 @@ export default function Dashboard() {
           </span>
         ))}
         <span style={{ marginLeft: "auto", color: T.dim, whiteSpace: "nowrap", letterSpacing: 1 }}>
-          sac sentinel watch --live · KynicOS v8.0-GUERRILLA
+          sac sentinel watch --live · KynicOS v9.0-XOCHIMILCO
         </span>
       </footer>
     </div>
@@ -353,6 +353,22 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
       {/* ── COL 1: NODES + HONEYPOTS ─────────────────────────────────────────── */}
       <div style={{ background: T.panel, overflow: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 10 }}>
         <div>
+          <Label text="XOCHIMILCO SPECTRAL MESH" accent={T.blue} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 10 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+              <div key={n} style={{
+                padding: "4px 6px", background: T.surface, border: `1px solid ${T.border}`,
+                borderLeft: `2px solid ${n === 9 ? T.blue : T.green}`,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: n === 9 ? T.blue : T.dim, fontSize: 8, fontWeight: 800 }}>N-0{n}</span>
+                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: T.green, animation: "pulse 2s infinite" }} />
+                </div>
+                <div style={{ color: T.bright, fontSize: 8 }}>{n === 9 ? "XOCHI-CORE" : n === 8 ? "GUERRILLA" : `NODE_V9_${n}`}</div>
+              </div>
+            ))}
+          </div>
+
           <Label text="KYNICOS NODES" accent={T.green} />
           {NODES.map((n) => (
             <div key={n.id} style={{
@@ -424,12 +440,12 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
           </div>
         </div>
 
-        {/* Command Terminal (SAC_OS Style) — ATLATL-ORDNANCE v7 Hardened */}
+        {/* Command Terminal (SAC_OS Style) — ATLATL-ORDNANCE v9 Hardened */}
         <div style={{ flex: 1, overflow: "hidden", padding: "10px 12px", display: "flex", flexDirection: "column", background: "#000", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
               <span style={{ color: T.red, fontSize: 8, letterSpacing: 2, fontWeight: 800 }} className="blink">
-                ● ATLATL_V8_GUERRILLA_ACTIVE
+                ● ATLATL_V9_XOCHIMILCO_ACTIVE
               </span>
             </div>
             <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#020202" }}>
@@ -715,8 +731,8 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
                   }}>
                     <div style={{ color: T.red, fontWeight: 800, fontSize: 12, marginBottom: 4 }}>{s}</div>
                     <div style={{ display: "flex", gap: 20 }}>
-                      <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: v8_ALGORITHMIC_GUILLOTINE</div>
-                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: CRITICAL_DESTRUCTIVE (25GB/s)</div>
+                      <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: v9_XOCHIMILCO_STRIKE</div>
+                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: COMPLETE_NEUTRALIZATION (50GB/s)</div>
                       <div style={{ color: T.green, fontSize: 9 }}>STATUS: EXECUTING</div>
                     </div>
                   </div>
