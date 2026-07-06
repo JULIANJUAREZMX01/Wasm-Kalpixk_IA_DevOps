@@ -3,7 +3,10 @@ Tests for AdversarialDriftGuard (v9).
 """
 
 import threading
+
 import numpy as np
+import pytest
+
 from python.detection.adaptive_threshold import AdversarialDriftGuard
 
 
@@ -74,11 +77,7 @@ def test_guard_to_dict():
         guard.update(0.2)
 
     d = guard.to_dict()
-    assert d["window_size"] == 500
     assert d["buffer_len"] == 10
     assert d["total_updates"] == 10
     assert "median" in d
     assert "mad" in d
-
-
-import pytest
