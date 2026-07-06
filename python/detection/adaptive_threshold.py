@@ -1,7 +1,9 @@
 """Robust adaptive threshold for anomaly scores using Median/MAD."""
 import threading
 from collections import deque
+
 import numpy as np
+
 
 class AdversarialDriftGuard:
     """Resists threshold poisoning via Median/MAD and alpha-dampening."""
@@ -13,7 +15,8 @@ class AdversarialDriftGuard:
         self._mad, self._updates, self._total, self._initialized = 0.1, 0, 0, False
 
     def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
-        if isinstance(scores, (int, float)): scores = [float(scores)]
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
         with self._lock:
             for s in scores:
                 self._buffer.append(s)
@@ -36,15 +39,23 @@ class AdversarialDriftGuard:
         self._updates = 0
 
     def is_anomaly(self, score: float) -> bool:
-        with self._lock: return score > self._current_threshold
+        with self._lock:
+            return score > self._current_threshold
     def set_threshold(self, value: float):
-        with self._lock: self._current_threshold = value
+        with self._lock:
+            self._current_threshold = value
     @property
     def current_threshold(self) -> float:
-        with self._lock: return self._current_threshold
+        with self._lock:
+            return self._current_threshold
     def to_dict(self) -> dict:
         with self._lock:
-            return {"current_threshold": round(self._current_threshold, 4), "median": round(self._median, 4),
-                    "mad": round(self._mad, 4), "buffer_len": len(self._buffer), "total_updates": self._total}
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
+                "buffer_len": len(self._buffer),
+                "total_updates": self._total
+            }
 
 AdaptiveThreshold = AdversarialDriftGuard
