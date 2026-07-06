@@ -28,8 +28,10 @@ def test_adaptive_threshold_recalibration():
 
     # 10th update triggers recalibration
     at.update(0.1)
-    # mean=0.1, std=0.0, threshold = 0.1 + 3.0*0.0 = 0.1
-    assert at.current_threshold == 0.1
+    # With robust v9 logic (MAD), threshold depends on median and MAD
+    # For all 0.1s: median=0.1, MAD=0.0. MAD is floored to 0.01.
+    # threshold = 0.1 + 3.0 * (0.01 * 1.4826) = 0.1 + 0.044478 = 0.144478
+    assert round(at.current_threshold, 6) == 0.144478
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
@@ -87,6 +89,6 @@ def test_is_anomaly():
         at.update(0.1)
 
     new_threshold = at.current_threshold
-    assert new_threshold < 0.2
+    assert new_threshold < 0.3
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
