@@ -63,7 +63,11 @@ extern "C" {
     fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
     fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
     fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v9_xochimilco_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, initial_x: f64);
+    fn v9_xochimilco_active_memory_scrambling(
+        target_ptr: *mut u8,
+        target_len: usize,
+        initial_x: f64,
+    );
     fn v9_xochimilco_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
 }
 
