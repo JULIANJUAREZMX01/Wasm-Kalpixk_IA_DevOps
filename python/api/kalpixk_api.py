@@ -19,7 +19,6 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 import msgpack
-from loguru import logger
 import numpy as np
 import torch
 from fastapi import (
@@ -34,6 +33,7 @@ from fastapi import (
 from fastapi import status as fastapi_status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
+from loguru import logger
 from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
