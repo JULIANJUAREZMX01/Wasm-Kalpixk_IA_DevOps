@@ -179,10 +179,6 @@ class KalpixkIsolationForest:
         # Scores > 0.5 are anomalies, scores < 0.5 are normal.
         normalized = np.clip(0.5 - (raw * 2.0), 0.0, 1.0)
 
-        # Update adaptive threshold
-        for score in normalized:
-            self.threshold.update(float(score))
-
         # Confidence: distance from the 0.5 boundary
         confidences = np.clip(np.abs(normalized - 0.5) * 2, 0.3, 1.0)
 

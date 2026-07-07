@@ -87,14 +87,24 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     if env == "production":
         if not expected_key:
             logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error"
+            )
+        # Strictly prohibit development_secret in production
+        if expected_key == "development_secret":
+            logger.error("Insecure KALPIXK_API_KEY ('development_secret') used in production!")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error"
+            )
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
-        # In development, if a key is set, enforce it. If not, allow access.
-        if expected_key:
-            if not api_key or not secrets.compare_digest(api_key, expected_key):
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+        # In non-production, default to 'development_secret' if no key is set
+        if not expected_key:
+            expected_key = "development_secret"
+
+        if not api_key or not secrets.compare_digest(api_key, expected_key):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 # -- FastAPI App --
