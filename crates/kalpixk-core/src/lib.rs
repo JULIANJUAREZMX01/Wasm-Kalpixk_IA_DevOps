@@ -143,72 +143,36 @@ pub fn v8_guerrilla_process(payload_json: &str) -> String {
 
 #[wasm_bindgen]
 pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_guerrilla_jit_shield(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_guerrilla_jit_shield(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_quantum_entropy_shredder(target.as_mut_ptr(), target.len(), initial_x);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_quantum_entropy_shredder(target, initial_x);
 }
 
 #[wasm_bindgen]
 pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v8_pointer_poisoning(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v8_pointer_poisoning(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v5_active_memory_scrambling_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v5_active_memory_scrambling(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v5_active_memory_scrambling(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v5_chaotic_interleaving_wasm(target: &mut [u8], stride: usize) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v5_chaotic_interleaving(target.as_mut_ptr(), target.len(), stride);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v5_chaotic_interleaving(target, stride);
 }
 
 #[wasm_bindgen]
 pub fn v7_guerrilla_memory_rotation_wasm(target: &mut [u8], seed: u64) {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v7_guerrilla_memory_rotation(target.as_mut_ptr(), target.len(), seed);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v7_guerrilla_memory_rotation(target, seed);
 }
 
 #[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
-    #[cfg(target_arch = "wasm32")]
-    unsafe {
-        v7_audit_tensor(tensor_data.as_ptr(), tensor_data.len())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     motor::v7_audit_tensor(tensor_data)
 }
 
