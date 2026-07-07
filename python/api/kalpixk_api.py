@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 import msgpack
+from loguru import logger
 import numpy as np
 import torch
 from fastapi import (
@@ -55,7 +56,6 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
     except Exception as e:
-        from loguru import logger
         logger.error(f"Failed to initialize database: {e}")
     yield
     # Shutdown
@@ -75,8 +75,6 @@ API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def verify_api_key(api_key: str = Security(api_key_header)):
-    from loguru import logger
-
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
     expected_key = os.getenv("KALPIXK_API_KEY")
 
