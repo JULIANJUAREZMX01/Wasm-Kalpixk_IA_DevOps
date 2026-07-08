@@ -4,9 +4,9 @@
 //! 8 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
-//! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
+//! - Node-8: XOCHIMILCO (v9.0.0-XOCHIMILCO)
 //!
-//! [ATLATL-ORDNANCE] Version 8.0: Guerrilla Mesh Coordination
+//! [ATLATL-ORDNANCE] Version 9.0: Spectral Mesh Coordination
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -56,6 +56,15 @@ pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
             format!("v8-ghost-{}", node_id),
+            chrono::Utc::now().timestamp_millis(),
+        );
+    }
+}
+
+pub fn process_v9_ghost_signal(node_id: &str, _payload: &str) {
+    if let Ok(mut nodes) = MESH_NODES.lock() {
+        nodes.insert(
+            format!("v9-xochimilco-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
@@ -235,7 +244,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -385,22 +396,28 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     let mut techniques = Vec::new();
     let raw = event.raw.to_lowercase();
 
-    if raw.contains("guerrilla") || raw.contains("jit_shield") || raw.contains("entropy_shredder") {
+    if raw.contains("guerrilla")
+        || raw.contains("jit_shield")
+        || raw.contains("entropy_shredder")
+        || raw.contains("xochimilco")
+        || raw.contains("espectral")
+    {
         score += 0.9;
         techniques.push("T1595".to_string());
     }
 
-    if event.source_type == "guerrilla_strike" {
+    if event.source_type == "guerrilla_strike" || event.source_type == "xochimilco_strike" {
         score = 1.0;
         techniques.push("T1548".to_string());
     }
 
     NodeResult {
-        node: "NODE-8: GUERRILLA".to_string(),
+        node: "NODE-8: XOCHIMILCO".to_string(),
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Coordination of Stage 8 retaliation against v8 guerrilla threats".to_string(),
+        description: "Coordination of v9 Xochimilco defensive mesh against spectral threats"
+            .to_string(),
     }
 }
 
@@ -438,11 +455,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     if score >= 0.7 {
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
-            technique: "TA-GUERRILLA-V8".to_string(),
+            node_id: "WASM-CORE-XOCHIMILCO-V9".to_string(),
+            technique: "TA-XOCHIMILCO-V9".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V8_GUERRILLA_SIG".to_string()),
+            signature: Some("V9_XOCHIMILCO_SIG".to_string()),
         });
         return true;
     }
