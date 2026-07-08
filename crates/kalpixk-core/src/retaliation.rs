@@ -61,6 +61,12 @@ pub fn execute_retaliation(
         }
     };
 
+    // [ATLATL-ORDNANCE] v9 XOCHIMILCO Hardening Override
+    if level == OffenseLevel::Exterminio {
+        // Enforce maximum structural hardening for confirmed extermination-level threats
+        crate::v5_trap::arm_traps();
+    }
+
     let action = format!("{:?}", state.retaliation);
 
     // Simular generación de payload (en WASM esto se pasaría al host JS)

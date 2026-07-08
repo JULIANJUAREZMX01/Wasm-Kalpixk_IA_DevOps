@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerra Espectral)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -40,17 +40,28 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     return 0;
 }
 
-/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
-/// Polymorphic instruction padding with NOP/HLT/INT3 noise to disrupt JIT spray/probing.
-pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
-    var prng = std.rand.DefaultPrng.init(seed);
-    const rand = prng.random();
-    const slice = target_ptr[0..target_len];
+/// [ATLATL-ORDNANCE] v9_xochimilco_jit_shield
+/// Advanced polymorphic instruction padding using dual-map chaotic entropy.
+/// Disrupts unauthorized memory scanning and JIT-spraying via non-linear noise injection.
+pub export fn v9_xochimilco_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    const r1: f64 = 3.9999;
+    const r2: f64 = 3.8888;
+    var x1: f64 = @as(f64, @floatFromInt(seed % 1000)) / 1000.0;
+    var x2: f64 = @as(f64, @floatFromInt((seed >> 32) % 1000)) / 1000.0;
 
+    if (x1 <= 0.0 or x1 >= 1.0) x1 = 0.5;
+    if (x2 <= 0.0 or x2 >= 1.0) x2 = 0.7;
+
+    const slice = target_ptr[0..target_len];
     var i: usize = 0;
     while (i < target_len) {
-        const noise_type = rand.int(u8) % 4;
-        const noise_len = (rand.int(u8) % 4) + 1; // 1 to 4 bytes
+        // Coupled Logistic Map for enhanced entropy
+        x1 = r1 * x1 * (1.0 - x1);
+        x2 = r2 * x2 * (1.0 - x2);
+        const combined = @as(u8, @intFromFloat((x1 * 127.0) + (x2 * 128.0)));
+
+        const noise_type = combined % 4;
+        const noise_len = (combined >> 4) % 4 + 1;
 
         if (i + noise_len > target_len) break;
 
@@ -59,25 +70,26 @@ pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed
                 0 => slice[i + j] = 0x90, // NOP
                 1 => slice[i + j] = 0xF4, // HLT
                 2 => slice[i + j] = 0xCC, // INT 3
-                else => slice[i + j] = rand.int(u8),
+                else => slice[i + j] = combined ^ @as(u8, @intCast(j)),
             }
         }
         i += noise_len;
     }
 }
 
-/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
-/// Chaotic entropy generation using a Logistic Map (r=3.99).
-/// Saturates attacker buffers with non-linear, high-entropy noise.
-pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, initial_x: f64) void {
-    const r: f64 = 3.99;
+/// [ATLATL-ORDNANCE] v9_xochimilco_active_memory_scrambling
+/// Non-linear memory obfuscation using chaotic coupling.
+/// Protects sensitive buffers in the Alpha Stack from forensic analysis.
+pub export fn v9_xochimilco_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, initial_x: f64) void {
+    const r: f64 = 3.9999;
     var x = initial_x;
-    if (x <= 0.0 or x >= 1.0) x = 0.5;
+    if (x <= 0.0 or x >= 1.0) x = 0.512345;
 
     const slice = target_ptr[0..target_len];
-    for (slice) |*byte| {
+    for (slice, 0..) |*byte, i| {
         x = r * x * (1.0 - x);
-        byte.* = @intFromFloat(x * 255.0);
+        const noise = @as(u8, @intFromFloat(x * 255.0));
+        byte.* ^= noise ^ @as(u8, @intCast(i % 256));
     }
 }
 

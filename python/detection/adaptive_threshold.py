@@ -78,3 +78,84 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    Robust adaptive threshold using Median and Median Absolute Deviation (MAD).
+    Designed to resist adversarial drift by using dampened updates and robust statistics.
+
+    Threshold = Median + k * (MAD * 1.4826)
+    """
+
+    def __init__(
+        self,
+        window_size: int = 1000,
+        k: float = 5.5,
+        alpha: float = 0.1,
+        recalibrate_every: int = 100,
+    ):
+        self.window_size = window_size
+        self.k = k
+        self.alpha = alpha  # Dampening factor for stats updates
+        self.recalibrate_every = recalibrate_every
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._median = 0.5
+        self._mad = 0.1
+        self._threshold = 0.7
+        self._initialized = False
+        self._updates_since_recalc = 0
+
+    def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
+        """Update buffer with new scores and return current threshold."""
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for s in scores:
+                self._buffer.append(s)
+                self._updates_since_recalc += 1
+
+            if force_recalibrate or self._updates_since_recalc >= self.recalibrate_every:
+                if len(self._buffer) >= 50:
+                    self._recalibrate()
+
+        return self._threshold
+
+    def _recalibrate(self) -> None:
+        data = np.array(self._buffer)
+        new_median = np.median(data)
+        new_mad = np.median(np.abs(data - new_median))
+
+        if not self._initialized:
+            self._median = new_median
+            self._mad = max(0.01, new_mad)
+            self._initialized = True
+        else:
+            # Dampened update to resist sudden adversarial shifts
+            self._median = (1 - self.alpha) * self._median + self.alpha * new_median
+            self._mad = (1 - self.alpha) * self._mad + self.alpha * max(0.01, new_mad)
+
+        # 1.4826 is the scaling factor to make MAD a consistent estimator of std dev
+        self._threshold = float(self._median + self.k * (self._mad * 1.4826))
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._threshold
+
+    def set_threshold(self, value: float) -> None:
+        with self._lock:
+            self._threshold = value
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "threshold": round(self._threshold, 4),
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
+                "buffer_len": len(self._buffer),
+                "initialized": self._initialized,
+            }

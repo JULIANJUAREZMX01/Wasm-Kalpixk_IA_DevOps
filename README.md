@@ -1,8 +1,8 @@
 # Kalpixk SIEM 🛡️ ![CI Status](https://github.com/JULIANJUAREZMX01/Wasm-Kalpixk_IA_DevOps/actions/workflows/main.yml/badge.svg)
 
-**Neural Threat Detection at Ultra-Scale (4.2M ev/s) using WASM Edge & AMD MI300X.**
+**Neural Threat Detection at Ultra-Scale (4.2M ev/s) using WASM Edge & AMD MI300X — v9.0.0-XOCHIMILCO.**
 
-Kalpixk is a high-performance Security Information and Event Management (SIEM) engine designed for the protection of critical infrastructure, specifically optimized for the **Manhattan WMS at CEDIS Cancún 427**. It leverages WebAssembly (WASM) for efficient edge parsing and AMD MI300X GPUs for massive neural inference throughput.
+Kalpixk is a high-performance Security Information and Event Management (SIEM) engine designed for the protection of critical infrastructure (Spectral Mesh Hardening), specifically optimized for the **Manhattan WMS at CEDIS Cancún 427**. It leverages WebAssembly (WASM) for efficient edge parsing and AMD MI300X GPUs for massive neural inference throughput under the **Guerra Espectral** framework.
 
 ## ⚡ Quick Install
 
