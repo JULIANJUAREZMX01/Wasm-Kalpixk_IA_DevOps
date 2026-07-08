@@ -78,3 +78,93 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+class AdversarialDriftGuard:
+    """
+    Robust drift-resistant thresholding for the SIEM ensemble.
+    Uses Median and Median Absolute Deviation (MAD) for stability against outliers
+    and adversarial noise.
+    """
+
+    def __init__(self, window_size: int = 1000, k: float = 3.5, recalibrate_every: int = 50, alpha: float = 0.1):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+        self.alpha = alpha  # Dampening factor for updates
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._median = 0.5
+        self._mad = 0.1
+        self._current_threshold = 0.8
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+        self._initialized = False
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def set_threshold(self, value: float) -> None:
+        with self._lock:
+            self._current_threshold = value
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "total_updates": self._total_updates,
+                "initialized": self._initialized,
+            }
+
+    def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
+        """
+        Add score(s) to buffer and return the (possibly updated) threshold.
+        Only updates buffer if score < current_threshold (self-stabilizing).
+        """
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for s in scores:
+                if s < self._current_threshold:
+                    self._buffer.append(s)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if force_recalibrate or (
+                self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
+            ):
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Recompute threshold using Median and MAD. Internal use only."""
+        if not self._buffer:
+            return
+
+        data = np.array(self._buffer)
+        new_median = float(np.median(data))
+        # MAD = median(|x_i - median(x)|)
+        new_mad = float(np.median(np.abs(data - new_median)))
+        new_mad = max(new_mad, 0.01)  # Floor for stability
+
+        if not self._initialized:
+            self._median = new_median
+            self._mad = new_mad
+            self._initialized = True
+        else:
+            # Dampened update to resist adversarial drift
+            self._median = (1 - self.alpha) * self._median + self.alpha * new_median
+            self._mad = (1 - self.alpha) * self._mad + self.alpha * new_mad
+
+        # Robust threshold: median + k * (MAD * 1.4826)
+        # 1.4826 is the scaling factor to make MAD a consistent estimator of std dev.
+        self._current_threshold = self._median + self.k * (self._mad * 1.4826)
+        self._updates_since_recalc = 0
