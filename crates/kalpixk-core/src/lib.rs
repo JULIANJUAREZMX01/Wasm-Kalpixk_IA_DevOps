@@ -56,6 +56,7 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 export!(KalpixkCore);
 
 #[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
 extern "C" {
     fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
     fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
@@ -184,7 +185,8 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
 #[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
     #[cfg(target_arch = "wasm32")]
-    extern "C" {
+    #[wasm_bindgen]
+extern "C" {
         fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
     }
 
