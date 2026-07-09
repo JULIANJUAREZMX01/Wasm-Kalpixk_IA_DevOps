@@ -116,7 +116,7 @@ pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
         target[i] = (target[i] ^ chaotic_byte).rotate_right(rot);
 
         state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-        if i > 0 && (state % 10 == 0) {
+        if i > 0 && state.is_multiple_of(10) {
             target.swap(i, i - 1);
         }
     }
