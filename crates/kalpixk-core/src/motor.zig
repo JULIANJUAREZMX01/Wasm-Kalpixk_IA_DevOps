@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerra Espectral)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -78,6 +78,71 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
     for (slice) |*byte| {
         x = r * x * (1.0 - x);
         byte.* = @intFromFloat(x * 255.0);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_xochimilco_jit_shield
+/// Enhanced JIT hardening with dual-map coupled chaotic entropy.
+pub export fn v9_xochimilco_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    // Chaotic parameters
+    const r1: f64 = 3.9999;
+    const r2: f64 = 3.8888;
+    var x: f64 = 0.5;
+    var y: f64 = 0.51;
+
+    var i: usize = 0;
+    while (i < target_len) {
+        // Coupled Logistic Map for high-entropy padding
+        x = r1 * x * (1.0 - x) + 0.01 * (y - x);
+        y = r2 * y * (1.0 - y) + 0.01 * (x - y);
+
+        const noise_type: u8 = @intFromFloat(x * 4.0);
+        const noise_len: usize = (@as(usize, @intFromFloat(y * 4.0)) % 4) + 1;
+
+        if (i + noise_len > target_len) break;
+
+        for (0..noise_len) |j| {
+            switch (noise_type) {
+                0 => slice[i + j] = 0x90, // NOP
+                1 => slice[i + j] = 0xF4, // HLT
+                2 => slice[i + j] = 0xCC, // INT 3
+                3 => slice[i + j] = 0x0F, // UD2 start
+                else => slice[i + j] = @intFromFloat(x * 255.0),
+            }
+            if (noise_type == 3 and j == 1) slice[i + j] = 0x0B; // UD2 end
+        }
+        i += noise_len;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_xochimilco_active_memory_scrambling
+/// Active memory obfuscation with non-linear bit rotation.
+pub export fn v9_xochimilco_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len == 0) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var x: f64 = 0.7;
+    const r: f64 = 3.999;
+
+    for (slice, 0..) |*byte, i| {
+        x = r * x * (1.0 - x);
+        const rot: u3 = @intFromFloat(x * 7.0);
+        // Scramble: XOR with chaotic byte + rotate
+        const chaotic_byte: u8 = @intFromFloat(x * 255.0);
+        byte.* = std.math.rotr(u8, byte.* ^ chaotic_byte, rot);
+
+        // Interleave with neighbors
+        if (i > 0 and (rand.int(u8) % 10 == 0)) {
+            const tmp = slice[i - 1];
+            slice[i - 1] = byte.*;
+            byte.* = tmp;
+        }
     }
 }
 
