@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v9.0.0-XOCHIMILCO initialized.", "[SYSTEM] Mesh operating in SPECTRAL MODE v9.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -170,7 +170,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v8.0.0-GUERRILLA · AMD MI300X MESH
+              GUERRA ESPECTRAL · v9.0.0-XOCHIMILCO · AMD MI300X SPECTRAL MESH
             </div>
           </div>
         </div>
@@ -238,18 +238,18 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/guerrilla/v8/strike", {
+                  const res = await fetch("/api/v1/guerrilla/v9/strike", {
                     method: "POST",
                     headers: { "X-Kalpixk-Key": apiKey }
                   });
                   const data = await res.json();
                   setTerminalOutput(prev => [
                     ...prev,
-                    `[STRIKE] v8 ALGORITHMIC GUILLOTINE ENGAGED.`,
+                    `[STRIKE] v9 ALGORITHMIC GUILLOTINE ENGAGED.`,
                     `[STRIKE] STATUS: ${data.status}`,
                     ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
                   ]);
-                  alert("v7 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  alert("v9 ALGORITHMIC GUILLOTINE ENGAGED: SPECTRAL NEUTRALIZATION INITIATED");
                 } catch (e) {
                   console.error("Strike failed", e);
                 }
@@ -313,7 +313,7 @@ export default function Dashboard() {
           </span>
         ))}
         <span style={{ marginLeft: "auto", color: T.dim, whiteSpace: "nowrap", letterSpacing: 1 }}>
-          sac sentinel watch --live · KynicOS v8.0-GUERRILLA
+          sac sentinel watch --live · KynicOS v9.0-XOCHIMILCO
         </span>
       </footer>
     </div>
@@ -429,7 +429,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Label text="EXECUTAR: COMMAND TERMINAL" accent={T.amber} />
               <span style={{ color: T.red, fontSize: 8, letterSpacing: 2, fontWeight: 800 }} className="blink">
-                ● ATLATL_V8_GUERRILLA_ACTIVE
+                ● ATLATL_V9_XOCHIMILCO_ACTIVE
               </span>
             </div>
             <div style={{ flex: 1, overflowY: "auto", fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: T.green, padding: "4px 8px", border: `1px solid ${T.border}33`, background: "#020202" }}>
@@ -673,7 +673,7 @@ const ParsersTab = React.memo(function ParsersTab() {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TAB: WAR ROOM (v7.0-ALPHA)
+// TAB: WAR ROOM (v9.0-XOCHIMILCO)
 // ═══════════════════════════════════════════════════════════════════════════════
 const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminalOutput: string[] }) {
   const alerts = useAlertStore((s) => s.alerts);
@@ -688,12 +688,12 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
               WAR ROOM
             </h2>
             <p style={{ color: T.dim, fontSize: 10, letterSpacing: 4 }}>
-              SYSTEMIC COLLAPSE ORCHESTRATION · PHASE BLACK v8.0-GUERRILLA
+              SPECTRAL NEUTRALIZATION ORCHESTRATION · PHASE BLACK v9.0-XOCHIMILCO
             </p>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_V8_GUERRILLA_ACTIVE</div>
-            <div style={{ color: T.dim, fontSize: 9 }}>MESH_GHOST_MODE_V8: ENABLED</div>
+            <div className="blink" style={{ color: T.red, fontSize: 12, fontWeight: 800 }}>● ATLATL_V9_XOCHIMILCO_ACTIVE</div>
+            <div style={{ color: T.dim, fontSize: 9 }}>MESH_SPECTRAL_MODE_V9: ENABLED</div>
           </div>
         </div>
 
@@ -715,8 +715,8 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
                   }}>
                     <div style={{ color: T.red, fontWeight: 800, fontSize: 12, marginBottom: 4 }}>{s}</div>
                     <div style={{ display: "flex", gap: 20 }}>
-                      <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: v8_ALGORITHMIC_GUILLOTINE</div>
-                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: CRITICAL_DESTRUCTIVE (25GB/s)</div>
+                      <div style={{ color: T.dim, fontSize: 9 }}>VECTOR: v9_ALGORITHMIC_GUILLOTINE</div>
+                      <div style={{ color: T.dim, fontSize: 9 }}>IMPACT: CRITICAL_DEFENSIVE (50GB/s)</div>
                       <div style={{ color: T.green, fontSize: 9 }}>STATUS: EXECUTING</div>
                     </div>
                   </div>
