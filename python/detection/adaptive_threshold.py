@@ -78,3 +78,44 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """Robust adaptive thresholding using Median and Median Absolute Deviation (MAD)."""
+
+    def __init__(self, window_size: int = 1000, k: float = 5.5, recalibrate_every: int = 100):
+        self.window_size, self.k, self.recalibrate_every = window_size, k, recalibrate_every
+        self._buffer, self._lock = deque(maxlen=window_size), threading.Lock()
+        self._current_threshold = self._median = 0.5
+        self._mad, self._updates_since_recalc, self._total_updates, self._initialized = 0.1, 0, 0, False
+
+    def set_threshold(self, value: float):
+        with self._lock: self._current_threshold = value
+
+    def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
+        scores_list = [float(scores)] if isinstance(scores, (int, float)) else [float(s) for s in scores]
+        with self._lock:
+            for s in scores_list:
+                if s < self._current_threshold:
+                    self._buffer.append(s); self._updates_since_recalc += 1; self._total_updates += 1
+            if force_recalibrate or (self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 20):
+                self._recalibrate()
+            return self._current_threshold
+
+    def _recalibrate(self):
+        data = np.array(self._buffer)
+        if len(data) < 2: return
+        new_median = float(np.median(data))
+        new_mad = max(float(np.median(np.abs(data - new_median))), 0.01)
+        if not self._initialized:
+            self._median, self._mad, self._initialized = new_median, new_mad, True
+        else:
+            self._median = 0.9 * self._median + 0.1 * new_median
+            self._mad = 0.9 * self._mad + 0.1 * new_mad
+        self._current_threshold = self._median + self.k * (self._mad * 1.4826)
+        self._updates_since_recalc = 0
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {"current_threshold": round(self._current_threshold, 4), "median": round(self._median, 4),
+                    "mad": round(self._mad, 4), "buffer_len": len(self._buffer), "total_updates": self._total_updates}
