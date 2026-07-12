@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -109,6 +109,57 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
             }
         }
         i += 8;
+    }
+}
+
+pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
+    let r1 = 3.9999;
+    let r2 = 3.8888;
+    let mut x = (seed & 0xFFFFFFFF) as f64 / 4294967296.0;
+    let mut y = (seed >> 32) as f64 / 4294967296.0;
+    if x <= 0.0 || x >= 1.0 { x = 0.5123; }
+    if y <= 0.0 || y >= 1.0 { y = 0.6789; }
+
+    let mut i = 0;
+    while i < target.len() {
+        x = r1 * x * (1.0 - x);
+        y = r2 * y * (1.0 - y);
+        let entropy = (x * 128.0 + y * 128.0) as u8;
+
+        let noise_type = entropy % 5;
+        let noise_len = (entropy % 4) as usize + 1;
+
+        if i + noise_len > target.len() {
+            break;
+        }
+
+        for j in 0..noise_len {
+            match noise_type {
+                0 => target[i + j] = 0x90, // NOP
+                1 => target[i + j] = 0xF4, // HLT
+                2 => target[i + j] = 0xCC, // INT 3
+                3 => target[i + j] = 0x0F, // UD2 start
+                4 => target[i + j] = 0x0B, // UD2 end
+                _ => target[i + j] = entropy,
+            }
+        }
+        i += noise_len;
+    }
+}
+
+pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    if target.len() < 32 { return; }
+    let r = 3.9999;
+    let mut x = (seed & 0xFFFFFFFF) as f64 / 4294967296.0;
+    if x <= 0.0 || x >= 1.0 { x = 0.3333; }
+
+    for _ in 0..16 {
+        x = r * x * (1.0 - x);
+        let idx1 = (x * (target.len() - 1) as f64) as usize;
+        x = r * x * (1.0 - x);
+        let idx2 = (x * (target.len() - 1) as f64) as usize;
+
+        target.swap(idx1, idx2);
     }
 }
 

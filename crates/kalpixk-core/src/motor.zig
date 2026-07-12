@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Guerra Espectral)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -40,8 +40,67 @@ pub export fn classify_entropy(data_ptr: [*]const u8, data_len: usize) u8 {
     return 0;
 }
 
-/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield
-/// Polymorphic instruction padding with NOP/HLT/INT3 noise to disrupt JIT spray/probing.
+/// [ATLATL-ORDNANCE] v9_xochimilco_jit_shield
+/// Dual-map coupled chaotic entropy (Logistic + Dual coupling) for non-linear instruction padding.
+pub export fn v9_xochimilco_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    const r1: f64 = 3.9999;
+    const r2: f64 = 3.8888;
+    var x: f64 = @as(f64, @floatFromInt(seed & 0xFFFFFFFF)) / 4294967296.0;
+    var y: f64 = @as(f64, @floatFromInt(seed >> 32)) / 4294967296.0;
+    if (x <= 0.0 or x >= 1.0) x = 0.5123;
+    if (y <= 0.0 or y >= 1.0) y = 0.6789;
+
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i < target_len) {
+        // Logistic Map 1
+        x = r1 * x * (1.0 - x);
+        // Logistic Map 2
+        y = r2 * y * (1.0 - y);
+        // Coupling
+        const entropy = @as(u8, @intFromFloat((x * 128.0 + y * 128.0)));
+
+        const noise_type = entropy % 5;
+        const noise_len = (entropy % 4) + 1;
+
+        if (i + noise_len > target_len) break;
+
+        for (0..noise_len) |j| {
+            switch (noise_type) {
+                0 => slice[i + j] = 0x90, // NOP
+                1 => slice[i + j] = 0xF4, // HLT
+                2 => slice[i + j] = 0xCC, // INT 3
+                3 => slice[i + j] = 0x0F, // UD2 start
+                4 => slice[i + j] = 0x0B, // UD2 end
+                else => slice[i + j] = entropy,
+            }
+        }
+        i += noise_len;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_xochimilco_active_memory_scrambling
+/// Non-linear memory rotation and byte-swapping using coupled chaotic oscillators.
+pub export fn v9_xochimilco_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 32) return;
+    const r: f64 = 3.9999;
+    var x: f64 = @as(f64, @floatFromInt(seed & 0xFFFFFFFF)) / 4294967296.0;
+    if (x <= 0.0 or x >= 1.0) x = 0.3333;
+
+    const slice = target_ptr[0..target_len];
+    for (0..16) |_| {
+        x = r * x * (1.0 - x);
+        const idx1 = @as(usize, @intFromFloat(x * @as(f64, @floatFromInt(target_len - 1))));
+        x = r * x * (1.0 - x);
+        const idx2 = @as(usize, @intFromFloat(x * @as(f64, @floatFromInt(target_len - 1))));
+
+        const temp = slice[idx1];
+        slice[idx1] = slice[idx2];
+        slice[idx2] = temp;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v8_guerrilla_jit_shield (LEGACY)
 pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     var prng = std.rand.DefaultPrng.init(seed);
     const rand = prng.random();
@@ -66,9 +125,7 @@ pub export fn v8_guerrilla_jit_shield(target_ptr: [*]u8, target_len: usize, seed
     }
 }
 
-/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder
-/// Chaotic entropy generation using a Logistic Map (r=3.99).
-/// Saturates attacker buffers with non-linear, high-entropy noise.
+/// [ATLATL-ORDNANCE] v8_quantum_entropy_shredder (LEGACY)
 pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, initial_x: f64) void {
     const r: f64 = 3.99;
     var x = initial_x;
@@ -81,8 +138,7 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
     }
 }
 
-/// [ATLATL-ORDNANCE] v8_pointer_poisoning
-/// Injects 8-byte traps into target memory to cause CPU exhaustion or crashes.
+/// [ATLATL-ORDNANCE] v8_pointer_poisoning (LEGACY)
 pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     if (target_len < 8) return;
     var prng = std.rand.DefaultPrng.init(seed);
@@ -200,6 +256,29 @@ test "v8 pointer poisoning" {
     var changed = false;
     for (buffer) |b| {
         if (b != 0xFF) {
+            changed = true;
+            break;
+        }
+    }
+    try std.testing.expect(changed);
+}
+
+test "v9 xochimilco jit shield" {
+    var buffer: [256]u8 = undefined;
+    @memset(&buffer, 0);
+    v9_xochimilco_jit_shield(&buffer, buffer.len, 0xABCDEF1234567890);
+    var entropy_sum: u64 = 0;
+    for (buffer) |b| entropy_sum += b;
+    try std.testing.expect(entropy_sum > 0);
+}
+
+test "v9 xochimilco memory scrambling" {
+    var buffer: [128]u8 = undefined;
+    for (0..buffer.len) |i| buffer[i] = @intCast(i);
+    v9_xochimilco_active_memory_scrambling(&buffer, buffer.len, 0x1234567890ABCDEF);
+    var changed = false;
+    for (0..buffer.len) |i| {
+        if (buffer[i] != @as(u8, @intCast(i))) {
             changed = true;
             break;
         }
