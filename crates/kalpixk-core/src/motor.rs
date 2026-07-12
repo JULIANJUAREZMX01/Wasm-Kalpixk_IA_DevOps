@@ -117,8 +117,12 @@ pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
     let r2 = 3.8888;
     let mut x = (seed & 0xFFFFFFFF) as f64 / 4294967296.0;
     let mut y = (seed >> 32) as f64 / 4294967296.0;
-    if x <= 0.0 || x >= 1.0 { x = 0.5123; }
-    if y <= 0.0 || y >= 1.0 { y = 0.6789; }
+    if x <= 0.0 || x >= 1.0 {
+        x = 0.5123;
+    }
+    if y <= 0.0 || y >= 1.0 {
+        y = 0.6789;
+    }
 
     let mut i = 0;
     while i < target.len() {
@@ -148,10 +152,14 @@ pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
 }
 
 pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
-    if target.len() < 32 { return; }
+    if target.len() < 32 {
+        return;
+    }
     let r = 3.9999;
     let mut x = (seed & 0xFFFFFFFF) as f64 / 4294967296.0;
-    if x <= 0.0 || x >= 1.0 { x = 0.3333; }
+    if x <= 0.0 || x >= 1.0 {
+        x = 0.3333;
+    }
 
     for _ in 0..16 {
         x = r * x * (1.0 - x);

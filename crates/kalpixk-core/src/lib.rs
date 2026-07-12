@@ -320,7 +320,11 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
             );
             v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
             v9_xochimilco_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x0C0C);
-            v9_xochimilco_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0xCAFE);
+            v9_xochimilco_active_memory_scrambling(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0xCAFE,
+            );
         }
 
         if anomaly_count > 5 {

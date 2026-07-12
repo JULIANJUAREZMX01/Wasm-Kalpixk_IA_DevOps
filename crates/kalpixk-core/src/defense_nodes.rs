@@ -235,7 +235,9 @@ pub fn detect_credential_theft(
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if raw_lower.contains("lsass") || raw_lower.contains("mimikatz") || raw_lower.contains("sekurlsa")
+    if raw_lower.contains("lsass")
+        || raw_lower.contains("mimikatz")
+        || raw_lower.contains("sekurlsa")
     {
         score += 0.95;
         techniques.push("T1003".to_string());
@@ -400,7 +402,8 @@ pub fn detect_xochimilco_threat(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Coordination of Stage 9 retaliation against v9 xochimilco spectral threats".to_string(),
+        description: "Coordination of Stage 9 retaliation against v9 xochimilco spectral threats"
+            .to_string(),
     }
 }
 
