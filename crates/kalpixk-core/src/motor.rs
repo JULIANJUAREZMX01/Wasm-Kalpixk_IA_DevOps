@@ -115,3 +115,59 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    let r1 = 3.9999;
+    let r2 = 3.8888;
+    let mut x1 = 0.5;
+    let mut x2 = 0.5;
+
+    let mut i = 0;
+    while i < target.len() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        x1 = r1 * x1 * (1.0 - x1);
+        x2 = r2 * x2 * (1.0 - x2);
+        let chaotic_byte = ((x1 + x2) * 127.5) as u8 % 4;
+
+        let noise_type = (chaotic_byte.wrapping_add((state % 256) as u8)) % 5;
+        let noise_len = ((state >> 8) % 4) as usize + 1;
+
+        if i + noise_len > target.len() {
+            break;
+        }
+
+        for j in 0..noise_len {
+            match noise_type {
+                0 => target[i + j] = 0x90, // NOP
+                1 => target[i + j] = 0xF4, // HLT
+                2 => target[i + j] = 0xCC, // INT 3
+                3 => target[i + j] = 0x0F,
+                _ => {
+                    if noise_type == 4 && j > 0 && target[i + j - 1] == 0x0F {
+                        target[i + j] = 0x0B; // UD2
+                    } else {
+                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                        target[i + j] = (state >> 16) as u8;
+                    }
+                }
+            }
+        }
+        i += noise_len;
+    }
+}
+
+pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], initial_x: f64) {
+    let r = 3.9999;
+    let mut x = if initial_x <= 0.0 || initial_x >= 1.0 {
+        0.5
+    } else {
+        initial_x
+    };
+
+    for byte in target.iter_mut() {
+        x = r * x * (1.0 - x);
+        let entropy = (x * 255.0) as u8;
+        *byte ^= entropy;
+    }
+}

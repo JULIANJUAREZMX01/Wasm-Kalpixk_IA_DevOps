@@ -81,6 +81,66 @@ pub export fn v8_quantum_entropy_shredder(target_ptr: [*]u8, target_len: usize, 
     }
 }
 
+/// [ATLATL-ORDNANCE] v9_xochimilco_jit_shield
+/// Enhanced polymorphic instruction padding using dual-map coupled chaotic entropy.
+pub export fn v9_xochimilco_jit_shield(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    // Chaotic parameters
+    const r1: f64 = 3.9999;
+    const r2: f64 = 3.8888;
+    var x1: f64 = 0.5;
+    var x2: f64 = 0.5;
+
+    var i: usize = 0;
+    while (i < target_len) {
+        // Logistic map coupling
+        x1 = r1 * x1 * (1.0 - x1);
+        x2 = r2 * x2 * (1.0 - x2);
+        const chaotic_byte = @as(u8, @intFromFloat((x1 + x2) * 127.5)) % 4;
+
+        const noise_type = (chaotic_byte + rand.int(u8)) % 5;
+        const noise_len = (rand.int(u8) % 4) + 1;
+
+        if (i + noise_len > target_len) break;
+
+        for (0..noise_len) |j| {
+            switch (noise_type) {
+                0 => slice[i + j] = 0x90, // NOP
+                1 => slice[i + j] = 0xF4, // HLT
+                2 => slice[i + j] = 0xCC, // INT 3
+                3 => slice[i + j] = 0x0F, // Multi-byte part 1
+                else => {
+                    if (noise_type == 4 and j > 0 and slice[i + j - 1] == 0x0F) {
+                        slice[i + j] = 0x0B; // UD2
+                    } else {
+                        slice[i + j] = rand.int(u8);
+                    }
+                },
+            }
+        }
+        i += noise_len;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v9_xochimilco_active_memory_scrambling
+/// High-intensity memory scrambling with non-linear entropy distribution.
+pub export fn v9_xochimilco_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, initial_x: f64) void {
+    const r: f64 = 3.9999;
+    var x = initial_x;
+    if (x <= 0.0 or x >= 1.0) x = 0.5;
+
+    const slice = target_ptr[0..target_len];
+    for (slice) |*byte| {
+        // Logistic Map (Chaotic)
+        x = r * x * (1.0 - x);
+        const entropy = @as(u8, @intFromFloat(x * 255.0));
+        byte.* = byte.* ^ entropy; // XOR scrambling
+    }
+}
+
 /// [ATLATL-ORDNANCE] v8_pointer_poisoning
 /// Injects 8-byte traps into target memory to cause CPU exhaustion or crashes.
 pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u64) void {

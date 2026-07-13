@@ -52,4 +52,4 @@ python main.py
 Kalpixk was built to solve the "Log Tsunami" problem in industrial logistics centers. By offloading the parsing to WASM and inference to AMD GPUs, we provide a defense-in-depth solution that is both faster and more cost-effective than traditional JVM-based SIEMs.
 
 ---
-*Developed by Julian Juarez for the AMD AI Hackathon 2024.*
+*Developed by Julian Juarez for the AMD AI Hackathon 2026.*
