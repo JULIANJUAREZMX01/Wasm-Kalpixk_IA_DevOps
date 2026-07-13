@@ -3,7 +3,6 @@ Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
-import time
 
 import numpy as np
 
