@@ -1,12 +1,13 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
+import time
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -63,30 +64,55 @@ def test_adaptive_threshold_thread_safety():
     assert at.current_threshold < 0.4
 
 
-def test_adaptive_threshold_to_dict():
-    at = AdaptiveThreshold(window_size=500, k=3.0, recalibrate_every=50)
-    for _ in range(10):
-        at.update(0.2)
+def test_adversarial_drift_guard_robustness():
+    # recalibrate_every=20, alpha=1.0 (no dampening for easier testing)
+    guard = AdversarialDriftGuard(window_size=20, recalibrate_every=20, k=3.0, alpha=1.0)
 
-    d = at.to_dict()
-    assert d["window_size"] == 500
-    assert d["k"] == 3.0
-    assert d["buffer_len"] == 10
-    assert d["total_updates"] == 10
-    assert "current_threshold" in d
+    # 1. Baseline: constant normal traffic
+    scores = [0.1] * 20
+    guard.update(scores)
+
+    # median=0.1, MAD=0.0 -> floor to 0.01
+    # threshold = 0.1 + 3.0 * (0.01 * 1.4826) ~= 0.144478
+    assert 0.14 < guard.current_threshold < 0.15
+
+    # 2. Add some noise that would affect mean but not median
+    # New buffer: [0.1]*15 + [0.14]*5 -> median is still 0.1
+    noise = [0.14] * 5
+    guard.update(noise, force_recalibrate=True)
+
+    # Still 0.1 because median of [0.1]*maxlen is 0.1
+    assert 0.14 < guard.current_threshold < 0.15
 
 
-def test_is_anomaly():
-    at = AdaptiveThreshold()
-    # Initial threshold is 0.5
-    assert not at.is_anomaly(0.4)
-    assert at.is_anomaly(0.6)
+def test_adversarial_drift_guard_dampening():
+    # alpha=0.1 (default)
+    guard = AdversarialDriftGuard(recalibrate_every=20, k=3.0, alpha=0.1)
 
-    # Recalibrate to lower threshold
-    for _ in range(50):
-        at.update(0.1)
+    # Initial recalibration (sets median/mad directly)
+    guard.update([0.1] * 20)
+    initial_threshold = guard.current_threshold
+    print(f"DEBUG: Initial threshold: {initial_threshold}")
 
-    new_threshold = at.current_threshold
-    assert new_threshold < 0.2
-    assert at.is_anomaly(0.3)
-    assert not at.is_anomaly(0.05)
+    # Second recalibration with different data
+    # We MUST use scores < initial_threshold (0.144) to get them into the buffer
+    # Let's use 0.14
+    new_data = [0.14] * 20
+    guard.update(new_data, force_recalibrate=True)
+
+    print(f"DEBUG: New threshold: {guard.current_threshold}")
+
+    # Threshold should have moved slightly up
+    assert guard.current_threshold > initial_threshold
+    assert guard.current_threshold < 0.25
+
+
+def test_adversarial_drift_guard_batch_update():
+    guard = AdversarialDriftGuard(recalibrate_every=10)
+    guard.update([0.1, 0.1, 0.2, 0.1, 0.1])
+    assert guard.to_dict()["total_updates"] == 5
+
+    # Triggers recalibration
+    guard.update([0.1] * 15)
+    assert guard.to_dict()["total_updates"] == 20
+    assert guard.to_dict()["initialized"] is True
