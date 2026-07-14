@@ -78,3 +78,82 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    Robust adaptive thresholding using Median and Median Absolute Deviation (MAD).
+    Designed to resist adversarial outliers and drift.
+    """
+
+    def __init__(self, window_size: int = 1000, k: float = 5.5, recalibrate_every: int = 100):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+        self.alpha = 0.1  # Dampening factor for drift resistance
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
+        self._median = 0.5
+        self._mad = 0.05
+        self._initialized = False
+        self._updates_since_recalc = 0
+
+    def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
+        """Update buffer with new score(s) and return current threshold."""
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
+        with self._lock:
+            for s in scores:
+                self._buffer.append(s)
+                self._updates_since_recalc += 1
+
+            if force_recalibrate or (self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10):
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Robust recalibration using Median and MAD."""
+        data = np.array(self._buffer)
+        new_median = np.median(data)
+        new_mad = np.median(np.abs(data - new_median))
+
+        # MAD floor to prevent division by zero or overly sensitive threshold
+        new_mad = max(new_mad, 0.01)
+
+        if not self._initialized:
+            self._median = new_median
+            self._mad = new_mad
+            self._initialized = True
+        else:
+            # Apply dampening to resist sudden adversarial drift
+            self._median = (1 - self.alpha) * self._median + self.alpha * new_median
+            self._mad = (1 - self.alpha) * self._mad + self.alpha * new_mad
+
+        # Robust threshold: Median + k * (MAD * 1.4826)
+        # 1.4826 is the consistency factor for normal distribution
+        self._current_threshold = float(self._median + self.k * (self._mad * 1.4826))
+        self._updates_since_recalc = 0
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def set_threshold(self, value: float) -> None:
+        """Manually override the threshold (used during system calibration)."""
+        with self._lock:
+            self._current_threshold = value
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
+                "buffer_len": len(self._buffer),
+                "initialized": self._initialized,
+            }
