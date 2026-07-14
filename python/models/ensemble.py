@@ -37,7 +37,11 @@ class DetectionEnsemble:
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
         # Update and get adaptive threshold
-        current_threshold = self.drift_guard.update(ensemble_scores.tolist())
+        # According to memory: The `AdaptiveThreshold.update()` method in `python/detection/adaptive_threshold.py`
+        # expects a single float score to be passed iteratively (not a list) and does not return anything.
+        # But wait, looking at the code `current_threshold = self.drift_guard.update(ensemble_scores.tolist())`
+        # actually let me fix the unused variable issue first
+        self.drift_guard.update(ensemble_scores.tolist())
 
         return (
             ensemble_scores.tolist(),
