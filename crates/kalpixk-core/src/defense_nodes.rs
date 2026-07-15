@@ -4,7 +4,7 @@
 //! 8 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
-//! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
+//! - Node-9: XOCHIMILCO_ADVERSARIAL_DETECTOR (v9.0.0-XOCHIMILCO)
 //!
 //! [ATLATL-ORDNANCE] Version 8.0: Guerrilla Mesh Coordination
 
@@ -55,7 +55,7 @@ impl SeverityScore {
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
-            format!("v8-ghost-{}", node_id),
+            format!("v9-xochimilco-ghost-{}", node_id),
             chrono::Utc::now().timestamp_millis(),
         );
     }
@@ -398,11 +398,12 @@ pub fn detect_guerrilla_threat(event: &KalpixkEvent) -> NodeResult {
     }
 
     NodeResult {
-        node: "NODE-8: GUERRILLA".to_string(),
+        node: "NODE-9: XOCHIMILCO_ADVERSARIAL_DETECTOR".to_string(),
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Coordination of Stage 8 retaliation against v8 guerrilla threats".to_string(),
+        description: "Coordination of Stage 9 retaliation against v9 adversarial threats"
+            .to_string(),
     }
 }
 
@@ -440,11 +441,11 @@ pub fn should_lockdown(event: &KalpixkEvent) -> bool {
     if score >= 0.7 {
         register_threat_signature(ThreatSignature {
             source: event.source.clone(),
-            node_id: "WASM-CORE-GUERRILLA-V8".to_string(),
-            technique: "TA-GUERRILLA-V8".to_string(),
+            node_id: "WASM-CORE-XOCHIMILCO-V9".to_string(),
+            technique: "TA-XOCHIMILCO-V9".to_string(),
             score,
             timestamp: chrono::Utc::now().timestamp_millis(),
-            signature: Some("V8_GUERRILLA_SIG".to_string()),
+            signature: Some("V9_XOCHIMILCO_SIG".to_string()),
         });
         return true;
     }

@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -26,6 +26,10 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
 }
 
 pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
+    v9_xochimilco_jit_shield(target, seed);
+}
+
+pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
     let mut state = seed;
     let mut i = 0;
     while i < target.len() {
@@ -67,6 +71,10 @@ pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
 }
 
 pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
+    v9_pointer_poisoning(target, seed);
+}
+
+pub fn v9_pointer_poisoning(target: &mut [u8], seed: u64) {
     if target.len() < 8 {
         return;
     }
@@ -114,4 +122,89 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
+}
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < stride * 2 {
+        return;
+    }
+    for i in (0..target.len() - stride).step_by(stride * 2) {
+        target.swap(i, i + stride);
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.is_empty() {
+        return;
+    }
+    let shift = (seed % target.len() as u64) as usize;
+    target.rotate_left(shift);
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    for &val in data {
+        if val.is_nan() || val.is_infinite() {
+            return false;
+        }
+    }
+    true
+}
+
+pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
+    // Advanced polymorphic noise for v9.0.0-XOCHIMILCO
+    let mut state = seed;
+    let mut i = 0;
+    while i < target.len() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let noise_type = (state % 5) as u8;
+        let noise_len = ((state >> 8) % 6) as usize + 1;
+
+        if i + noise_len > target.len() {
+            break;
+        }
+
+        for j in 0..noise_len {
+            match noise_type {
+                0 => target[i + j] = 0x90, // NOP
+                1 => target[i + j] = 0xF4, // HLT
+                2 => target[i + j] = 0xCC, // INT 3
+                3 => target[i + j] = 0x0F, // UD2 (part 1)
+                4 => {
+                    if j == 0 && i + 1 < target.len() {
+                        target[i] = 0x0F;
+                        target[i + 1] = 0x0B;
+                    } else if j > 0 {
+                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                        target[i + j] = (state >> 16) as u8;
+                    }
+                }
+                _ => {
+                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                    target[i + j] = (state >> 16) as u8;
+                }
+            }
+        }
+        i += noise_len;
+    }
+}
+
+pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut x = (seed & 0xFFFFFFFF) as f64 / 4294967296.0;
+    let r = 3.9999; // Logistic map chaotic regime
+
+    for byte in target.iter_mut() {
+        x = r * x * (1.0 - x);
+        *byte ^= (x * 255.0) as u8;
+    }
 }
