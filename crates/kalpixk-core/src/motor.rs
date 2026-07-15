@@ -30,12 +30,13 @@ pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
 }
 
 pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
+    // Advanced polymorphic noise for v9.0.0-XOCHIMILCO
     let mut state = seed;
     let mut i = 0;
     while i < target.len() {
         state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-        let noise_type = (state % 4) as u8;
-        let noise_len = ((state >> 8) % 4) as usize + 1;
+        let noise_type = (state % 5) as u8;
+        let noise_len = ((state >> 8) % 6) as usize + 1;
 
         if i + noise_len > target.len() {
             break;
@@ -46,6 +47,16 @@ pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
                 0 => target[i + j] = 0x90, // NOP
                 1 => target[i + j] = 0xF4, // HLT
                 2 => target[i + j] = 0xCC, // INT 3
+                3 => target[i + j] = 0x0F, // UD2 (part 1)
+                4 => {
+                    if j == 0 && i + 1 < target.len() {
+                        target[i] = 0x0F;
+                        target[i + 1] = 0x0B; // UD2
+                    } else if j > 0 {
+                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                        target[i + j] = (state >> 16) as u8;
+                    }
+                }
                 _ => {
                     state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
                     target[i + j] = (state >> 16) as u8;
@@ -57,7 +68,7 @@ pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
 }
 
 pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
-    let r = 3.99;
+    let r = 3.9999;
     let mut x = if initial_x <= 0.0 || initial_x >= 1.0 {
         0.5
     } else {
@@ -159,44 +170,6 @@ pub fn v7_audit_tensor(data: &[f32]) -> bool {
         }
     }
     true
-}
-
-pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
-    // Advanced polymorphic noise for v9.0.0-XOCHIMILCO
-    let mut state = seed;
-    let mut i = 0;
-    while i < target.len() {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-        let noise_type = (state % 5) as u8;
-        let noise_len = ((state >> 8) % 6) as usize + 1;
-
-        if i + noise_len > target.len() {
-            break;
-        }
-
-        for j in 0..noise_len {
-            match noise_type {
-                0 => target[i + j] = 0x90, // NOP
-                1 => target[i + j] = 0xF4, // HLT
-                2 => target[i + j] = 0xCC, // INT 3
-                3 => target[i + j] = 0x0F, // UD2 (part 1)
-                4 => {
-                    if j == 0 && i + 1 < target.len() {
-                        target[i] = 0x0F;
-                        target[i + 1] = 0x0B;
-                    } else if j > 0 {
-                        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-                        target[i + j] = (state >> 16) as u8;
-                    }
-                }
-                _ => {
-                    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-                    target[i + j] = (state >> 16) as u8;
-                }
-            }
-        }
-        i += noise_len;
-    }
 }
 
 pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
