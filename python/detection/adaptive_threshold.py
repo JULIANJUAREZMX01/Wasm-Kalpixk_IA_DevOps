@@ -81,37 +81,94 @@ class AdaptiveThreshold:
 
 
 class AdversarialDriftGuard:
-    """Robust adaptive threshold using Median and MAD (Median Absolute Deviation)."""
-    def __init__(self, window_size: int = 1000, k: float = 5.5, recalibrate_every: int = 100, alpha: float = 0.1):
-        self.window_size, self.k, self.recalibrate_every, self.alpha = window_size, k, recalibrate_every, alpha
-        self._buffer, self._lock = deque(maxlen=window_size), threading.Lock()
-        self._median, self._mad, self._current_threshold, self._updates_since_recalc, self._total_updates, self._initialized = 0.5, 0.1, 0.8, 0, 0, False
+    """
+    Robust adaptive threshold using Median and MAD (Median Absolute Deviation).
+    Designed to resist adversarial drift by using dampened updates and robust statistics.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 1000,
+        k: float = 5.5,
+        recalibrate_every: int = 100,
+        alpha: float = 0.1,
+    ):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+        self.alpha = alpha  # Dampening factor for statistics updates
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+
+        self._median = 0.5
+        self._mad = 0.1
+        self._current_threshold = 0.8
+
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+        self._initialized = False
 
     def update(self, scores: float | list[float], force_recalibrate: bool = False) -> float:
-        scores = [float(scores)] if isinstance(scores, (int, float)) else scores
+        """
+        Update the guard with new scores and return the current adaptive threshold.
+        """
+        if isinstance(scores, (int, float)):
+            scores = [float(scores)]
+
         with self._lock:
-            for s in scores:
-                self._buffer.append(s); self._updates_since_recalc += 1; self._total_updates += 1
-            if force_recalibrate or (self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 20):
+            for score in scores:
+                self._buffer.append(score)
+                self._updates_since_recalc += 1
+                self._total_updates += 1
+
+            if force_recalibrate or (
+                self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 20
+            ):
                 self._recalibrate()
+
             return self._current_threshold
 
     def _recalibrate(self) -> None:
-        if not self._buffer: return
+        """Robust recalibration using dampened Median/MAD."""
+        # Assumption: called while holding self._lock
+        if not self._buffer:
+            return
+
         data = np.array(self._buffer)
         new_median = float(np.median(data))
-        new_mad = max(0.01, float(np.median(np.abs(data - new_median))))
+        new_mad = float(np.median(np.abs(data - new_median)))
+
+        # Ensure MAD doesn't collapse to zero (floor of 0.01)
+        new_mad = max(0.01, new_mad)
+
         if not self._initialized:
-            self._median, self._mad, self._initialized = new_median, new_mad, True
+            self._median = new_median
+            self._mad = new_mad
+            self._initialized = True
         else:
+            # Dampened update: EMA of the statistics to resist sudden adversarial shifts
             self._median = (1 - self.alpha) * self._median + self.alpha * new_median
             self._mad = (1 - self.alpha) * self._mad + self.alpha * new_mad
+
+        # Robust threshold formula: Median + k * (MAD * 1.4826)
+        # 1.4826 is the scaling factor to make MAD a consistent estimator of StdDev for Normal distribution
         self._current_threshold = float(self._median + self.k * (self._mad * 1.4826))
         self._updates_since_recalc = 0
 
     @property
     def current_threshold(self) -> float:
-        with self._lock: return self._current_threshold
+        with self._lock:
+            return self._current_threshold
 
     def to_dict(self) -> dict:
-        with self._lock: return {"current_threshold": round(self._current_threshold, 4), "median": round(self._median, 4), "mad": round(self._mad, 4), "window_size": self.window_size, "buffer_len": len(self._buffer), "total_updates": self._total_updates, "initialized": self._initialized}
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "total_updates": self._total_updates,
+                "initialized": self._initialized,
+            }
