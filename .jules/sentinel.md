@@ -9,3 +9,8 @@
 **Vulnerability:** JIT Spraying and Buffer Deduplication Evasion in decentralized nodes.
 **Learning:** Standard entropy storms can be mitigated by deduplicating network appliances. JIT probing requires polymorphic instruction noise to disrupt shellcode alignment.
 **Prevention:** Implement non-linear chaotic entropy (Logistic Map) and polymorphic instruction padding (JIT Shield) at the metal layer (Zig/Rust).
+
+## 2024-05-24 - [Adversarial Drift Protection]
+**Vulnerability:** Adaptive thresholds using simple Mean/StdDev are vulnerable to adversarial "boiling frog" attacks, where an attacker slowly shifts the baseline to hide anomalies.
+**Learning:** Robust statistics like Median and MAD (Median Absolute Deviation) are significantly harder to poison. Using dampened updates (EMA) on these statistics adds another layer of defense against rapid shifts.
+**Prevention:** Always use robust statistical guards (like AdversarialDriftGuard) for ensemble-level thresholds instead of component-level simple thresholds.
