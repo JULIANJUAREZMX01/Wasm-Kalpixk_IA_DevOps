@@ -26,3 +26,6 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+## 2024-11-20 - [Persona Constraint Conflict]
+**Learning:** Conflicting line count constraints across multiple personas (Ordnance >= 100 lines vs. Bolt < 50 lines) make satisfying combined operations mathematically impossible.
+**Action:** When presented with conflicting hard limits, strictly follow the explicit terminal instruction (e.g., "stop operations if no optimization can be identified"). Always evaluate feasibility before starting modifications.
