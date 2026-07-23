@@ -8,6 +8,7 @@ on:
 
 env:
   RUST_BACKTRACE: 1
+  CARGO_BUILD_JOBS: 2
 
 permissions:
   contents: read
