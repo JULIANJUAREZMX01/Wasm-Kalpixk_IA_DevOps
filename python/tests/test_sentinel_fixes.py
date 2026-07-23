@@ -88,3 +88,36 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+@pytest.mark.asyncio
+async def test_alerts_endpoint_limit_bypass_prevention(tmp_db):
+    await init_db()
+    import httpx
+
+    from python.api.kalpixk_api import app
+
+    # Insert 15 alerts
+    alerts_data = []
+    for i in range(15):
+        alerts_data.append({
+            "ts": f"2023-10-27T12:00:{i:02d}Z",
+            "ip": f"192.168.1.{i}",
+            "anomaly_score": 0.1,
+            "event_type": "test_limit"
+        })
+    from python.db.database import insert_alerts
+    await insert_alerts(alerts_data)
+
+    # Call /api/alerts with a negative limit, e.g., limit=-1
+    # SQLite translates LIMIT -1 to "no limit" (returning all 15 results).
+    # But our clamp should restrict it to max(1, min(-1, 500)) = 1, returning exactly 1 alert.
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret"},
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://localhost:8000"
+    ) as c:
+        response = await c.get("/api/alerts", params={"limit": -1})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["alerts"]) == 1, "Limit bypass occurred! Returned more than 1 alert."
