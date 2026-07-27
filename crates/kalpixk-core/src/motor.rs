@@ -115,3 +115,70 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut hash: u64 = 0xCBF29CE484222325;
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(0x100000001B3);
+    }
+    hash
+}
+
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    state ^ 0x584F4348494D494C // XOR with "XOCHIMIL"
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        let diff = (val - prev).abs();
+        if diff > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.len() < 16 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let stride = (state as usize % (target.len() / 4)) + 1;
+
+    let mut i = 0;
+    while i + stride < target.len() {
+        let j = (i + stride) % target.len();
+        target.swap(i, j);
+        i += stride;
+    }
+}
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < 2 {
+        return;
+    }
+    let len = target.len();
+    for i in (0..len - 1).step_by(stride) {
+        target.swap(i, i + 1);
+    }
+}
