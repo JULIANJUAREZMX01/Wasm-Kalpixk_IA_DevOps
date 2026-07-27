@@ -9,3 +9,8 @@
 **Vulnerability:** JIT Spraying and Buffer Deduplication Evasion in decentralized nodes.
 **Learning:** Standard entropy storms can be mitigated by deduplicating network appliances. JIT probing requires polymorphic instruction noise to disrupt shellcode alignment.
 **Prevention:** Implement non-linear chaotic entropy (Logistic Map) and polymorphic instruction padding (JIT Shield) at the metal layer (Zig/Rust).
+
+## 2026-07-27 - [SQLite Pagination Limit Bypass]
+**Vulnerability:** SQLite treats negative LIMIT values (e.g., -1) as "no limit," which allows bypassing query boundaries when only upper bound checks are present.
+**Learning:** Simple checks like `if limit > 500: limit = 500` fail to secure database queries from pagination bypass and denial of service (DoS) when negative values are provided.
+**Prevention:** Always clamp pagination parameters on both sides using `limit = max(1, min(limit, max_allowed))` to enforce proper lower and upper bounds.
