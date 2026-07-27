@@ -206,3 +206,31 @@ test "v8 pointer poisoning" {
     }
     try std.testing.expect(changed);
 }
+
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling (Legacy Support)
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 2) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    var i: usize = 0;
+    while (i < target_len / 2) : (i += 1) {
+        const j = rand.int(usize) % target_len;
+        const temp = slice[i];
+        slice[i] = slice[j];
+        slice[j] = temp;
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving (Legacy Support)
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 2) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+
+    for (slice) |*byte| {
+        byte.* = byte.* ^ rand.int(u8);
+    }
+}
