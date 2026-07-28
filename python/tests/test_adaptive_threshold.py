@@ -6,11 +6,11 @@ import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
-    at = AdaptiveThreshold(window_size=100, k=2.0, recalibrate_every=10)
+    at = AdversarialDriftGuard(window_size=100, k=2.0, recalibrate_every=10)
     assert at.window_size == 100
     assert at.k == 2.0
     assert at.recalibrate_every == 10
@@ -19,7 +19,7 @@ def test_adaptive_threshold_initialization():
 
 def test_adaptive_threshold_recalibration():
     # recalibrate_every = 10, window_size = 100
-    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
+    at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
 
     # Feed 9 benign scores (no recalibration yet because < 10 updates)
     for _ in range(9):
@@ -29,11 +29,12 @@ def test_adaptive_threshold_recalibration():
     # 10th update triggers recalibration
     at.update(0.1)
     # mean=0.1, std=0.0, threshold = 0.1 + 3.0*0.0 = 0.1
-    assert at.current_threshold == 0.1
+    # v9 dampening (alpha=0.1): 0.9 * 0.5 + 0.1 * 0.1 = 0.45 + 0.01 = 0.46
+    assert abs(at.current_threshold - 0.46) < 1e-6
 
 
 def test_adaptive_threshold_no_move_on_anomalies():
-    at = AdaptiveThreshold(window_size=100, k=3.0, recalibrate_every=10)
+    at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
     initial_threshold = at.current_threshold
 
     # Feed anomalous scores (> 0.5)
@@ -45,7 +46,7 @@ def test_adaptive_threshold_no_move_on_anomalies():
 
 
 def test_adaptive_threshold_thread_safety():
-    at = AdaptiveThreshold(window_size=1000, k=3.0, recalibrate_every=50)
+    at = AdversarialDriftGuard(window_size=1000, k=3.0, recalibrate_every=50)
 
     def worker():
         for _ in range(100):
@@ -64,7 +65,7 @@ def test_adaptive_threshold_thread_safety():
 
 
 def test_adaptive_threshold_to_dict():
-    at = AdaptiveThreshold(window_size=500, k=3.0, recalibrate_every=50)
+    at = AdversarialDriftGuard(window_size=500, k=3.0, recalibrate_every=50)
     for _ in range(10):
         at.update(0.2)
 
@@ -77,16 +78,31 @@ def test_adaptive_threshold_to_dict():
 
 
 def test_is_anomaly():
-    at = AdaptiveThreshold()
+    at = AdversarialDriftGuard()
     # Initial threshold is 0.5
     assert not at.is_anomaly(0.4)
     assert at.is_anomaly(0.6)
 
     # Recalibrate to lower threshold
+    # Each recalibration moves the threshold by 10% towards 0.1
+    # after 50 updates (1 recalibration), threshold = 0.46
     for _ in range(50):
         at.update(0.1)
 
     new_threshold = at.current_threshold
-    assert new_threshold < 0.2
-    assert at.is_anomaly(0.3)
+    assert new_threshold < 0.5
+    assert not at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adaptive_threshold_list_update():
+    at = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
+    # Update with a list of 10 benign scores
+    scores = [0.1] * 10
+    new_thresh = at.update(scores)
+
+    # Threshold should have recalibrated
+    # initial 0.5, alpha 0.1, target 0.1 -> 0.46
+    assert abs(new_thresh - 0.46) < 1e-6
+    assert at.current_threshold == new_thresh
+    assert at.to_dict()["total_updates"] == 10

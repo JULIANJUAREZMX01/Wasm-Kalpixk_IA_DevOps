@@ -2,7 +2,7 @@
 // Compila a wasm32-freestanding: zero dependencies, pure math
 //
 // ATLATL-ORDNANCE: "No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla."
-// Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
+// Versión: 9.0.0-XOCHIMILCO (Xochimilco Guerrilla Hardening)
 
 const std = @import("std");
 const atomic = std.atomic;
@@ -174,6 +174,47 @@ pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize,
         slice[i] = slice[j];
         slice[j] = temp;
     }
+}
+
+/// [ATLATL-ORDNANCE] v9_polymorphic_challenge_gen
+/// Deterministic challenge generation for mesh authentication (LCG + 'XOCHIMIL' XOR).
+pub export fn v9_polymorphic_challenge_gen(seed: u64) u64 {
+    const multiplier: u64 = 6364136223846793005;
+    const increment: u64 = 1;
+    const xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL' in hex
+    return (seed.wrapping_mul(multiplier).wrapping_add(increment)) ^ xochimil;
+}
+
+/// [ATLATL-ORDNANCE] v9_binary_integrity_hash
+/// Rolling FNV-1a variant hash for runtime binary verification.
+pub export fn v9_binary_integrity_hash(data_ptr: [*]const u8, data_len: usize) u64 {
+    const fnv_offset_basis: u64 = 14695981039346656037;
+    const fnv_prime: u64 = 1099511628211;
+
+    var hash: u64 = fnv_offset_basis;
+    const slice = data_ptr[0..data_len];
+
+    for (slice) |byte| {
+        hash ^= @as(u64, byte);
+        hash = hash.wrapping_mul(fnv_prime);
+    }
+
+    return hash;
+}
+
+test "v9 polymorphic challenge gen" {
+    const c1 = v9_polymorphic_challenge_gen(0x1234);
+    const c2 = v9_polymorphic_challenge_gen(0x1234);
+    try std.testing.expect(c1 == c2);
+    try std.testing.expect(c1 != 0x1234);
+}
+
+test "v9 binary integrity hash" {
+    const data = "XOCHIMILCO_V9_INTEGRITY_CHECK";
+    const h1 = v9_binary_integrity_hash(data.ptr, data.len);
+    const h2 = v9_binary_integrity_hash(data.ptr, data.len);
+    try std.testing.expect(h1 == h2);
+    try std.testing.expect(h1 != 0);
 }
 
 test "v8 guerrilla jit shield" {
