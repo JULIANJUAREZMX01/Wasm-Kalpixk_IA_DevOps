@@ -1,6 +1,5 @@
 import os
 import pytest
-import secrets
 from fastapi.testclient import TestClient
 from main import app, verify_api_key
 
@@ -28,7 +27,6 @@ def test_verify_api_key_timing_resistance():
     # or just ensure it works as expected for equality.
     os.environ["KALPIXK_API_KEY"] = "test-secret-key"
 
-    from main import verify_api_key
     import asyncio
 
     async def run_verify():

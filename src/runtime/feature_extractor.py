@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from wasmtime import Store, Instance, Linker
+from wasmtime import Store, Linker
 from src.runtime.wasm_loader import wasm_loader
 from loguru import logger
 

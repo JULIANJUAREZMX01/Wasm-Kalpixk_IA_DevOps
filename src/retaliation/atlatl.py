@@ -5,8 +5,6 @@ Versión: 8.0.0-GUERRILLA (Guerrilla Algorítmica)
 """
 from loguru import logger
 import time
-import os
-import random
 
 class Atlatl:
     def __init__(self):

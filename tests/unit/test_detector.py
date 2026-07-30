@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 import os
 
 def test_detector_train(detector):

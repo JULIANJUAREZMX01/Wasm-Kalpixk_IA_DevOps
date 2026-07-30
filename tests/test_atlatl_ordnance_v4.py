@@ -2,7 +2,6 @@ import hmac
 import hashlib
 import json
 import time
-import os
 import sys
 from unittest.mock import MagicMock
 
