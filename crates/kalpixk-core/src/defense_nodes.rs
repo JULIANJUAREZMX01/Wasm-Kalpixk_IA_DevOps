@@ -429,11 +429,9 @@ pub fn detect_node9_mesh_auth(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
 
-    if event.source_type == "mesh_sync" {
-        if !event.metadata.contains_key("v9_auth_token") {
-            score = 0.95;
-            techniques.push("T1557".to_string());
-        }
+    if event.source_type == "mesh_sync" && !event.metadata.contains_key("v9_auth_token") {
+        score = 0.95;
+        techniques.push("T1557".to_string());
     }
 
     NodeResult {
