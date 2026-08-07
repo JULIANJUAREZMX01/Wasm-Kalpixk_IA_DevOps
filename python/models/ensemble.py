@@ -16,13 +16,14 @@ class DetectionEnsemble:
         self.iso_forest = KalpixkIsolationForest(device)
         self.autoencoder = KalpixkAutoencoder(device)
         self.drift_guard = AdversarialDriftGuard()
-        logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
+        self.version = "9.0.0-XOCHIMILCO"
+        logger.info(f"Ensemble v9.0.0-XOCHIMILCO inicializado en {device} with Robust DriftGuard")
 
     def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float], float]:
         features_np = features.cpu().numpy()
 
         # Inferencia
-        if_scores, if_conf, adaptive_threshold = self.iso_forest.predict(features_np)
+        if_scores, if_conf, _ = self.iso_forest.predict(features_np)
         ae_scores, ae_conf = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
@@ -43,5 +44,5 @@ class DetectionEnsemble:
             ensemble_scores.tolist(),
             methods,
             confidences,
-            adaptive_threshold,
+            current_threshold,
         )
