@@ -143,21 +143,6 @@ pub export fn v7_stealth_poisoning(target_ptr: [*]u8, target_len: usize, seed: u
     }
 }
 
-/// [ATLATL-ORDNANCE] v7_audit_tensor
-pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) bool {
-    if (data_len == 0) return true;
-    const slice = data_ptr[0..data_len];
-
-    var prev: f32 = slice[0];
-    for (slice) |val| {
-        if (!std.math.isFinite(val)) return false;
-        const diff = @abs(val - prev);
-        if (diff > 10.0) return false;
-        prev = val;
-    }
-    return true;
-}
-
 /// [ATLATL-ORDNANCE] v7_guerrilla_memory_rotation
 pub export fn v7_guerrilla_memory_rotation(target_ptr: [*]u8, target_len: usize, seed: u64) void {
     if (target_len < 16) return;
@@ -228,4 +213,19 @@ pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stri
         slice[i] = slice[i + stride - 1];
         slice[i + stride - 1] = temp;
     }
+}
+
+/// [ATLATL-ORDNANCE] v7_audit_tensor
+pub export fn v7_audit_tensor(data_ptr: [*]const f32, data_len: usize) bool {
+    if (data_len == 0) return true;
+    const slice = data_ptr[0..data_len];
+
+    var prev: f32 = slice[0];
+    for (slice) |val| {
+        if (!std.math.isFinite(val)) return false;
+        const diff = @abs(val - prev);
+        if (diff > 10.0) return false;
+        prev = val;
+    }
+    return true;
 }

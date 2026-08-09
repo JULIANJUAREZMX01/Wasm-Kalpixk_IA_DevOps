@@ -115,3 +115,58 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v5_active_memory_scrambling(target_ptr: &mut [u8], entropy_seed: u64) {
+    if target_ptr.len() < 4 {
+        return;
+    }
+    let mut state = entropy_seed;
+    for byte in target_ptr.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte = byte.wrapping_add((state >> 24) as u8);
+    }
+}
+
+pub fn v5_chaotic_interleaving(target_ptr: &mut [u8], stride: usize) {
+    if target_ptr.len() < stride || stride == 0 {
+        return;
+    }
+    let mut i = 0;
+    while i + stride < target_ptr.len() {
+        target_ptr.swap(i, i + stride - 1);
+        i += stride;
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target_ptr: &mut [u8], seed: u64) {
+    if target_ptr.len() < 16 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let stride = ((state >> 16) as usize % (target_ptr.len() / 4)) + 1;
+    let mut i = 0;
+    while i + stride < target_ptr.len() {
+        let j = (i + stride) % target_ptr.len();
+        target_ptr.swap(i, j);
+        i += stride;
+    }
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        let diff = (val - prev).abs();
+        if diff > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
