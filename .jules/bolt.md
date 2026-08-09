@@ -26,3 +26,6 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+## 2025-02-18 - [Bolt] Vectorize ensemble predictions
+**Learning:** Found a CPU bottleneck in the Python ML prediction pipeline where NumPy arrays were being converted to Python lists (`.tolist()`) and back across inference boundaries (`isolation_forest`, `autoencoder`, `ensemble`).
+**Action:** Prevent CPU bottlenecks by ensuring all ML components (`isolation_forest`, `autoencoder`) return and operate natively on `np.ndarray` objects throughout the inference lifecycle, converting to lists only at the final serialization step at the end of `ensemble.predict`. Explicitly cast string scalar data types like those from `np.where` during the final list conversion.

@@ -207,7 +207,7 @@ class KalpixkAutoencoder:
 
     def predict(
         self, X: np.ndarray
-    ) -> tuple[list[float], list[float]]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Score anomaly via reconstruction error.
 
