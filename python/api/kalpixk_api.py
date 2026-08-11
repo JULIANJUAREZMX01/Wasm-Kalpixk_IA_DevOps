@@ -79,15 +79,19 @@ async def verify_api_key(api_key: str = Security(api_key_header)):
     expected_key = os.getenv("KALPIXK_API_KEY")
 
     if env == "production":
-        if not expected_key:
+        if not expected_key or expected_key == "development_secret":
             from loguru import logger
-            logger.error("KALPIXK_API_KEY not set in production!")
-            raise HTTPException(status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+            logger.error("KALPIXK_API_KEY not set or set to development default in production!")
+            raise HTTPException(
+                status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error",
+            )
         if not api_key or not secrets.compare_digest(api_key, expected_key):
             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     else:
-        if expected_key and (not api_key or not secrets.compare_digest(api_key, expected_key)):
-             raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
+        key_to_check = expected_key if expected_key else "development_secret"
+        if not api_key or not secrets.compare_digest(api_key, key_to_check):
+            raise HTTPException(status_code=fastapi_status.HTTP_403_FORBIDDEN, detail="Invalid credentials")
     return api_key
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -154,6 +158,7 @@ def ensure_ensemble():
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                _ensemble.drift_guard.set_threshold(min(0.8, max_err + 0.15))
     return _ensemble
 
 
@@ -234,7 +239,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +304,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:

@@ -9,3 +9,8 @@
 **Vulnerability:** JIT Spraying and Buffer Deduplication Evasion in decentralized nodes.
 **Learning:** Standard entropy storms can be mitigated by deduplicating network appliances. JIT probing requires polymorphic instruction noise to disrupt shellcode alignment.
 **Prevention:** Implement non-linear chaotic entropy (Logistic Map) and polymorphic instruction padding (JIT Shield) at the metal layer (Zig/Rust).
+
+## 2026-06-01 - [Ensemble Adaptive Threshold Bypass]
+**Vulnerability:** Adaptive threshold security bypass via incorrect variable assignment in ensemble logic.
+**Learning:** Even if a robust AdversarialDriftGuard module is implemented and updated with batch scores, returning the legacy or individual model threshold (like Isolation Forest's simple Mean/StdDev threshold) in the prediction endpoint bypasses the robust statistical guard entirely. This leaves the system completely vulnerable to baseline shifting ("boiling frog") attacks and leads to extreme false-positive/negative rates under varying traffic.
+**Prevention:** Ensure the combined ensemble prediction returns the robust `current_threshold` calculated directly from the active `drift_guard` update, and rigorously test the anomaly rate on baseline/normal traffic fixtures.
