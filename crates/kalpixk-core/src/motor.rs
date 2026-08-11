@@ -25,6 +25,56 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
     entropy
 }
 
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 32) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || stride >= target.len() {
+        return;
+    }
+    for i in (0..target.len()).step_by(stride * 2) {
+        if i + stride < target.len() {
+            for j in 0..stride {
+                if i + stride + j < target.len() {
+                    target.swap(i + j, i + stride + j);
+                }
+            }
+        }
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.is_empty() {
+        return;
+    }
+    let shift = (seed % target.len() as u64) as usize;
+    target.rotate_left(shift);
+}
+
+pub fn v7_audit_tensor(tensor_data: &[f32]) -> bool {
+    if tensor_data.is_empty() {
+        return true;
+    }
+
+    let mut prev = tensor_data[0];
+    for &val in tensor_data {
+        if !val.is_finite() {
+            return false;
+        }
+        let diff = (val - prev).abs();
+        if diff > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
+}
+
 pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
     let mut state = seed;
     let mut i = 0;
