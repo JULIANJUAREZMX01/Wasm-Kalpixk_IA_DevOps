@@ -1,7 +1,8 @@
 """
 python/detection/adaptive_threshold.py
 ───────────────────────────────────────
-Sliding-window adaptive threshold for anomaly scores.
+Adaptive thresholding for anomaly scores.
+Includes legacy AdaptiveThreshold and robust AdversarialDriftGuard.
 """
 
 import threading
@@ -13,14 +14,7 @@ import numpy as np
 class AdaptiveThreshold:
     """
     Sliding-window adaptive threshold for anomaly scores.
-
-    Algorithm:
-      1. Maintains a ring buffer of the last N benign scores (default N=500)
-      2. Every `recalibrate_every` new samples, recomputes:
-           threshold = mean(buffer) + k * std(buffer)   (default k=3.0)
-      3. Exposes is_anomaly(score) -> bool
-      4. Exposes current_threshold property
-      5. Thread-safe (uses threading.Lock)
+    Original simple implementation using Mean and Standard Deviation.
     """
 
     def __init__(self, window_size: int = 500, k: float = 3.0, recalibrate_every: int = 50):
@@ -49,8 +43,7 @@ class AdaptiveThreshold:
                     self._recalibrate()
 
     def _recalibrate(self) -> None:
-        """Recompute threshold based on buffer statistics. Internal use only."""
-        # Assumption: called while holding self._lock
+        """Recompute threshold based on buffer statistics."""
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)
@@ -69,12 +62,100 @@ class AdaptiveThreshold:
             return self._current_threshold
 
     def to_dict(self) -> dict:
-        """Serializable state for /api/status endpoint."""
+        """Serializable state for telemetry."""
         with self._lock:
             return {
                 "current_threshold": round(self._current_threshold, 4),
                 "window_size": self.window_size,
                 "buffer_len": len(self._buffer),
                 "k": self.k,
+                "total_updates": self._total_updates,
+            }
+
+
+class AdversarialDriftGuard:
+    """
+    AdversarialDriftGuard — Robust adaptive thresholding for ensemble scores.
+    Uses Median and MAD (Median Absolute Deviation) to resist outlier influence.
+    """
+
+    def __init__(self, window_size: int = 1000, k: float = 5.5, recalibrate_every: int = 100):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+        self._initialized = False
+        self._median = 0.5
+        self._mad = 0.1
+
+    def update(
+        self,
+        scores: float | list[float],
+        force_recalibrate: bool = False,
+        is_confirmed_benign: bool = False,
+    ) -> float:
+        """Add score(s) to buffer and return current threshold."""
+        with self._lock:
+            if isinstance(scores, (int, float)):
+                scores = [float(scores)]
+
+            for s in scores:
+                if is_confirmed_benign or s < self._current_threshold or not self._initialized:
+                    self._buffer.append(s)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if force_recalibrate or (
+                self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
+            ):
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        data = np.array(self._buffer)
+        if len(data) < 5:
+            return
+
+        new_median = np.median(data)
+        new_mad = np.median(np.abs(data - new_median))
+
+        if new_mad < 0.01:
+            new_mad = 0.01
+
+        if not self._initialized:
+            self._median = new_median
+            self._mad = new_mad
+            self._initialized = True
+        else:
+            alpha = 0.1
+            self._median = (1 - alpha) * self._median + alpha * new_median
+            self._mad = (1 - alpha) * self._mad + alpha * new_mad
+
+        self._current_threshold = float(self._median + self.k * (self._mad * 1.4826))
+        self._updates_since_recalc = 0
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def set_threshold(self, value: float) -> None:
+        with self._lock:
+            self._current_threshold = value
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
+                "buffer_len": len(self._buffer),
                 "total_updates": self._total_updates,
             }

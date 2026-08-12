@@ -154,6 +154,7 @@ def ensure_ensemble():
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                _ensemble.drift_guard.set_threshold(min(0.8, max_err + 0.15))
     return _ensemble
 
 
@@ -234,7 +235,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +300,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
