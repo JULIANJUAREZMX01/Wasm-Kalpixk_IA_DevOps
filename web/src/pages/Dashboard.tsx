@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer,
   Tooltip, ReferenceLine,
@@ -677,7 +677,16 @@ const ParsersTab = React.memo(function ParsersTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminalOutput: string[] }) {
   const alerts = useAlertStore((s) => s.alerts);
-  const strikes = terminalOutput.filter(l => l.includes("[STRIKE]") || l.includes("[GUILLOTINE]"));
+
+  const strikes = useMemo(
+    () => terminalOutput.filter(l => l.includes("[STRIKE]") || l.includes("[GUILLOTINE]")),
+    [terminalOutput]
+  );
+
+  const targetedAlerts = useMemo(
+    () => alerts.filter(a => a.score > 0.8).slice(0, 5),
+    [alerts]
+  );
 
   return (
     <div style={{ flex: 1, padding: 20, overflow: "auto", background: "#000" }}>
@@ -729,7 +738,7 @@ const WarRoomTab = React.memo(function WarRoomTab({ terminalOutput }: { terminal
           <div>
             <Label text="TARGETED INFRASTRUCTURE" accent={T.amber} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {alerts.filter(a => a.score > 0.8).slice(0, 5).map((a) => (
+              {targetedAlerts.map((a) => (
                 <div key={a.id} style={{
                   padding: 12, background: T.surface, border: `1px solid ${T.border}`,
                   position: "relative", overflow: "hidden"
