@@ -55,16 +55,6 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
-#[cfg(target_arch = "wasm32")]
-extern "C" {
-    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
-    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
-    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
-    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
-}
-
 #[wasm_bindgen]
 pub fn version() -> String {
     "8.0.0-GUERRILLA".to_string()
@@ -288,16 +278,10 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
         let mut decoy_buffer = [0u8; 128];
-        unsafe {
-            v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-            v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
-            v7_guerrilla_memory_rotation(
-                decoy_buffer.as_mut_ptr(),
-                decoy_buffer.len(),
-                seed ^ 0xDEADBEEF,
-            );
-            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
-        }
+        motor::v5_active_memory_scrambling(&mut decoy_buffer, seed);
+        motor::v5_chaotic_interleaving(&mut decoy_buffer, 16);
+        motor::v7_guerrilla_memory_rotation(&mut decoy_buffer, seed ^ 0xDEADBEEF);
+        motor::v8_guerrilla_jit_shield(&mut decoy_buffer, seed ^ 0x1337);
 
         if anomaly_count > 5 {
             v5_trap::arm_traps();
