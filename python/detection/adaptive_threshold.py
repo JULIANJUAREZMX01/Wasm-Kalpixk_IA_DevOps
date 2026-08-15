@@ -126,7 +126,13 @@ class AdversarialDriftGuard:
 
         with self._lock:
             for s in scores_list:
-                if is_confirmed_benign or s < self._current_threshold:
+                # Accept scores during warm-up phase or when explicitly benign / force / below threshold
+                if (
+                    is_confirmed_benign
+                    or force_recalibrate
+                    or self._total_updates < self.recalibrate_every
+                    or s < self._current_threshold
+                ):
                     self._buffer.append(s)
                     self._updates_since_recalc += 1
                     self._total_updates += 1

@@ -830,6 +830,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "winreg",
 ]
 
 [[package]]

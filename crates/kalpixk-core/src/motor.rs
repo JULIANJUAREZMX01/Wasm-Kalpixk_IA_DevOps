@@ -69,11 +69,11 @@ pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
     let mut x1 = ((seed & 0xFFFFFFFF) as f64 + 1.0) / 4294967296.0;
     let mut x2 = (((seed >> 32) & 0xFFFFFFFF) as f64 + 1.0) / 4294967296.0;
 
-    for i in 0..target.len() {
+    for byte in target.iter_mut() {
         x1 = r1 * x1 * (1.0 - x1);
         x2 = r2 * x2 * (1.0 - x2);
         let mask = ((x1 * 255.0) as u8) ^ ((x2 * 255.0) as u8);
-        target[i] ^= mask;
+        *byte ^= mask;
     }
 }
 
