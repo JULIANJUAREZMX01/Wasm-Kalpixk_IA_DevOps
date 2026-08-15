@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -95,7 +95,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -147,13 +149,14 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
+            # Calibration: Evaluate baseline scores and calibrate AdversarialDriftGuard
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                scores, _, _, _ = _ensemble.predict(X_tensor)
+                _ensemble.drift_guard.update(scores, force_recalibrate=True)
     return _ensemble
 
 
@@ -170,7 +173,6 @@ class LogRequest(BaseModel):
     def validate_features(cls, v):
         if not v:
             return v
-        # Pydantic may have already converted to floats, but let's check structure
         first = v[0]
         if isinstance(first, (int, float)):
             if len(v) != 32:
@@ -186,12 +188,10 @@ class LogRequest(BaseModel):
         features = self.features
         if isinstance(features, list) and len(features) > 0 and isinstance(features[0], list):
             expected = len(features)
-            # Check event_ids
             if self.event_ids is not None:
                 if len(self.event_ids) != expected:
                     raise ValueError("features and event_ids must have the same length")
 
-            # Check metadata
             if self.metadata is not None:
                 if len(self.metadata) != expected:
                     raise ValueError("features and metadata must have the same length")
@@ -213,12 +213,11 @@ class AnomalyResponse(BaseModel):
 
 @app.get("/api/health")
 async def health():
-    # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -230,11 +229,12 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
     return {
         "status": "ok",
         "module": "kalpixk-api",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device),
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -258,8 +258,7 @@ async def get_kalpixk_alerts(
     since: str | None = None,
     api_key: str = Depends(verify_api_key)
 ):
-    if limit > 500:
-        limit = 500
+    limit = max(1, min(limit, 500))
 
     alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}
@@ -299,7 +298,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
@@ -309,7 +308,6 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
                 else "HIGH" if score > 0.6
                 else "LOW"
             )
-            # Persist alert
             alert_data = {
                 "ts": datetime.utcnow().isoformat(),
                 "ip": request.client.host if request.client else "unknown",
@@ -359,7 +357,6 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
         else "LOW"
     )
 
-    # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
             "ts": datetime.utcnow().isoformat(),
@@ -367,13 +364,12 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
             "anomaly_score": float(score),
             "event_type": req.source_type,
             "severity": severity,
-            "technique": "unknown", # /analyze endpoint doesn't return technique currently
+            "technique": "unknown",
             "features_json": req.features,
             "source": req.source or "agent"
         }
         await insert_alert(alert_data)
 
-    # Broadcast a clientes WebSocket conectados
     if _ws_clients and is_anomaly:
         alert = msgpack.packb({
             "type": "anomaly",
@@ -402,7 +398,6 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
 @app.post("/train")
 @limiter.limit("5/minute")
 async def train(request: Request, payload: TrainPayload, api_key: str = Depends(verify_api_key)):
-    """Entrena el modelo con datos normales sintéticos (baseline)."""
     if _ensemble is None:
         raise HTTPException(503, "Modelo no inicializado")
     normal_data = np.random.randn(payload.n_samples, 32).astype(np.float32)
@@ -413,14 +408,11 @@ async def train(request: Request, payload: TrainPayload, api_key: str = Depends(
 
 @app.websocket("/stream")
 async def ws_stream(ws: WebSocket, token: str | None = None):
-    """WebSocket para telemetría en tiempo real con MessagePack."""
     expected_key = os.getenv("KALPIXK_API_KEY")
     env = os.getenv("KALPIXK_ENV", os.getenv("ENV", "development"))
 
-    # Hardened fail-secure authentication for WS
     if env == "production":
         if not expected_key:
-            # En producción es un error crítico no tener la llave configurada
             await ws.close(code=fastapi_status.WS_1011_INTERNAL_ERROR)
             return
         if not token or not secrets.compare_digest(token, expected_key):
@@ -441,7 +433,6 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
             features = payload.get("features", [])
             if len(features) == 32:
                 arr = np.array([features], dtype=np.float32)
-                # Convert to tensor and fix result unpacking
                 features_array = torch.from_numpy(arr).to(_device)
                 scores, _, _, adaptive_threshold = ens.predict(features_array)
                 score = float(scores[0])
@@ -477,7 +468,6 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 @app.get("/features")
 @limiter.limit("10/minute")
 async def get_feature_names(request: Request, api_key: str = Depends(verify_api_key)):
-    """Retorna los nombres de las 32 features para XAI."""
     return {
         "feature_dim": 32,
         "contract_version": "1.0.0",
@@ -496,18 +486,12 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
     }
 
 
-
-# ---------------------------------------------------------------------------
-# Attack Simulator Control — AMD Hackathon Demo
-# ---------------------------------------------------------------------------
-
 _sim_state: dict = {"proc": None, "phase": "idle"}
 
 
 @app.post("/api/simulate/start")
 @limiter.limit("5/minute")
 async def simulate_start(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
-    """Launch the ransomware simulator as a background subprocess."""
     if _sim_state["proc"] and _sim_state["proc"].poll() is None:
         return {"status": "already_running", "phase": _sim_state["phase"]}
 
@@ -528,7 +512,6 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
 @app.post("/api/simulate/stop")
 @limiter.limit("10/minute")
 async def simulate_stop(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
-    """Kill the running simulator process."""
     proc = _sim_state.get("proc")
     if proc and proc.poll() is None:
         proc.send_signal(_signal.SIGTERM)
@@ -544,7 +527,6 @@ async def simulate_stop(request: Request, api_key: str = Depends(verify_api_key)
 @app.get("/api/simulate/status")
 @limiter.limit("30/minute")
 async def simulate_status(request: Request, api_key: str = Depends(verify_api_key)) -> dict:
-    """Return current simulator state."""
     proc = _sim_state.get("proc")
     if proc is None or proc.poll() is not None:
         _sim_state["phase"] = "idle"
@@ -552,10 +534,11 @@ async def simulate_status(request: Request, api_key: str = Depends(verify_api_ke
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
 
+@app.post("/api/v1/guerrilla/v9/strike")
 @app.post("/api/v1/guerrilla/v8/strike")
 @limiter.limit("2/minute")
-async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
-    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
+async def v9_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v9 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
-    result = atlatl.v8_algorithmic_guillotine(target)
+    result = atlatl.v9_algorithmic_guillotine(target)
     return result
