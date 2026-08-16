@@ -70,10 +70,10 @@ pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], seed: u64) {
         x = 0.5;
     }
 
-    for idx in 0..target.len() {
+    for byte in target.iter_mut() {
         x = r * x * (1.0 - x);
         let mask = (x * 255.0) as u8;
-        target[idx] ^= mask;
+        *byte ^= mask;
     }
 }
 
