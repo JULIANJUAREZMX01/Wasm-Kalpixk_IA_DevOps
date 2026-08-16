@@ -154,6 +154,15 @@ def ensure_ensemble():
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+
+        # Calibrate drift guard threshold based on baseline normal predictions
+        rng = np.random.default_rng(42)
+        X_calib = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X_calib[:, 5] = 0.0
+        X_calib[:, 6] = 1.0
+        X_tensor = torch.from_numpy(X_calib).to(_device)
+        scores, _, _, _ = _ensemble.predict(X_tensor)
+        _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
     return _ensemble
 
 
@@ -234,7 +243,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +308,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:

@@ -1,11 +1,12 @@
 """
 python/detection/adaptive_threshold.py
 ───────────────────────────────────────
-Sliding-window adaptive threshold for anomaly scores.
+Sliding-window adaptive threshold and AdversarialDriftGuard for anomaly scores.
 """
 
 import threading
 from collections import deque
+from typing import Any
 
 import numpy as np
 
@@ -73,6 +74,95 @@ class AdaptiveThreshold:
         with self._lock:
             return {
                 "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "k": self.k,
+                "total_updates": self._total_updates,
+            }
+
+
+class AdversarialDriftGuard:
+    """
+    Robust adaptive threshold guard resistant to baseline shifting ('boiling frog') attacks.
+
+    Uses Median and Median Absolute Deviation (MAD) instead of mean/std, making it resilient
+    against adversarial score drift and outlier contamination.
+    """
+
+    def __init__(self, window_size: int = 500, k: float = 5.5, recalibrate_every: int = 100):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+
+        self._buffer: deque[float] = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
+        self._median = 0.5
+        self._mad = 0.01
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+
+    def update(
+        self,
+        scores: float | list[float] | np.ndarray,
+        is_confirmed_benign: bool = False,
+        force_recalibrate: bool = False,
+    ) -> float:
+        """
+        Accepts a single score or batch of scores.
+        Updates internal benign score buffer and returns current threshold.
+        """
+        if isinstance(scores, (int, float)):
+            score_list = [float(scores)]
+        elif isinstance(scores, np.ndarray):
+            score_list = scores.astype(float).tolist()
+        else:
+            score_list = [float(s) for s in scores]
+
+        with self._lock:
+            for score in score_list:
+                if is_confirmed_benign or score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if force_recalibrate or (
+                self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
+            ):
+                self._recalibrate()
+
+            return self._current_threshold
+
+    def _recalibrate(self) -> None:
+        """Recompute threshold using robust median and MAD statistics."""
+        if len(self._buffer) < 2:
+            return
+        data = np.array(self._buffer)
+        self._median = float(np.median(data))
+        raw_mad = float(np.median(np.abs(data - self._median)))
+        # Convert MAD to equivalent normal standard deviation, capped at floor 0.01
+        self._mad = max(raw_mad * 1.4826, 0.01)
+        self._current_threshold = float(self._median + self.k * self._mad)
+        self._updates_since_recalc = 0
+
+    def is_anomaly(self, score: float) -> bool:
+        """Return True if score exceeds adaptive threshold."""
+        with self._lock:
+            return score > self._current_threshold
+
+    @property
+    def current_threshold(self) -> float:
+        """Current threshold value."""
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializable state for telemetry endpoints."""
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
                 "window_size": self.window_size,
                 "buffer_len": len(self._buffer),
                 "k": self.k,
