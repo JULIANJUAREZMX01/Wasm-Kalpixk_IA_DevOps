@@ -16,13 +16,13 @@ class DetectionEnsemble:
         self.iso_forest = KalpixkIsolationForest(device)
         self.autoencoder = KalpixkAutoencoder(device)
         self.drift_guard = AdversarialDriftGuard()
-        logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
+        logger.info(f"Ensemble inicializado en {device} con AdversarialDriftGuard")
 
     def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float], float]:
         features_np = features.cpu().numpy()
 
         # Inferencia
-        if_scores, if_conf, adaptive_threshold = self.iso_forest.predict(features_np)
+        if_scores, if_conf, _ = self.iso_forest.predict(features_np)
         ae_scores, ae_conf = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
@@ -36,12 +36,12 @@ class DetectionEnsemble:
         # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
-        # Update and get adaptive threshold
+        # Update and get adaptive threshold from drift guard
         current_threshold = self.drift_guard.update(ensemble_scores.tolist())
 
         return (
             ensemble_scores.tolist(),
             methods,
             confidences,
-            adaptive_threshold,
+            current_threshold,
         )
