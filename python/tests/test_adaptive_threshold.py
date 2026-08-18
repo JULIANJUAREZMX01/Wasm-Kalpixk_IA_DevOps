@@ -1,12 +1,12 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,23 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adversarial_drift_guard_batch_update_and_recalibration():
+    guard = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10, alpha=1.0)
+    scores = [0.1] * 10
+    thresh = guard.update(scores)
+    # median=0.1, MAD=0 -> scaled_mad = max(0.01, 0) = 0.01 -> raw = 0.1 + 3.0 * 0.01 = 0.13
+    assert abs(thresh - 0.13) < 1e-4
+    assert guard.is_anomaly(0.2)
+    assert not guard.is_anomaly(0.1)
+
+
+def test_adversarial_drift_guard_resilience_to_outliers():
+    guard = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10, alpha=1.0)
+    # 9 normal low scores and 1 high outlier score
+    batch = [0.1] * 9 + [0.45]
+    thresh = guard.update(batch, force_recalibrate=True)
+    # Median is still 0.1 despite the outlier, resisting baseline shift
+    assert thresh < 0.3
+    assert guard.to_dict()["buffer_len"] == 10
