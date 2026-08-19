@@ -25,6 +25,34 @@ pub fn shannon_entropy(data: &[u8]) -> f64 {
     entropy
 }
 
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 24) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < stride {
+        return;
+    }
+    for i in (0..target.len() - stride).step_by(stride) {
+        target.swap(i, i + stride / 2);
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    let shift = (seed % 7) as u32 + 1;
+    for byte in target.iter_mut() {
+        *byte = byte.rotate_left(shift);
+    }
+}
+
+pub fn v7_audit_tensor(tensor_data: &[f32]) -> bool {
+    !tensor_data.iter().any(|v| v.is_nan() || v.is_infinite())
+}
+
 pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
     let mut state = seed;
     let mut i = 0;
