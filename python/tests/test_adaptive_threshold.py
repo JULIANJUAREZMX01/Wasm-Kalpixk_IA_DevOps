@@ -1,12 +1,12 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,60 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+# ── AdversarialDriftGuard Tests ──────────────────────────────────────────────
+
+
+def test_adversarial_drift_guard_initialization():
+    guard = AdversarialDriftGuard(window_size=200, k=4.0, recalibrate_every=20)
+    assert guard.window_size == 200
+    assert guard.k == 4.0
+    assert guard.recalibrate_every == 20
+    assert guard.current_threshold == 0.5
+
+
+def test_adversarial_drift_guard_batch_update_and_recalibration():
+    guard = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=10)
+    scores = [0.1, 0.12, 0.11, 0.09, 0.13, 0.08, 0.1, 0.11, 0.1, 0.12]
+    thresh = guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+
+    assert isinstance(thresh, float)
+    assert guard.current_threshold < 0.4
+    d = guard.to_dict()
+    assert d["buffer_len"] == 10
+    assert d["total_updates"] == 10
+    assert "median" in d
+    assert "mad" in d
+
+
+def test_adversarial_drift_guard_robustness_against_outliers():
+    guard = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=10)
+    # Feed normal scores
+    normal_scores = [0.15] * 20
+    guard.update(normal_scores, is_confirmed_benign=True, force_recalibrate=True)
+    normal_thresh = guard.current_threshold
+
+    # Inject extreme outliers ("boiling frog" attack attempt)
+    outlier_scores = [0.95] * 10
+    guard.update(outlier_scores)
+
+    # Median & MAD based guard should remain stable and not shift wildly
+    assert abs(guard.current_threshold - normal_thresh) < 0.15
+
+
+def test_adversarial_drift_guard_thread_safety():
+    guard = AdversarialDriftGuard(window_size=1000, k=6.0, recalibrate_every=50)
+
+    def worker():
+        for _ in range(50):
+            guard.update([np.random.uniform(0.1, 0.2) for _ in range(2)])
+
+    threads = [threading.Thread(target=worker) for _ in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert guard.to_dict()["total_updates"] == 1000
+    assert guard.current_threshold < 0.4

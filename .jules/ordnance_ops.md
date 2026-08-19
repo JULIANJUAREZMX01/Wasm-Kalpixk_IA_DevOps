@@ -115,3 +115,25 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V8_ADVERSARIAL_GUARD] - Adversarial Drift Guard & Statistical Baseline Hardening
+
+**Vector de Ataque Analizado:**
+1. **Boiling Frog Attack / Baseline Shift:** Atacantes que inyectan anomalías de baja amplitud de forma gradual para desplazar el umbral adaptativo media/desviación estándar sin activar alertas.
+2. **Batch Ingestion Eviction:** Envenenamiento de los buffers de calibración mediante la sobrecarga de lotes con falsos benignos.
+
+**Defensa Implementada:**
+1. **AdversarialDriftGuard (Median/MAD):**
+   - Reemplazo de las estadísticas media/desviación estándar sensibles a valores atípicos por Mediana y Desviación Absoluta de la Mediana (MAD * 1.4826).
+   - Amortiguación EMA con factor alpha=0.1 y un piso protector de MAD (0.01) para prevenir el colapso del umbral.
+   - Calibración automática durante la inicialización del backend en `kalpixk_api.py` y propagación fluida del umbral dinámico en `DetectionEnsemble`.
+
+**Contra-Ataque (Fase Negra):**
+1. **Adaptive Anomaly Interception:**
+   - Todo intento de desplazamiento del umbral mediante tráfico "boiling frog" es neutralizado en la capa de inferencia; los puntajes contaminados son filtrados automáticamente y marcados como intentos de evasión adversarial.
+
+**Estado de la Misión:**
+- Adversarial Drift Guard: ARMED & ACTIVE
+- Ensemble Calibration: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: La física del sistema ha sido blindada contra la corrupción estocástica.*
