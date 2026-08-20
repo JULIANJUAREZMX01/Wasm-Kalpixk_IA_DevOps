@@ -1,7 +1,7 @@
 """
 python/detection/adaptive_threshold.py
 ───────────────────────────────────────
-Sliding-window adaptive threshold for anomaly scores.
+Sliding-window adaptive threshold and robust adversarial drift guard for anomaly scores.
 """
 
 import threading
@@ -50,7 +50,6 @@ class AdaptiveThreshold:
 
     def _recalibrate(self) -> None:
         """Recompute threshold based on buffer statistics. Internal use only."""
-        # Assumption: called while holding self._lock
         data = np.array(self._buffer)
         mean = np.mean(data)
         std = np.std(data)
@@ -76,5 +75,100 @@ class AdaptiveThreshold:
                 "window_size": self.window_size,
                 "buffer_len": len(self._buffer),
                 "k": self.k,
+                "total_updates": self._total_updates,
+            }
+
+
+class AdversarialDriftGuard:
+    """
+    Robust statistical drift guard resilient against baseline-shifting adversarial attacks.
+    Uses Median and Median Absolute Deviation (MAD) with EMA dampening.
+    """
+
+    def __init__(
+        self,
+        window_size: int = 1000,
+        k: float = 6.0,
+        recalibrate_every: int = 100,
+        alpha: float = 0.1,
+    ):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+        self.alpha = alpha
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+        self._median = 0.5
+        self._mad = 0.01
+
+    def update(
+        self,
+        scores: float | list[float],
+        is_confirmed_benign: bool = False,
+        force_recalibrate: bool = False,
+    ) -> float:
+        """
+        Add score(s) to buffer and return current threshold.
+        Accepts float or list[float].
+        """
+        if isinstance(scores, (int, float)):
+            scores_list = [float(scores)]
+        else:
+            scores_list = [float(s) for s in scores]
+
+        with self._lock:
+            for score in scores_list:
+                if is_confirmed_benign or score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if force_recalibrate or (
+                self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
+            ):
+                self._recalibrate(force=force_recalibrate)
+
+            return self._current_threshold
+
+    def _recalibrate(self, force: bool = False) -> None:
+        if len(self._buffer) < 2:
+            return
+        data = np.array(self._buffer)
+        self._median = float(np.median(data))
+        mad_raw = float(np.median(np.abs(data - self._median)))
+        self._mad = max(mad_raw, 0.01)
+
+        raw_threshold = self._median + self.k * (self._mad * 1.4826)
+
+        if force:
+            self._current_threshold = float(raw_threshold)
+        else:
+            self._current_threshold = float(
+                self.alpha * raw_threshold + (1.0 - self.alpha) * self._current_threshold
+            )
+        self._updates_since_recalc = 0
+
+    def is_anomaly(self, score: float) -> bool:
+        with self._lock:
+            return score > self._current_threshold
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "k": self.k,
+                "median": round(self._median, 4),
+                "mad": round(self._mad, 4),
                 "total_updates": self._total_updates,
             }
