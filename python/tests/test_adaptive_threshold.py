@@ -1,12 +1,12 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,36 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adversarial_drift_guard_initialization():
+    guard = AdversarialDriftGuard(window_size=200, k=6.0, recalibrate_every=10)
+    assert guard.window_size == 200
+    assert guard.k == 6.0
+    assert guard.current_threshold == 0.5
+
+
+def test_adversarial_drift_guard_batch_update():
+    guard = AdversarialDriftGuard(window_size=500, k=6.0, recalibrate_every=10)
+    # Batch update with list of float scores
+    scores = [0.1, 0.12, 0.08, 0.09, 0.11, 0.10, 0.13, 0.07, 0.09, 0.11]
+    thresh = guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+    # Threshold should recalibrate based on median and MAD
+    assert thresh < 0.5
+    d = guard.to_dict()
+    assert d["total_updates"] == 10
+    assert "median" in d
+    assert "mad" in d
+
+
+def test_adversarial_drift_guard_single_float_update():
+    guard = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
+    for _ in range(10):
+        t = guard.update(0.2, is_confirmed_benign=True)
+    assert t < 0.5
+
+
+def test_adversarial_drift_guard_anomaly_detection():
+    guard = AdversarialDriftGuard()
+    assert not guard.is_anomaly(0.4)
+    assert guard.is_anomaly(0.6)
