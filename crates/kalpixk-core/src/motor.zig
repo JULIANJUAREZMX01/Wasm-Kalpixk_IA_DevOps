@@ -116,6 +116,29 @@ pub export fn v8_pointer_poisoning(target_ptr: [*]u8, target_len: usize, seed: u
     }
 }
 
+/// [ATLATL-ORDNANCE] v5_active_memory_scrambling (Legacy Support)
+pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void {
+    if (target_len < 4) return;
+    var prng = std.rand.DefaultPrng.init(seed);
+    const rand = prng.random();
+    const slice = target_ptr[0..target_len];
+    for (slice) |*byte| {
+        byte.* = byte.* ^ rand.int(u8);
+    }
+}
+
+/// [ATLATL-ORDNANCE] v5_chaotic_interleaving (Legacy Support)
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void {
+    if (target_len < 2 or stride == 0) return;
+    const slice = target_ptr[0..target_len];
+    var i: usize = 0;
+    while (i + stride < target_len) : (i += stride * 2) {
+        const temp = slice[i];
+        slice[i] = slice[i + stride];
+        slice[i + stride] = temp;
+    }
+}
+
 /// [ATLATL-ORDNANCE] ATOMIC ACCESS VALIDATION
 pub export fn validate_atomic_access(ptr: *atomic.Atomic(u8), expected: u8) bool {
     return ptr.load(.Monotonic) == expected;
