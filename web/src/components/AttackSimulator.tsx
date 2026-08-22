@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 
 type SimPhase = "idle" | "normal" | "attack";
 
@@ -28,7 +28,7 @@ const PHASE_CONFIG: Record<SimPhase, { label: string; classes: string; dot: stri
 const BASE_URL = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_URL ?? "";
 const API_KEY  = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_KEY ?? "";
 
-export default function AttackSimulator() {
+export default memo(function AttackSimulator() {
   const [status, setStatus] = useState<SimStatus>({ running: false, phase: "idle" });
   const [loading, setLoading] = useState<"start" | "stop" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,4 +132,4 @@ export default function AttackSimulator() {
       </p>
     </div>
   );
-}
+});
