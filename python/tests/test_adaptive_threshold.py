@@ -1,12 +1,12 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,81 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+# ── AdversarialDriftGuard Tests ───────────────────────────────────────────────
+
+
+def test_drift_guard_initialization():
+    dg = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=10, alpha=0.1)
+    assert dg.window_size == 100
+    assert dg.k == 6.0
+    assert dg.recalibrate_every == 10
+    assert dg.alpha == 0.1
+    assert dg.current_threshold == 0.5
+
+
+def test_drift_guard_update_single_and_batch():
+    dg = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=10, alpha=0.1)
+
+    # Test single float update
+    thresh = dg.update(0.2)
+    assert thresh == 0.5
+
+    # Test batch list update (9 scores) -> total 10 updates
+    batch = [0.15] * 9
+    thresh = dg.update(batch)
+    # 10 updates triggers recalibration
+    assert thresh < 0.5
+    assert dg.current_threshold == thresh
+
+
+def test_drift_guard_force_recalibrate():
+    dg = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=100)
+
+    # Add 15 scores
+    scores = list(np.random.normal(0.2, 0.01, 15))
+    dg.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+
+    d = dg.to_dict()
+    assert d["buffer_len"] == 15
+    assert d["total_updates"] == 15
+    assert d["median"] > 0
+    assert d["mad"] >= 0.01
+
+
+def test_drift_guard_is_anomaly():
+    dg = AdversarialDriftGuard()
+    assert not dg.is_anomaly(0.3)
+    assert dg.is_anomaly(0.8)
+
+
+def test_drift_guard_to_dict():
+    dg = AdversarialDriftGuard(window_size=500, k=6.0, recalibrate_every=50, alpha=0.1)
+    scores = list(np.linspace(0.1, 0.3, 20))
+    dg.update(scores, force_recalibrate=True)
+
+    d = dg.to_dict()
+    assert d["window_size"] == 500
+    assert d["k"] == 6.0
+    assert d["alpha"] == 0.1
+    assert d["buffer_len"] == 20
+    assert "median" in d
+    assert "mad" in d
+    assert "current_threshold" in d
+
+
+def test_drift_guard_thread_safety():
+    dg = AdversarialDriftGuard(window_size=1000, k=6.0, recalibrate_every=50)
+
+    def worker():
+        for _ in range(50):
+            dg.update([0.1, 0.15])
+
+    threads = [threading.Thread(target=worker) for _ in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert dg.to_dict()["total_updates"] == 1000
