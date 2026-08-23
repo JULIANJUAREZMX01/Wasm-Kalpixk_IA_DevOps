@@ -115,3 +115,42 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *byte ^= (state >> 24) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if stride == 0 || target.len() < stride {
+        return;
+    }
+    let len = target.len();
+    for i in 0..(len / 2) {
+        let j = (i * stride) % len;
+        target.swap(i, j);
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.is_empty() {
+        return;
+    }
+    let shift = (seed as usize) % target.len();
+    target.rotate_left(shift);
+}
+
+pub fn v7_audit_tensor(tensor_data: &[f32]) -> bool {
+    if tensor_data.is_empty() {
+        return false;
+    }
+    for &val in tensor_data {
+        if val.is_nan() || val.is_infinite() {
+            return false;
+        }
+    }
+    true
+}
