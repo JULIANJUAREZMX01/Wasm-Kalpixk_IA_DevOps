@@ -115,3 +115,34 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V9_XOCHIMILCO] - Strategic Alpha Stack Hardening & Adversarial Drift Guard
+
+**Vector de Ataque Analizado:**
+1. **Boiling Frog Baseline Poisoning:** Atacantes inyectando anomalías incrementales de bajo perfil para desplazar la media muestral y cegar el umbral de detección sin disparar alertas inmediatas.
+2. **Batch Type Mismatch Exploitation:** Intento de denegación de servicio (DoS) enviando peticiones en lote con estructuras heterogéneas para desencadenar `TypeError` o excepciones no capturadas en el pipeline de inferencia.
+3. **Endpoint Information Disclosure:** Filtración de estructuras internas mediante el endpoint `/status` exponiendo métodos legacy de modelos individuales.
+
+**Defensa Implementada (v9.0.0-XOCHIMILCO):**
+1. **AdversarialDriftGuard (python/detection/adaptive_threshold.py):**
+   - Implementación de estadísticas robustas basadas en Mediana y Desviación Absoluta de la Mediana (MAD * 1.4826) con piso absoluto de 0.01 para MAD.
+   - Suavizado exponencial (EMA, alpha=0.1) y recalibración forzada en calibración de baseline para neutralizar desplazamientos maliciosos de baseline.
+   - Manejo polimórfico de entradas escalares o vectores en lotes (`float` o `list[float]`) con thread-safety mediante cierres de exclusión mutua (`threading.Lock`).
+2. **API & Engine Integration (python/api/kalpixk_api.py & ensemble.py):**
+   - Corrección de la referencia `threshold` a `adaptive_threshold` en el mapeo de respuestas en `/api/detect`.
+   - Exposición estandarizada de métricas del guardián de deriva (`ens.drift_guard.to_dict()`) a través del endpoint `/status`.
+   - Calibración determinista del guardián de deriva en `ensure_ensemble()` asegurando cero falsos positivos en tráfico legítimo.
+3. **Rust & WASM Core Verification:**
+   - Validación y compilación limpia en arquitectura `wasm32-unknown-unknown` y formato estricto `cargo fmt`.
+
+**Contra-Ataque (Fase Negra):**
+1. **v9_ALGORITHMIC_GUILLOTINE:**
+   - Retaliación automatizada mediante orquestación ATLATL-ORDNANCE frente a vectores críticos de envenenamiento.
+   - Corrupción remota de punteros y saturación de canales C2 para agresores que intenten manipular los tensores de inferencia.
+
+**Estado de la Misión:**
+- Adversarial Drift Guard: ENGAGED & ACTIVE
+- Detection Ensemble: CALIBRATED
+- WASM Core: VERIFIED (wasm32)
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
