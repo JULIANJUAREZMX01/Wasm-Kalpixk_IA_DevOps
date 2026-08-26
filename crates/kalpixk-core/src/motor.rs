@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -112,6 +112,80 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
     }
 }
 
+pub fn v9_polymorphic_challenge_gen(seed: u64) -> u64 {
+    let multiplier: u64 = 6364136223846793005;
+    let increment: u64 = 1;
+    let xochimil: u64 = 0x584F4348494D494C; // 'XOCHIMIL'
+
+    let next = seed.wrapping_mul(multiplier).wrapping_add(increment);
+    next ^ xochimil
+}
+
+pub fn v9_binary_integrity_hash(data: &[u8]) -> u64 {
+    let mut hash: u64 = 14695981039346656037;
+    let prime: u64 = 1099511628211;
+
+    for &byte in data {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(prime);
+    }
+    hash
+}
+
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
+}
+
+pub fn v5_active_memory_scrambling(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in target.iter_mut() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let shift = (state % 8) as u32;
+        *byte = byte.rotate_left(shift) ^ (state >> 16) as u8;
+    }
+}
+
+pub fn v5_chaotic_interleaving(target: &mut [u8], stride: usize) {
+    if target.len() < stride * 2 {
+        return;
+    }
+    for i in (0..target.len() - stride).step_by(stride * 2) {
+        let (left, right) = target.split_at_mut(i + stride);
+        if let (Some(l), Some(r)) = (left.get_mut(i), right.first_mut()) {
+            std::mem::swap(l, r);
+        }
+    }
+}
+
+pub fn v7_guerrilla_memory_rotation(target: &mut [u8], seed: u64) {
+    if target.len() < 16 {
+        return;
+    }
+    let mut state = seed;
+    state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+    let stride = (state as usize % (target.len() / 4)) + 1;
+
+    let mut i = 0;
+    while i + stride < target.len() {
+        let j = (i + stride) % target.len();
+        target.swap(i, j);
+        i += stride;
+    }
+}
+
+pub fn v7_audit_tensor(data: &[f32]) -> bool {
+    if data.is_empty() {
+        return true;
+    }
+    let mut prev = data[0];
+    for &val in data {
+        if !val.is_finite() {
+            return false;
+        }
+        if (val - prev).abs() > 10.0 {
+            return false;
+        }
+        prev = val;
+    }
+    true
 }
