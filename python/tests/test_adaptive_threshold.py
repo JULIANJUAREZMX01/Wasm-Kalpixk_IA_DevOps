@@ -6,7 +6,33 @@ import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
+
+
+def test_adversarial_drift_guard_initialization():
+    guard = AdversarialDriftGuard(window_size=200, k=5.0, alpha=0.2, recalibrate_every=20)
+    assert guard.window_size == 200
+    assert guard.k == 5.0
+    assert guard.alpha == 0.2
+    assert guard.current_threshold == 0.5
+
+
+def test_adversarial_drift_guard_recalibration_and_poisoning_resilience():
+    guard = AdversarialDriftGuard(window_size=100, k=3.0, alpha=0.5, recalibrate_every=10)
+
+    # Feed benign low scores
+    benign_scores = [0.1] * 15
+    thresh = guard.update(benign_scores)
+
+    # Median=0.1, MAD=0.0 -> mad_scaled=0.01. Target = 0.1 + 3.0*0.01 = 0.13
+    # Initial = 0.5. After EMA (alpha=0.5): 0.5*0.5 + 0.5*0.13 = 0.315
+    assert thresh < 0.35
+
+    # Attempt baseline poisoning with high anomaly scores (> current threshold)
+    poison_scores = [0.9] * 50
+    thresh_after_poison = guard.update(poison_scores)
+    # Threshold should not be pushed up by unconfirmed high scores
+    assert thresh_after_poison == thresh
 
 
 def test_adaptive_threshold_initialization():

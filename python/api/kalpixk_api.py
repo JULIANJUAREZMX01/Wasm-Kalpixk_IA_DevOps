@@ -154,6 +154,16 @@ def ensure_ensemble():
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+
+        # Always calibrate AdversarialDriftGuard baseline on normal synthetic baseline data
+        rng = np.random.default_rng(42)
+        X_base = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X_base[:, 5] = 0.0
+        X_base[:, 6] = 1.0
+        if_scores, _, _ = _ensemble.iso_forest.predict(X_base)
+        ae_scores, _ = _ensemble.autoencoder.predict(X_base)
+        ens_scores = (0.45 * np.asarray(if_scores) + 0.55 * np.asarray(ae_scores)).tolist()
+        _ensemble.drift_guard.update(ens_scores, is_confirmed_benign=True, force_recalibrate=True)
     return _ensemble
 
 
@@ -234,7 +244,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +309,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
