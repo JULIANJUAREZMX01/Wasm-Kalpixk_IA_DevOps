@@ -1,12 +1,12 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,51 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+# ── AdversarialDriftGuard Tests ───────────────────────────────────────────────
+
+
+def test_adversarial_drift_guard_initialization():
+    guard = AdversarialDriftGuard(window_size=200, k=5.0, recalibrate_every=20)
+    assert guard.window_size == 200
+    assert guard.k == 5.0
+    assert guard.recalibrate_every == 20
+    assert guard.current_threshold == 0.5
+
+
+def test_adversarial_drift_guard_batch_update():
+    guard = AdversarialDriftGuard(window_size=500, k=6.0, recalibrate_every=50)
+    scores = np.random.uniform(0.05, 0.15, 100).tolist()
+
+    # Batch update with list of floats
+    thresh = guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+    assert isinstance(thresh, float)
+    assert guard.to_dict()["total_updates"] == 100
+
+
+def test_adversarial_drift_guard_force_recalibrate():
+    guard = AdversarialDriftGuard()
+    benign = [0.1] * 20
+    guard.update(benign, is_confirmed_benign=True, force_recalibrate=True)
+
+    thresh = guard.current_threshold
+    assert thresh < 0.25
+
+
+def test_adversarial_drift_guard_thread_safety():
+    guard = AdversarialDriftGuard(window_size=1000, k=6.0, recalibrate_every=50)
+
+    def worker():
+        for _ in range(10):
+            scores = np.random.uniform(0.0, 0.2, 10).tolist()
+            guard.update(scores)
+
+    threads = [threading.Thread(target=worker) for _ in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert guard.to_dict()["total_updates"] == 1000
+    assert guard.current_threshold <= 0.6

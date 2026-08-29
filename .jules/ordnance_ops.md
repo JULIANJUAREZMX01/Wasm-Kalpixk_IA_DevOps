@@ -34,7 +34,7 @@
 **Vector de Ataque Analizado:**
 1. **Análisis Estático de WASM:** Los atacantes podrían intentar desensamblar el motor para identificar las firmas de detección.
 2. **Caza de Nodos:** En una red centralizada, derribar el orquestador colapsa la defensa.
-3. **Resistencia del Atacante:** Bloqueos simples de IP son evadidos mediante rotación de proxies y C2 distribuidos.
+3. **Resistencia del Atacante:** Bloqueos simples de IP son evadidos mediante rotación de proxies vacation.
 
 **Defensa Implementada (v6.0-GUERRILLA):**
 1. **Zig Polymorphic Layer:**
@@ -115,3 +115,27 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V9_ADVERSARIAL_DRIFT_GUARD] - Robust Statistical Thresholding & Ensemble Integration
+
+**Vector de Ataque Analizado:**
+1. **Boiling Frog Baseline Drift:** Atacantes inyectando lentamente pequeñas anomalías progresivas para elevar la media del buffer y evadir el umbral de detección.
+2. **NameError & Uncalibrated Deadlocks:** Desfases entre variables de la API REST (`threshold` vs `adaptive_threshold`) y bloqueos por falta de calibración inicial de baseline en hilos concurrentes.
+
+**Defensa Implementada (v9.0.0-HARDENING):**
+1. **Cerebro AI (adaptive_threshold.py & ensemble.py):**
+   - `AdversarialDriftGuard`: Algoritmo estadístico robusto basado en Mediana y Desviación Absoluta de la Mediana (MAD) con factor de escala 1.4826 y floor seguro para resistir envenenamiento.
+   - Soporte para actualizaciones por lotes `list[float]` y calibración forzada de baseline en `ensure_ensemble()`.
+2. **Rust Defense Nodes:**
+   - Formateo y verificación de firmas de seguridad en `crates/kalpixk-core/src/defense_nodes.rs`.
+
+**Contra-Ataque (Fase Negra):**
+1. **Neural Lockout & Retaliation Bridge:**
+   - Bloqueo instantáneo de desvíos adversariales y derivación directa a la Algorithmic Guillotine para colapso de la infraestructura atacante.
+
+**Estado de la Misión:**
+- Adversarial Drift Guard: ACTIVE
+- Ensemble Thresholding: SYNCHRONIZED
+- Retaliation Bridge: ENGAGED
+
+*ATLATL-ORDNANCE: Aniquilación total de la amenaza.*
