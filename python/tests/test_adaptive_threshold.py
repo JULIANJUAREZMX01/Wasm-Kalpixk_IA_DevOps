@@ -90,3 +90,20 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adversarial_drift_guard_batch_and_poisoning():
+    from python.detection.adaptive_threshold import AdversarialDriftGuard
+
+    guard = AdversarialDriftGuard(window_size=100, k=3.0, recalibrate_every=10)
+    # Test updating with list of batch scores
+    scores = [0.1] * 10
+    thresh = guard.update(scores, force_recalibrate=True, force_direct=True)
+    assert thresh < 0.5
+
+    # Test poison attack resistance: anomalous scores (> threshold) should be ignored
+    guard.update([0.9] * 20)
+    assert guard.current_threshold == thresh
+
+    d = guard.to_dict()
+    assert d["guard_type"] == "AdversarialDriftGuard"
