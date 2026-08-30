@@ -89,7 +89,7 @@ class AdversarialDriftGuard:
     def __init__(
         self,
         window_size: int = 500,
-        k: float = 3.0,
+        k: float = 6.0,
         recalibrate_every: int = 50,
         alpha: float = 0.1,
         mad_floor: float = 0.01,
