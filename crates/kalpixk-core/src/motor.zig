@@ -207,4 +207,4 @@ test "v8 pointer poisoning" {
     try std.testing.expect(changed);
 }
 pub export fn v5_active_memory_scrambling(target_ptr: [*]u8, target_len: usize, seed: u64) void { v7_guerrilla_memory_rotation(target_ptr, target_len, seed); }
-pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, seed: u64) void { v7_guerrilla_memory_rotation(target_ptr, target_len, seed); }
+pub export fn v5_chaotic_interleaving(target_ptr: [*]u8, target_len: usize, stride: usize) void { v7_guerrilla_memory_rotation(target_ptr, target_len, stride); }
