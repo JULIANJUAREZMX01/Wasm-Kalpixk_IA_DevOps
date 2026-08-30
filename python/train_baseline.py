@@ -10,8 +10,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from python.models.ensemble import DetectionEnsemble
-from python.utils.device import get_rocm_device, log_gpu_info
+from models.ensemble import DetectionEnsemble
+from utils.device import get_rocm_device, log_gpu_info
 
 FEATURE_DIM = 32
 BASELINE_FILE = Path("models/baseline_model.pkl")

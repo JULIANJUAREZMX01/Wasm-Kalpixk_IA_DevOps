@@ -43,9 +43,9 @@ sys.path.insert(0, "/app/wasm_kalpixk")
 
 from src.retaliation.atlatl import atlatl
 
-from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
-from python.models.ensemble import DetectionEnsemble
-from python.utils.device import get_rocm_device, log_gpu_info
+from db.database import get_alerts, init_db, insert_alert, insert_alerts
+from models.ensemble import DetectionEnsemble
+from utils.device import get_rocm_device, log_gpu_info
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -299,7 +299,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:

@@ -26,3 +26,8 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+
+
+## 2024-05-24 - [Avoid `tolist()` in inference pipeline loops for performance]
+**Learning:** Converting NumPy arrays to Python lists (`.tolist()`) and back within the prediction pipeline, especially inside iterative operations like anomaly score drift guarding, introduces significant CPU bottlenecks due to serialization overhead. This is counter to the codebase memory directives which state: 'To prevent CPU bottlenecks in the Python ML prediction pipeline, avoid converting NumPy arrays to Python lists'. However, `DetectionEnsemble` in `python/models/ensemble.py` was converting `ensemble_scores.tolist()` which then triggered an error inside `AdaptiveThreshold.update()` which expects a single `float`.
+**Action:** Modified `DetectionEnsemble` to iterate over `ensemble_scores` natively and cast each to `float` individually instead of passing a `.tolist()` array, resolving a bug and respecting the architecture.

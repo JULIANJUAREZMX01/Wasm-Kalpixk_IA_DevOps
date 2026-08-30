@@ -3,9 +3,9 @@ import logging
 import numpy as np
 import torch
 
-from python.detection.adaptive_threshold import AdversarialDriftGuard
-from python.detection.autoencoder import KalpixkAutoencoder
-from python.detection.isolation_forest import KalpixkIsolationForest
+from detection.adaptive_threshold import AdaptiveThreshold
+from detection.autoencoder import KalpixkAutoencoder
+from detection.isolation_forest import KalpixkIsolationForest
 
 logger = logging.getLogger("kalpixk.models.ensemble")
 
@@ -15,8 +15,8 @@ class DetectionEnsemble:
         self.device = device
         self.iso_forest = KalpixkIsolationForest(device)
         self.autoencoder = KalpixkAutoencoder(device)
-        self.drift_guard = AdversarialDriftGuard()
-        logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
+        self.drift_guard = AdaptiveThreshold()
+        logger.info(f"Ensemble inicializado en {device} with AdaptiveThreshold")
 
     def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float], float]:
         features_np = features.cpu().numpy()
@@ -37,11 +37,13 @@ class DetectionEnsemble:
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
         # Update and get adaptive threshold
-        current_threshold = self.drift_guard.update(ensemble_scores.tolist())
+        for score in ensemble_scores:
+            self.drift_guard.update(float(score))
+        current_threshold = self.drift_guard.current_threshold
 
         return (
             ensemble_scores.tolist(),
             methods,
             confidences,
-            adaptive_threshold,
+            current_threshold,
         )
