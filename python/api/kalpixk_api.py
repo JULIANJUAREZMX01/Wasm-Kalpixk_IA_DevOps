@@ -147,16 +147,21 @@ def ensure_ensemble():
             X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
-                # Calibrate drift guard with normal baseline scores
-                scores, _, _, _ = _ensemble.predict(X_tensor)
-                _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
+
+        # Calibrate drift guard with baseline normal traffic scores
+        rng = np.random.default_rng(42)
+        X_base = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X_base[:, 5] = 0.0
+        X_base[:, 6] = 1.0
+        with torch.no_grad():
+            X_tensor = torch.from_numpy(X_base).to(_device)
+            scores, _, _, _ = _ensemble.predict(X_tensor)
+            _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True)
     return _ensemble
 
 
