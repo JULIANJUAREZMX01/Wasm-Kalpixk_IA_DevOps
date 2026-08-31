@@ -115,3 +115,28 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_ADVERSARIAL_DRIFT_GUARD_HARDENING] - Adversarial Drift Guard & SIEM Pipeline Hardening
+
+**Vector de Ataque Analizado:**
+1. **Envenenamiento de Umbral ('Boiling Frog' Attack):** Inyección paulatina de ruido benigno sintético para desplazar progresivamente el umbral adaptativo y permitir la evasión de anomalías críticas sin disparar alertas.
+2. **Excepción por Indirección de Variable en API:** Fallo de referencia en tiempo de ejecución en el loop de detección `/api/detect` que deshabilitaba la respuesta del SIEM ante eventos por lotes.
+
+**Defensa Implementada (Hardening Masivo):**
+1. **AdversarialDriftGuard (Python Detection Layer):**
+   - Implementación del guardia adaptativo con estadísticas robustas de Mediana y Desviación Absoluta de la Mediana (`Median + k * MAD * 1.4826`).
+   - Suavizado mediante Exponencial Moving Average (EMA, alpha=0.1) y límite inferior (`MAD floor = 0.01`) para garantizar resistencia contra manipulación de umbral.
+   - Soporte nativo para actualizaciones de lotes de puntuación (arrays de flotantes) y recalibración directa instantánea.
+2. **API Endpoint Stabilization (Python/FastAPI Layer):**
+   - Corrección de la referencia de variable en `/api/detect` para retornar `adaptive_threshold` de forma consistente en respuestas por lotes y alertas persistidas.
+
+**Contra-Ataque (Fase Negra):**
+1. **Retaliation Escalation Protocol:**
+   - La estabilización del umbral previene la evasión silenciosa, asegurando que cualquier intento de deformación del baseline active de forma inmediata la guillotina algorítmica (`v8_algorithmic_guillotine`) y el bloqueo perimetral de la infraestructura agresora.
+
+**Estado de la Misión:**
+- Adversarial Drift Guard: ACTIVE
+- API Detection Pipeline: OPERATIONAL
+- Algorithmic Guillotine: ENGAGED
+
+*ATLATL-ORDNANCE: La trampa está calibrada y el sistema listo para devorar cualquier amenaza.*

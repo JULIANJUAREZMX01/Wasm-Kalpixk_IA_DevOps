@@ -78,3 +78,91 @@ class AdaptiveThreshold:
                 "k": self.k,
                 "total_updates": self._total_updates,
             }
+
+
+class AdversarialDriftGuard:
+    """
+    Robust adaptive threshold against adversarial baseline poisoning ('boiling frog').
+    Uses Median + k * (MAD * 1.4826) statistics with exponential moving average (EMA)
+    and a MAD floor (0.01) to protect against threshold manipulation.
+    """
+
+    def __init__(self, window_size: int = 500, k: float = 6.0, recalibrate_every: int = 100, alpha: float = 0.1):
+        self.window_size = window_size
+        self.k = k
+        self.recalibrate_every = recalibrate_every
+        self.alpha = alpha
+
+        self._buffer = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+        self._current_threshold = 0.5
+        self._updates_since_recalc = 0
+        self._total_updates = 0
+
+    def update(
+        self,
+        scores: float | list[float],
+        is_confirmed_benign: bool = False,
+        force_recalibrate: bool = False,
+        force_direct: bool = False,
+    ) -> float:
+        """
+        Accepts a single score or a list of scores.
+        Returns the current threshold.
+        """
+        if isinstance(scores, (int, float)):
+            scores_list = [float(scores)]
+        else:
+            scores_list = [float(s) for s in scores]
+
+        with self._lock:
+            for score in scores_list:
+                if is_confirmed_benign or score < self._current_threshold:
+                    self._buffer.append(score)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
+
+            if (
+                force_recalibrate
+                or self._updates_since_recalc >= self.recalibrate_every
+            ) and len(self._buffer) >= 10:
+                self._recalibrate(force_direct=force_direct)
+
+            return self._current_threshold
+
+    def _recalibrate(self, force_direct: bool = False) -> None:
+        """Recompute threshold using median & MAD."""
+        data = np.array(self._buffer)
+        median = float(np.median(data))
+        mad = float(np.median(np.abs(data - median)))
+        mad_scaled = max(mad * 1.4826, 0.01)
+
+        raw_thresh = median + self.k * mad_scaled
+
+        if force_direct:
+            self._current_threshold = raw_thresh
+        else:
+            self._current_threshold = (
+                self.alpha * raw_thresh + (1.0 - self.alpha) * self._current_threshold
+            )
+
+        self._updates_since_recalc = 0
+
+    def is_anomaly(self, score: float) -> bool:
+        with self._lock:
+            return score > self._current_threshold
+
+    @property
+    def current_threshold(self) -> float:
+        with self._lock:
+            return self._current_threshold
+
+    def to_dict(self) -> dict:
+        with self._lock:
+            return {
+                "current_threshold": round(self._current_threshold, 4),
+                "window_size": self.window_size,
+                "buffer_len": len(self._buffer),
+                "k": self.k,
+                "total_updates": self._total_updates,
+            }
