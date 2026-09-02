@@ -6,7 +6,7 @@ import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,34 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adversarial_drift_guard_batch_and_single_update():
+    guard = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=10)
+
+    # Test single float update
+    thresh = guard.update(0.1)
+    assert thresh == 0.5  # Initial baseline until recalibration
+
+    # Test batch list update
+    batch_scores = [0.1, 0.12, 0.11, 0.09, 0.1, 0.1, 0.13, 0.08, 0.1]
+    thresh = guard.update(batch_scores)
+    # 10 updates total, triggers recalibration
+    assert thresh < 0.5
+    assert guard.to_dict()["total_updates"] == 10
+
+
+def test_adversarial_drift_guard_resists_poisoning():
+    guard = AdversarialDriftGuard(window_size=100, k=6.0, recalibrate_every=10)
+
+    # Calibrate baseline with normal traffic ~0.1
+    guard.update([0.1] * 20, is_confirmed_benign=True, force_recalibrate=True, force_direct=True)
+    normal_thresh = guard.current_threshold
+
+    # Attempt boiling frog attack with elevated scores (> threshold)
+    for _ in range(50):
+        guard.update(0.85)
+
+    # Threshold should remain stable and not drift upwards due to unconfirmed anomalies
+    assert guard.current_threshold == normal_thresh
+    assert guard.is_anomaly(0.85)

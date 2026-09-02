@@ -115,3 +115,32 @@
 - Quantum Shredder: ENGAGED
 
 *ATLATL-ORDNANCE: No protegemos la puerta, colapsamos el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V9_XOCHIMILCO] - Alpha Stack Hardening & Adversarial Drift Defense
+
+**Vector de Ataque Analizado:**
+1. **Adversarial Threshold Poisoning ('Boiling Frog' Attack):** Inyección continua de anomalías sutiles en los lotes de inferencia para desplazar gradualmente la media y desviación estándar del umbral adaptativo, permitiendo evasión posterior.
+2. **WASM FFI Linker Vulnerabilities:** Dependencias externas y declaraciones `extern "C"` que causan fallos de compilación o desbordamiento de funciones importadas en entornos sin compilador Zig nativo.
+3. **Model Drift Evasion:** Sondeos adversariales dirigidos al ensamble (Isolation Forest + Autoencoder) para corromper los vectores de decisión sin disparar firmas tradicionales de red.
+
+**Defensa Implementada (v9.0.0-XOCHIMILCO):**
+1. **AdversarialDriftGuard (Python):**
+   - Sustitución de media/std basales por estadísticas robustas (Mediana y Desviación Absoluta de la Mediana - MAD con piso de 0.01 y escala de 1.4826).
+   - Filtrado estricto de muestras para el buffer deslizante y suavizado exponencial (EMA alpha=0.1) para neutralizar la manipulación maliciosa de baseline.
+2. **Rust Metal Layer Portability:**
+   - Eliminación de declaraciones `extern "C"` en `lib.rs` y enrutamiento directo de las primitivas de encriptación y ofuscación a `motor.rs`.
+   - Implementación de `Node-9: XOCHIMILCO_ADVERSARIAL_DETECTOR` en `defense_nodes.rs` para detectar sondeos de envenenamiento de tensores y ataques de deriva.
+3. **SAC_OS Tactical Integration:**
+   - Integración de tokens militares SAC_OS y soporte para nodos de defensa descentralizados en sistemas embebidos.
+
+**Contra-Ataque (Fase Negra):**
+1. **v9_XOCHIMILCO_RETALIATION:**
+   - Inyección de trampas de memoria caóticas y punteros envenenados en canales de exfiltración detectados.
+   - Saturación activa de infraestructura atacante coordinada mediante la malla indetectable de nodos WASM.
+
+**Estado de la Misión:**
+- Adversarial Drift Guard: ARMED & CALIBRATED
+- Node-9 Detector: ENGAGED
+- WASM Core: FULLY PORTABLE
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
