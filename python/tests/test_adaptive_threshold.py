@@ -1,12 +1,12 @@
 """
-Tests for AdaptiveThreshold.
+Tests for AdaptiveThreshold and AdversarialDriftGuard.
 """
 
 import threading
 
 import numpy as np
 
-from python.detection.adaptive_threshold import AdaptiveThreshold
+from python.detection.adaptive_threshold import AdaptiveThreshold, AdversarialDriftGuard
 
 
 def test_adaptive_threshold_initialization():
@@ -90,3 +90,40 @@ def test_is_anomaly():
     assert new_threshold < 0.2
     assert at.is_anomaly(0.3)
     assert not at.is_anomaly(0.05)
+
+
+def test_adversarial_drift_guard_batch_and_single_update():
+    guard = AdversarialDriftGuard(window_size=100, recalibrate_every=10)
+    # Test batch update with list of floats
+    thresh = guard.update([0.1, 0.12, 0.08, 0.15, 0.09, 0.11, 0.1, 0.13, 0.07, 0.14])
+    assert thresh == guard.current_threshold
+    assert guard.to_dict()["total_updates"] == 10
+
+    # Test single float update
+    guard.update(0.1)
+    assert guard.to_dict()["total_updates"] == 11
+
+
+def test_adversarial_drift_guard_recalibration_and_clamping():
+    guard = AdversarialDriftGuard(
+        window_size=100,
+        k=6.0,
+        recalibrate_every=10,
+        min_threshold=0.3,
+        max_threshold=0.9,
+    )
+    # Feed extremely low scores with force_direct=True to test direct recalibration clamping
+    guard.update([0.01] * 20, is_confirmed_benign=True, force_direct=True)
+    # Theoretical threshold = 0.01 + 6.0 * (0.01 * 1.4826) = 0.0989, but clamped to min_threshold 0.3
+    assert guard.current_threshold == 0.3
+
+
+def test_adversarial_drift_guard_rejects_unconfirmed_anomalies():
+    guard = AdversarialDriftGuard(window_size=100, recalibrate_every=10)
+    init_thresh = guard.current_threshold
+
+    # Feed anomalous scores without confirmation
+    guard.update([0.85] * 20, is_confirmed_benign=False)
+    # Buffer length and total updates should remain 0
+    assert guard.to_dict()["buffer_len"] == 0
+    assert guard.current_threshold == init_thresh
