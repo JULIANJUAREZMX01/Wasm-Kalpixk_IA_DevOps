@@ -55,8 +55,11 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(target_arch = "wasm32")]
 export!(KalpixkCore);
 
+/// # Safety
+///
+/// `target_ptr` must be a valid, non-null pointer to a mutable byte slice of at least `target_len` bytes.
 #[no_mangle]
-pub extern "C" fn v5_active_memory_scrambling(
+pub unsafe extern "C" fn v5_active_memory_scrambling(
     target_ptr: *mut u8,
     target_len: usize,
     entropy_seed: u64,
@@ -64,39 +67,63 @@ pub extern "C" fn v5_active_memory_scrambling(
     if target_ptr.is_null() || target_len == 0 {
         return;
     }
-    let slice = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
     motor::v5_active_memory_scrambling(slice, entropy_seed);
 }
 
+/// # Safety
+///
+/// `target_ptr` must be a valid, non-null pointer to a mutable byte slice of at least `target_len` bytes.
 #[no_mangle]
-pub extern "C" fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize) {
+pub unsafe extern "C" fn v5_chaotic_interleaving(
+    target_ptr: *mut u8,
+    target_len: usize,
+    stride: usize,
+) {
     if target_ptr.is_null() || target_len == 0 {
         return;
     }
-    let slice = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
     motor::v5_chaotic_interleaving(slice, stride);
 }
 
+/// # Safety
+///
+/// `target_ptr` must be a valid, non-null pointer to a mutable byte slice of at least `target_len` bytes.
 #[no_mangle]
-pub extern "C" fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64) {
+pub unsafe extern "C" fn v7_guerrilla_memory_rotation(
+    target_ptr: *mut u8,
+    target_len: usize,
+    seed: u64,
+) {
     if target_ptr.is_null() || target_len == 0 {
         return;
     }
-    let slice = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
     motor::v7_guerrilla_memory_rotation(slice, seed);
 }
 
+/// # Safety
+///
+/// `target_ptr` must be a valid, non-null pointer to a mutable byte slice of at least `target_len` bytes.
 #[no_mangle]
-pub extern "C" fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64) {
+pub unsafe extern "C" fn v8_guerrilla_jit_shield(
+    target_ptr: *mut u8,
+    target_len: usize,
+    seed: u64,
+) {
     if target_ptr.is_null() || target_len == 0 {
         return;
     }
-    let slice = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
     motor::v8_guerrilla_jit_shield(slice, seed);
 }
 
+/// # Safety
+///
+/// `target_ptr` must be a valid, non-null pointer to a mutable byte slice of at least `target_len` bytes.
 #[no_mangle]
-pub extern "C" fn v8_quantum_entropy_shredder(
+pub unsafe extern "C" fn v8_quantum_entropy_shredder(
     target_ptr: *mut u8,
     target_len: usize,
     initial_x: f64,
@@ -104,25 +131,31 @@ pub extern "C" fn v8_quantum_entropy_shredder(
     if target_ptr.is_null() || target_len == 0 {
         return;
     }
-    let slice = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
     motor::v8_quantum_entropy_shredder(slice, initial_x);
 }
 
+/// # Safety
+///
+/// `target_ptr` must be a valid, non-null pointer to a mutable byte slice of at least `target_len` bytes.
 #[no_mangle]
-pub extern "C" fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64) {
+pub unsafe extern "C" fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64) {
     if target_ptr.is_null() || target_len == 0 {
         return;
     }
-    let slice = unsafe { std::slice::from_raw_parts_mut(target_ptr, target_len) };
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
     motor::v8_pointer_poisoning(slice, seed);
 }
 
+/// # Safety
+///
+/// `data_ptr` must be a valid, non-null pointer to a readable slice of `f32` with length `data_len`.
 #[no_mangle]
-pub extern "C" fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool {
+pub unsafe extern "C" fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool {
     if data_ptr.is_null() || data_len == 0 {
         return false;
     }
-    let slice = unsafe { std::slice::from_raw_parts(data_ptr, data_len) };
+    let slice = std::slice::from_raw_parts(data_ptr, data_len);
     motor::v7_audit_tensor(slice)
 }
 
@@ -319,14 +352,16 @@ pub fn process_batch(logs_json: &str, source_type: &str) -> String {
         getrandom::getrandom(&mut seed_buf).unwrap_or_default();
         let seed = u64::from_le_bytes(seed_buf);
         let mut decoy_buffer = [0u8; 128];
-        v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
-        v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
-        v7_guerrilla_memory_rotation(
-            decoy_buffer.as_mut_ptr(),
-            decoy_buffer.len(),
-            seed ^ 0xDEADBEEF,
-        );
-        v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
+        unsafe {
+            v5_active_memory_scrambling(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed);
+            v5_chaotic_interleaving(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), 16);
+            v7_guerrilla_memory_rotation(
+                decoy_buffer.as_mut_ptr(),
+                decoy_buffer.len(),
+                seed ^ 0xDEADBEEF,
+            );
+            v8_guerrilla_jit_shield(decoy_buffer.as_mut_ptr(), decoy_buffer.len(), seed ^ 0x1337);
+        }
 
         if anomaly_count > 5 {
             v5_trap::arm_traps();
