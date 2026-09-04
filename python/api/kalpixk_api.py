@@ -137,29 +137,28 @@ def ensure_ensemble():
         _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
+        rng = np.random.default_rng(42)
+        X_cal = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X_cal[:, 5] = 0.0  # matches fixture
+        X_cal[:, 6] = 1.0  # matches fixture
+
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
-            rng = np.random.default_rng(42)
-            # Use more samples and tighter variance for a more stable baseline in tests
-            # This baseline matches the 'normal_traffic_features' fixture in tests/test_full_pipeline.py
-            X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
-            X[:, 5] = 0.0  # matches fixture
-            X[:, 6] = 1.0  # matches fixture
-            _ensemble.autoencoder.fit(X, epochs=20)
-            _ensemble.iso_forest.fit(X)
+            _ensemble.autoencoder.fit(X_cal, epochs=20)
+            _ensemble.iso_forest.fit(X_cal)
             # Calibration: Set threshold to 2x the max error on normal training data
             # to ensure integration tests pass with high confidence.
             with torch.no_grad():
-                X_tensor = torch.from_numpy(X).to(_device)
+                X_tensor = torch.from_numpy(X_cal).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
 
-            # Calibrate drift guard with baseline scores
-            with torch.no_grad():
-                X_tensor = torch.from_numpy(X).to(_device)
-                scores, _, _, _ = _ensemble.predict(X_tensor)
-                _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True, force_direct=True)
+        # Calibrate drift guard with baseline scores
+        with torch.no_grad():
+            X_tensor = torch.from_numpy(X_cal).to(_device)
+            scores, _, _, _ = _ensemble.predict(X_tensor)
+            _ensemble.drift_guard.update(scores, is_confirmed_benign=True, force_recalibrate=True, force_direct=True)
     return _ensemble
 
 
