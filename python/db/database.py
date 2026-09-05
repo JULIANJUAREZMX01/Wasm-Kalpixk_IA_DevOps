@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 
 import aiosqlite
 from loguru import logger
@@ -37,7 +37,6 @@ async def init_db():
 
 async def insert_alert(alert_dict):
     async with aiosqlite.connect(get_db_path()) as db:
-        # Filter input against whitelist to prevent SQL Injection in column names
         filtered_data = {}
         for k, v in alert_dict.items():
             if k in ALLOWED_COLUMNS:
@@ -49,14 +48,12 @@ async def insert_alert(alert_dict):
             logger.error("Attempted to insert alert with only invalid fields")
             return
 
-        # Convert features_json if it is a list
         features = filtered_data.get("features_json")
         if isinstance(features, list):
             filtered_data["features_json"] = json.dumps(features)
 
-        # Ensure timestamp if not provided
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         columns = ", ".join(filtered_data.keys())
         placeholders = ", ".join([":" + k for k in filtered_data.keys()])
@@ -66,6 +63,12 @@ async def insert_alert(alert_dict):
         await db.commit()
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = 100
+    limit = max(1, min(limit, 500))
+
     db_path = get_db_path()
     query = "SELECT * FROM alerts WHERE 1=1"
     params = []
@@ -95,7 +98,6 @@ async def get_alerts(limit=100, severity_filter=None, since_ts=None):
                         pass
                 alerts.append(alert)
 
-            # Get total count
             count_query = "SELECT COUNT(*) FROM alerts WHERE 1=1"
             count_params = []
             if severity_filter:
@@ -110,7 +112,6 @@ async def get_alerts(limit=100, severity_filter=None, since_ts=None):
 
             return alerts, total
 
-
 async def insert_alerts(alerts_list):
     if not alerts_list:
         return
@@ -121,6 +122,8 @@ async def insert_alerts(alerts_list):
         for k, v in alert_dict.items():
             if k in ALLOWED_COLUMNS:
                 filtered_data[k] = v
+            else:
+                logger.warning(f"Skipping invalid alert field in batch: {k}")
 
         if not filtered_data:
             continue
@@ -129,24 +132,17 @@ async def insert_alerts(alerts_list):
         if isinstance(features, list):
             filtered_data["features_json"] = json.dumps(features)
         if "ts" not in filtered_data:
-            filtered_data["ts"] = datetime.utcnow().isoformat()
+            filtered_data["ts"] = datetime.now(UTC).isoformat()
 
         filtered_alerts.append(filtered_data)
 
     if not filtered_alerts:
         return
 
-    # Ensure all dicts have the same keys for executemany with named placeholders.
-    # We use the union of all keys found in the filtered alerts.
-    all_keys = set()
-    for a in filtered_alerts:
-        all_keys.update(a.keys())
-
-    all_keys = sorted(list(all_keys)) # Deterministic order
-    for a in filtered_alerts:
-        for k in all_keys:
-            if k not in a:
-                a[k] = None
+    all_keys = sorted({key for alert in filtered_alerts for key in alert})
+    for alert in filtered_alerts:
+        for key in all_keys:
+            alert.setdefault(key, None)
 
     db_path = get_db_path()
     async with aiosqlite.connect(db_path) as db:
