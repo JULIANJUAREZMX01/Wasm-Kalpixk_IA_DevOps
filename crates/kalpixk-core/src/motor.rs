@@ -1,4 +1,4 @@
-// motor.rs — Rust port of Zig Metal logic for v8.0.0-GUERRILLA
+// motor.rs — Rust port of Zig Metal logic for v9.0.0-XOCHIMILCO
 // Ensures build compatibility in environments without a Zig compiler.
 
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -52,6 +52,38 @@ pub fn v8_guerrilla_jit_shield(target: &mut [u8], seed: u64) {
     }
 }
 
+pub fn v9_xochimilco_jit_shield(target: &mut [u8], seed: u64) {
+    let r1 = 3.9999;
+    let r2 = 3.8888;
+    let mut x1 = 0.5 + ((seed % 1000) as f64 / 10000.0);
+    let mut x2 = 0.3 + (((seed >> 16) % 1000) as f64 / 10000.0);
+
+    let mut i = 0;
+    while i < target.len() {
+        x1 = r1 * x1 * (1.0 - x1);
+        x2 = r2 * x2 * (1.0 - x2);
+
+        let noise_type = ((x1 * 1000.0) as usize) % 4;
+        let noise_len = (((x2 * 1000.0) as usize) % 4) + 1;
+
+        if i + noise_len > target.len() {
+            break;
+        }
+
+        for j in 0..noise_len {
+            match noise_type {
+                0 => target[i + j] = 0x90, // NOP
+                1 => target[i + j] = 0xF4, // HLT
+                2 => target[i + j] = 0xCC, // INT 3
+                _ => {
+                    target[i + j] = ((x1 * 255.0) as u8) ^ ((x2 * 255.0) as u8);
+                }
+            }
+        }
+        i += noise_len;
+    }
+}
+
 pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
     let r = 3.99;
     let mut x = if initial_x <= 0.0 || initial_x >= 1.0 {
@@ -64,6 +96,25 @@ pub fn v8_quantum_entropy_shredder(target: &mut [u8], initial_x: f64) {
         x = r * x * (1.0 - x);
         *byte = (x * 255.0) as u8;
     }
+}
+
+pub fn v9_xochimilco_active_memory_scrambling(target: &mut [u8], key: u64) {
+    let r = 3.9999;
+    let mut x = 0.42 + ((key % 1000) as f64 / 5000.0);
+
+    for (idx, byte) in target.iter_mut().enumerate() {
+        x = r * x * (1.0 - x);
+        let mask = (x * 255.0) as u8;
+        let rot = (idx % 7) as u32 + 1;
+        *byte = (*byte ^ mask).rotate_left(rot);
+    }
+}
+
+pub fn v9_xochimilco_ghost_mesh(node_id: &str, payload: &str) -> String {
+    let mut data = payload.as_bytes().to_vec();
+    v9_xochimilco_active_memory_scrambling(&mut data, 0x584F4348);
+    let hex_part: String = data.iter().take(16).map(|b| format!("{:02x}", b)).collect();
+    format!("v9-ghost-{}:{}", node_id, hex_part)
 }
 
 pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {

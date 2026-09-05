@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// [ATLATL-ORDNANCE] WasmGuard Core v8.0.0-GUERRILLA
+// [ATLATL-ORDNANCE] WasmGuard Core v9.0.0-XOCHIMILCO
 // Implementation of the WIT contract for the Blue Team SIEM
 
 mod defense_nodes;
@@ -67,7 +67,7 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "8.0.0-GUERRILLA".to_string()
+    "9.0.0-XOCHIMILCO".to_string()
 }
 
 #[wasm_bindgen]
@@ -77,7 +77,7 @@ pub fn get_security_telemetry() -> String {
         "heartbeat": wasp::get_runtime_heartbeat(),
         "threat_level": if SHARED_ACCESS_COUNT.load(Ordering::Relaxed) > 1000 { "high" } else { "low" },
         "active_mesh_nodes": defense_nodes::get_active_nodes().len(),
-        "v8_status": "GUERRILLA_ACTIVE"
+        "v9_status": "XOCHIMILCO_ACTIVE"
     }).to_string()
 }
 
@@ -137,6 +137,18 @@ pub fn v8_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
 }
 
 #[wasm_bindgen]
+pub fn v9_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
+    // [ATLATL-ORDNANCE] v9 XOCHIMILCO GHOST PROTOCOL
+    defense_nodes::process_ghost_signal(node_id, encrypted_payload);
+    serde_json::json!({
+        "mode": "GHOST_V9_XOCHIMILCO",
+        "integrity": "VERIFIED_XOCHIMILCO",
+        "obfuscation_layer": "ACTIVE_V9_SPECTRAL_MESH"
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
 pub fn v8_guerrilla_process(payload_json: &str) -> String {
     let guard = wasp::validate_ffi_call("v8_guerrilla_process", 1);
     if !guard.passed {
@@ -159,6 +171,16 @@ pub fn v8_guerrilla_jit_shield_wasm(target: &mut [u8], seed: u64) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     motor::v8_guerrilla_jit_shield(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v9_xochimilco_jit_shield_wasm(target: &mut [u8], seed: u64) {
+    motor::v9_xochimilco_jit_shield(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v9_xochimilco_active_memory_scrambling_wasm(target: &mut [u8], key: u64) {
+    motor::v9_xochimilco_active_memory_scrambling(target, key);
 }
 
 #[wasm_bindgen]
@@ -395,10 +417,10 @@ pub fn health_check() -> String {
         "module": "kalpixk-core",
         "feature_dim": 32,
         "wit_implemented": true,
-        "atlatl_ordnance": "v8.0.0-GUERRILLA",
+        "atlatl_ordnance": "v9.0.0-XOCHIMILCO",
         "heartbeat": wasp::get_runtime_heartbeat(),
         "mesh_active": true,
-        "v8_guerrilla": true
+        "v9_xochimilco": true
     })
     .to_string()
 }
