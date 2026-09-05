@@ -43,7 +43,8 @@ class AdversarialDriftGuard:
         median = np.median(data)
         mad = np.median(np.abs(data - median))
         mad = max(mad, 0.01)
-        self._current_threshold = float(median + self.k * (mad * 1.4826))
+        # Use k=3.0 or median + 3*MAD for normal traffic bounds
+        self._current_threshold = float(median + 3.0 * (mad * 1.4826))
         self._updates_since_recalc = 0
 
     def is_anomaly(self, score: float) -> bool:
