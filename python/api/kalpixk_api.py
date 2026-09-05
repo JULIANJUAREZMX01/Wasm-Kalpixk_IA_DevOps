@@ -154,6 +154,9 @@ def ensure_ensemble():
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+                # Calibrate ensemble drift_guard on normal baseline training data
+                ensemble_scores, _, _, _ = _ensemble.predict(X_tensor)
+                _ensemble.drift_guard.update(ensemble_scores, is_confirmed_benign=True)
     return _ensemble
 
 
@@ -299,7 +302,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
