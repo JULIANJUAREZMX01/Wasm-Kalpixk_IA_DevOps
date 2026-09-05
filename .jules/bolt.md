@@ -26,3 +26,6 @@
 ## 2024-05-21 - [Optimize API insertions with bulk executemany]
 **Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
 **Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
+## 2026-08-14 - [React useMemo Optimization for Array Derivations]
+**Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
+**Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
