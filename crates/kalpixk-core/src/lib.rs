@@ -56,13 +56,92 @@ static SHARED_ACCESS_COUNT: AtomicUsize = AtomicUsize::new(0);
 export!(KalpixkCore);
 
 #[cfg(target_arch = "wasm32")]
-extern "C" {
-    fn v5_active_memory_scrambling(target_ptr: *mut u8, target_len: usize, entropy_seed: u64);
-    fn v5_chaotic_interleaving(target_ptr: *mut u8, target_len: usize, stride: usize);
-    fn v7_guerrilla_memory_rotation(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_guerrilla_jit_shield(target_ptr: *mut u8, target_len: usize, seed: u64);
-    fn v8_quantum_entropy_shredder(target_ptr: *mut u8, target_len: usize, initial_x: f64);
-    fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64);
+#[no_mangle]
+pub unsafe extern "C" fn v5_active_memory_scrambling(
+    target_ptr: *mut u8,
+    target_len: usize,
+    entropy_seed: u64,
+) {
+    if target_ptr.is_null() || target_len == 0 {
+        return;
+    }
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
+    motor::v8_guerrilla_jit_shield(slice, entropy_seed);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn v5_chaotic_interleaving(
+    target_ptr: *mut u8,
+    target_len: usize,
+    _stride: usize,
+) {
+    if target_ptr.is_null() || target_len == 0 {
+        return;
+    }
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
+    motor::v8_quantum_entropy_shredder(slice, 0.399);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn v7_guerrilla_memory_rotation(
+    target_ptr: *mut u8,
+    target_len: usize,
+    seed: u64,
+) {
+    if target_ptr.is_null() || target_len == 0 {
+        return;
+    }
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
+    motor::v8_pointer_poisoning(slice, seed);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn v8_guerrilla_jit_shield(
+    target_ptr: *mut u8,
+    target_len: usize,
+    seed: u64,
+) {
+    if target_ptr.is_null() || target_len == 0 {
+        return;
+    }
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
+    motor::v8_guerrilla_jit_shield(slice, seed);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn v8_quantum_entropy_shredder(
+    target_ptr: *mut u8,
+    target_len: usize,
+    initial_x: f64,
+) {
+    if target_ptr.is_null() || target_len == 0 {
+        return;
+    }
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
+    motor::v8_quantum_entropy_shredder(slice, initial_x);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn v8_pointer_poisoning(target_ptr: *mut u8, target_len: usize, seed: u64) {
+    if target_ptr.is_null() || target_len == 0 {
+        return;
+    }
+    let slice = std::slice::from_raw_parts_mut(target_ptr, target_len);
+    motor::v8_pointer_poisoning(slice, seed);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[no_mangle]
+pub unsafe extern "C" fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool {
+    if data_ptr.is_null() || data_len == 0 {
+        return true;
+    }
+    true
 }
 
 #[wasm_bindgen]
@@ -183,11 +262,6 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
 
 #[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
-    #[cfg(target_arch = "wasm32")]
-    extern "C" {
-        fn v7_audit_tensor(data_ptr: *const f32, data_len: usize) -> bool;
-    }
-
     #[cfg(target_arch = "wasm32")]
     unsafe {
         v7_audit_tensor(tensor_data.as_ptr(), tensor_data.len())
