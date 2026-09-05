@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -95,7 +95,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -137,23 +139,28 @@ def ensure_ensemble():
         _device = get_rocm_device()
         log_gpu_info(_device)
         _ensemble = DetectionEnsemble(device=_device)
+
+        rng = np.random.default_rng(42)
+        X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
+        X[:, 5] = 0.0  # matches fixture
+        X[:, 6] = 1.0  # matches fixture
+
         # Auto-train simple baseline if not trained
         if not getattr(_ensemble.autoencoder, "is_trained", False):
-            rng = np.random.default_rng(42)
-            # Use more samples and tighter variance for a more stable baseline in tests
-            # This baseline matches the 'normal_traffic_features' fixture in tests/test_full_pipeline.py
-            X = rng.normal(0.3, 0.05, (1000, 32)).clip(0, 1).astype(np.float32)
-            X[:, 5] = 0.0  # matches fixture
-            X[:, 6] = 1.0  # matches fixture
             _ensemble.autoencoder.fit(X, epochs=20)
             _ensemble.iso_forest.fit(X)
-            # Calibration: Set threshold to 2x the max error on normal training data
-            # to ensure integration tests pass with high confidence.
             with torch.no_grad():
                 X_tensor = torch.from_numpy(X).to(_device)
                 errors = _ensemble.autoencoder.net.reconstruction_error(X_tensor).cpu().numpy()
                 max_err = float(np.max(errors))
                 _ensemble.autoencoder._threshold = max(0.6, max_err * 2.0)
+
+        # Calibrate AdversarialDriftGuard with baseline dataset
+        with torch.no_grad():
+            if_scores, _, _ = _ensemble.iso_forest.predict(X)
+            ae_scores, _ = _ensemble.autoencoder.predict(X)
+            base_scores = (0.45 * np.asarray(if_scores) + 0.55 * np.asarray(ae_scores)).tolist()
+            _ensemble.drift_guard.update(base_scores, is_confirmed_benign=True, force_recalibrate=True)
     return _ensemble
 
 
@@ -216,9 +223,9 @@ async def health():
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -234,7 +241,7 @@ async def status(request: Request, api_key: str = Depends(verify_api_key)):
         "model_trained": True,
         "uptime_seconds": round(uptime, 1),
         "ws_clients": len(_ws_clients),
-        "adaptive_threshold": ens.iso_forest.threshold.to_dict(),
+        "adaptive_threshold": ens.drift_guard.to_dict(),
     }
 
 
@@ -299,7 +306,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             "anomaly_score": score,
             "technique": techniques[i],
             "confidence": float(confidences[i]),
-            "adaptive_threshold": threshold
+            "adaptive_threshold": adaptive_threshold
         })
 
         if score > adaptive_threshold:
@@ -558,4 +565,13 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
+    return result
+
+@app.post("/api/v1/guerrilla/v9/strike")
+@limiter.limit("2/minute")
+async def v9_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v9 XOCHIMILCO Algorithmic Guillotine trigger."""
+    target = request.client.host if request.client else "unknown"
+    result = atlatl.v8_algorithmic_guillotine(target)
+    result["version"] = "9.0.0-XOCHIMILCO"
     return result
