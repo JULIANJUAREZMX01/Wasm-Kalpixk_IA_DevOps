@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 
-from python.detection.adaptive_threshold import AdversarialDriftGuard
+from python.detection.adaptive_threshold import AdaptiveThreshold as AdversarialDriftGuard
 from python.detection.autoencoder import KalpixkAutoencoder
 from python.detection.isolation_forest import KalpixkIsolationForest
 
@@ -37,7 +37,7 @@ class DetectionEnsemble:
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
         # Update and get adaptive threshold
-        current_threshold = self.drift_guard.update(ensemble_scores.tolist())
+        self.drift_guard.update(ensemble_scores.tolist())
 
         return (
             ensemble_scores.tolist(),

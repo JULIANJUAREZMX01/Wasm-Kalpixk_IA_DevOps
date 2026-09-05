@@ -34,19 +34,23 @@ class AdaptiveThreshold:
         self._updates_since_recalc = 0
         self._total_updates = 0
 
-    def update(self, score: float, is_confirmed_benign: bool = False) -> None:
+    def update(self, score: float | list[float], is_confirmed_benign: bool = False) -> float:
         """
-        Add score to buffer.
+        Add score or batch of scores to buffer.
         Only updates buffer if is_confirmed_benign or score < current_threshold.
+        Returns current threshold.
         """
+        scores = score if isinstance(score, list) else [score]
         with self._lock:
-            if is_confirmed_benign or score < self._current_threshold:
-                self._buffer.append(score)
-                self._updates_since_recalc += 1
-                self._total_updates += 1
+            for s in scores:
+                if is_confirmed_benign or s < self._current_threshold:
+                    self._buffer.append(s)
+                    self._updates_since_recalc += 1
+                    self._total_updates += 1
 
-                if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
-                    self._recalibrate()
+                    if self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10:
+                        self._recalibrate()
+            return self._current_threshold
 
     def _recalibrate(self) -> None:
         """Recompute threshold based on buffer statistics. Internal use only."""
