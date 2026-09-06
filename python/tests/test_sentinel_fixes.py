@@ -88,3 +88,45 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_non_finite_features_rejected_in_api():
+    import httpx
+
+    from python.api.kalpixk_api import app
+
+    headers = {
+        "X-Kalpixk-Key": "development_secret",
+        "Content-Type": "application/json"
+    }
+
+    # Construct JSON string bodies containing non-standard NaN and Infinity literals
+    nan_features_json = '{"features": [' + ', '.join(['0.1'] * 31) + ', NaN]}'
+    inf_features_json = '{"features": [' + ', '.join(['0.1'] * 31) + ', Infinity]}'
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        # Test NaN in /api/detect
+        res_nan_detect = await client.post("/api/detect", content=nan_features_json, headers=headers)
+        assert res_nan_detect.status_code == 422
+        assert "finite" in res_nan_detect.text.lower() or "nan" in res_nan_detect.text.lower()
+
+        # Test Inf in /analyze
+        res_inf_analyze = await client.post("/analyze", content=inf_features_json, headers=headers)
+        assert res_inf_analyze.status_code == 422
+        assert "finite" in res_inf_analyze.text.lower() or "infinity" in res_inf_analyze.text.lower()
+
+
+def test_adversarial_drift_guard_filters_nan_and_inf():
+    import math
+
+    from python.detection.adaptive_threshold import AdversarialDriftGuard
+
+    guard = AdversarialDriftGuard()
+
+    # Update with a batch containing NaN, Inf, and valid scores
+    guard.update([float("nan"), float("inf"), -float("inf"), 0.2, 0.3], force_recalibrate=True)
+
+    updated_threshold = guard.current_threshold
+    assert math.isfinite(updated_threshold), "Threshold corrupted to NaN or Inf!"
+    assert updated_threshold != float("nan")

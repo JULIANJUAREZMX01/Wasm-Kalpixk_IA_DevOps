@@ -4,6 +4,7 @@ python/detection/adaptive_threshold.py
 Sliding-window adaptive threshold for anomaly scores.
 """
 
+import math
 import threading
 from collections import deque
 
@@ -121,6 +122,9 @@ class AdversarialDriftGuard:
             scores_list = scores.tolist()
         else:
             scores_list = [float(s) for s in scores]
+
+        # SECURITY: Filter out non-finite values (NaN, Inf) to prevent buffer/threshold corruption
+        scores_list = [s for s in scores_list if math.isfinite(s)]
 
         with self._lock:
             for score in scores_list:
