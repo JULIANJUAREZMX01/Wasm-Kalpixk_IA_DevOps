@@ -29,3 +29,7 @@
 ## 2026-08-14 - [React useMemo Optimization for Array Derivations]
 **Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
 **Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
+
+## 2026-08-14 - [FastAPI Python Ensemble Bug Fix]
+**Learning:** The Python API was crashing at `/analyze` because it passed a list of scores from `ens.predict()` to `drift_guard.update()` instead of a single float, and then tried to return `current_threshold` which was not defined in scope.
+**Action:** We fixed it by changing `self.drift_guard.update(ensemble_scores.tolist())` to `self.drift_guard.update(float(np.mean(ensemble_scores)))` and returning `self.drift_guard.current_threshold`. This is required because `AdaptiveThreshold` in `python/detection/adaptive_threshold.py` expects a single float score to be passed iteratively (not a list).

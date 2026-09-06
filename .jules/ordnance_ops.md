@@ -144,3 +144,4 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+## [OPS_V8_GUILLOTINE_FIX] - [REPAIR BACKEND PREDICTION AND WAR ROOM RENDER] **Vector de Ataque:** Tried to flood the API with batch payloads or heavy UI load to cause a Denial of Service through crashing prediction loops and O(N) render re-calculations. **Defensa Implementada:** Fixed Python prediction loops (drift guard float conversion, returning proper threshold) and wrapped React arrays in useMemo for optimal V8 operations. **Contra-Ataque:** The backend is now fully stable for ATLATL operations, ready to launch algorithmic guillotines.
