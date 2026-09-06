@@ -144,3 +144,26 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_NODES] - Decentralized Embedded Node Shield & Mesh Hardening
+
+**Vector de Ataque Analizado:**
+1. **Sondeo de Nodos Descentralizados (Embedded Node Probing):** Ataques dirigidos a la malla de nodos desatendidos en microcontroladores y dispositivos embebidos para interceptar o manipular señales fantasma (`ghost_signal`).
+2. **Subversión del Protocolo Ghost (Mesh Tampering):** Inyección de paquetes no autorizados para simular tráfico legitimo y provocar denegación de servicio o falsa calibración en los defensores locales.
+
+**Defensa Implementada (v10.0.0-EMBEDDED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (`defense_nodes.rs`):**
+   - Incorporación del nodo 10 para identificar intentos de sondeo (`embedded_probe`), manipulación de malla (`mesh_tamper`) y subversión del protocolo espectral (`ghost_subversion`).
+   - Aislamiento inmediato de los nodos atacados y marcado táctico en el registro de amenazas globales.
+2. **Corrección de la Interfaz del Ensamble (`ensemble.py`):**
+   - Asegurada la captura y retorno del umbral adaptativo (`current_threshold`) calculado por `AdversarialDriftGuard`.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_GHOST_RETALIATION:**
+   - Redirección de peticiones maliciosas a bucles infinitos de consumo de CPU local y envenenamiento de los canales de C2 del agresor mediante trampas de punteros y de datos aleatorios.
+
+**Estado de la Misión:**
+- Embedded Node Shield: ACTIVE & ARMED (Node-10)
+- Spectral Mesh: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
