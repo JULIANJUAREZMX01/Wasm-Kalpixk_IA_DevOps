@@ -9,3 +9,8 @@
 **Vulnerability:** JIT Spraying and Buffer Deduplication Evasion in decentralized nodes.
 **Learning:** Standard entropy storms can be mitigated by deduplicating network appliances. JIT probing requires polymorphic instruction noise to disrupt shellcode alignment.
 **Prevention:** Implement non-linear chaotic entropy (Logistic Map) and polymorphic instruction padding (JIT Shield) at the metal layer (Zig/Rust).
+
+## 2026-09-07 - [Non-Finite Float Threshold Poisoning]
+**Vulnerability:** Unsanitized non-finite float inputs (`NaN`, `Infinity`) in feature payloads.
+**Learning:** Ingesting non-finite floats into machine learning pipelines corrupts statistical state estimators (e.g., `AdversarialDriftGuard` threshold becomes `NaN`, permanently disabling anomaly detection). Additionally, default FastAPI error handlers crash with 500 when attempting to serialize non-finite floats inside `RequestValidationError` detail structures.
+**Prevention:** Enforce `math.isfinite` validation on all numeric input fields via Pydantic validators and sanitize validation error details before JSON serialization.

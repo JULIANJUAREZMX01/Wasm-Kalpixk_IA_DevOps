@@ -7,13 +7,21 @@ from loguru import logger
 
 # Whitelist of allowed columns for the alerts table to prevent SQL Injection
 ALLOWED_COLUMNS = {
-    "ts", "ip", "anomaly_score", "event_type", "severity",
-    "technique", "confidence", "features_json", "source"
+    "ts",
+    "ip",
+    "anomaly_score",
+    "event_type",
+    "severity",
+    "technique",
+    "confidence",
+    "features_json",
+    "source",
 }
 
 
 def get_db_path():
     return os.getenv("KALPIXK_DB_PATH", "./kalpixk_alerts.db")
+
 
 async def init_db():
     async with aiosqlite.connect(get_db_path()) as db:
@@ -34,6 +42,7 @@ async def init_db():
         await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts DESC)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity)")
         await db.commit()
+
 
 async def insert_alert(alert_dict):
     async with aiosqlite.connect(get_db_path()) as db:
@@ -61,6 +70,7 @@ async def insert_alert(alert_dict):
 
         await db.execute(query, filtered_data)
         await db.commit()
+
 
 async def get_alerts(limit=100, severity_filter=None, since_ts=None):
     try:
@@ -111,6 +121,7 @@ async def get_alerts(limit=100, severity_filter=None, since_ts=None):
                 total = (await count_cursor.fetchone())[0]
 
             return alerts, total
+
 
 async def insert_alerts(alerts_list):
     if not alerts_list:
