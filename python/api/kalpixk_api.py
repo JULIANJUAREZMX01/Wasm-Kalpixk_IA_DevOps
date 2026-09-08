@@ -9,6 +9,7 @@ Endpoints:
 """
 
 import json
+import math
 import os
 import secrets
 import signal as _signal
@@ -31,7 +32,10 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi import status as fastapi_status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -69,6 +73,27 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+def _sanitize_non_finite(obj):
+    if isinstance(obj, float):
+        if not math.isfinite(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_non_finite(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_non_finite(x) for x in obj]
+    return obj
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    sanitized_errors = _sanitize_non_finite(jsonable_encoder(exc.errors()))
+    return JSONResponse(
+        status_code=fastapi_status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": sanitized_errors},
+    )
 
 # -- Security & Rate Limiting --
 API_KEY_NAME = "X-Kalpixk-Key"
@@ -187,10 +212,14 @@ class LogRequest(BaseModel):
         if isinstance(first, (int, float)):
             if len(v) != 32:
                 raise ValueError(f"Single event features must have 32 dimensions, got {len(v)}")
+            if any(not math.isfinite(x) for x in v):
+                raise ValueError("Feature values must be finite numbers (no NaN or Infinity)")
         elif isinstance(first, list):
             for i, row in enumerate(v):
                 if len(row) != 32:
                     raise ValueError(f"Batch event features at index {i} must have 32 dimensions, got {len(row)}")
+                if any(not math.isfinite(x) for x in row):
+                    raise ValueError(f"Batch event features at index {i} must be finite numbers (no NaN or Infinity)")
         return v
 
     @model_validator(mode="after")

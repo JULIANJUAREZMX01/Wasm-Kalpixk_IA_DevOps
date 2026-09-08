@@ -88,3 +88,27 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_non_finite_features_validation():
+    import json
+
+    from fastapi.testclient import TestClient
+
+    from python.api.kalpixk_api import app
+
+    client = TestClient(app)
+    headers = {"X-Kalpixk-Key": "development_secret", "Content-Type": "application/json"}
+
+    # Test single event with NaN
+    nan_body = json.dumps({"features": [0.1] * 31 + [float("nan")]}, allow_nan=True)
+    res = client.post("/analyze", content=nan_body, headers=headers)
+    assert res.status_code == 422
+    assert "finite numbers" in res.text
+
+    # Test batch event with Infinity
+    inf_body = json.dumps({"features": [[0.1] * 32, [float("inf")] + [0.1] * 31]}, allow_nan=True)
+    res_batch = client.post("/api/detect", content=inf_body, headers=headers)
+    assert res_batch.status_code == 422
+    assert "finite numbers" in res_batch.text
