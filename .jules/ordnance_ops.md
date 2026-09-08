@@ -144,3 +144,29 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_MESH] - Decentralized Embedded Node Hardening & Node-10 Deployment
+
+**Vector de Ataque Analizado:**
+1. **Firmware Probing & Hardware Glitching:** Intentos de extracción de claves y manipulación de memoria en nodos embebidos periféricos mediante sondas JTAG o inyección de fallos de voltaje.
+2. **Node Identity Spoofing:** Suplantación de nodos de la malla para inyectar telemetría falsa o evadir la detección de comportamiento anómalo.
+3. **Unbound Edge Telemetry:** Peticiones de datos sin sellado criptográfico de hardware ejecutadas directo desde el perímetro.
+
+**Defensa Implementada (v10.0.0-EMBEDDED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (`defense_nodes.rs`):**
+   - Módulo Rust especializado en la detección heurística de probing de firmware, fugas de canal lateral (side-channel leaks) y manipulación de hardware en nodos descentralizados.
+2. **Hardware Seal Generator (`motor.rs`):**
+   - Implementación de `v10_embedded_hardware_seal` para generar un sello criptográfico inviolable basado en hashing FNV-1a combinando el ID de nodo y el hash del firmware.
+3. **WASM Registration Layer (`lib.rs`):**
+   - Exposición de `register_embedded_node` para sincronizar y registrar dinámicamente nodos embebidos en la malla espectral.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_HARDWARE_RETALIATION:**
+   - Aislamiento inmediato de red y purga remota de buffers para cualquier nodo embebido que falle la verificación del sello criptográfico de hardware.
+
+**Estado de la Misión:**
+- Node-10 Defender: ACTIVE & ENGAGED
+- Hardware Seal: ARMED & BOUND
+- Spectral Mesh: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Ataque para Defender. El sistema devora cada amenaza en el origen.*

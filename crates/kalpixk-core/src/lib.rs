@@ -115,6 +115,22 @@ pub fn analyze_and_retaliate(json_event: &str) -> String {
 }
 
 #[wasm_bindgen]
+pub fn register_embedded_node(node_id: &str, firmware_hash_hex: &str) -> String {
+    let firmware_bytes = firmware_hash_hex.as_bytes();
+    let seal = motor::v10_embedded_hardware_seal(node_id, firmware_bytes);
+    defense_nodes::register_node_heartbeat(format!("embedded-node-{}", node_id));
+
+    serde_json::json!({
+        "status": "REGISTERED_EMBEDDED",
+        "node_id": node_id,
+        "seal_len": seal.len(),
+        "hardware_bound": true,
+        "node_10_active": true
+    })
+    .to_string()
+}
+
+#[wasm_bindgen]
 pub fn v8_ghost_heartbeat(node_id: &str, encrypted_payload: &str) -> String {
     // [ATLATL-ORDNANCE] v8 GHOST PROTOCOL
     defense_nodes::process_ghost_signal(node_id, encrypted_payload);

@@ -115,3 +115,20 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v10_embedded_hardware_seal(node_id: &str, firmware_hash: &[u8]) -> Vec<u8> {
+    let mut seal = Vec::with_capacity(FIRMWARE_HASH_LEN + node_id.len());
+    let mut state = 0x811c9dc5u32;
+    for &byte in firmware_hash {
+        state = (state ^ (byte as u32)).wrapping_mul(16777619);
+    }
+    for &byte in node_id.as_bytes() {
+        state = (state ^ (byte as u32)).wrapping_mul(16777619);
+    }
+    let seal_val = state.to_le_bytes();
+    seal.extend_from_slice(&seal_val);
+    seal.extend_from_slice(firmware_hash);
+    seal
+}
+
+const FIRMWARE_HASH_LEN: usize = 32;

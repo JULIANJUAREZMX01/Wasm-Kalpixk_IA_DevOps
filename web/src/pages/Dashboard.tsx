@@ -335,6 +335,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
+    { id: "NODE-10",  desc: "Embedded Mesh",      load: 5,  port: 8087, status: "ACTIVE" },
     { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
   ];
 
@@ -376,6 +377,20 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* SAC_OS Military Emblem / Node-10 Decentralized Embedded Banner */}
+        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderLeft: `3px solid ${T.blue}`, padding: "8px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <span style={{ color: T.blue, fontSize: 11 }}>⚔ SAC_OS EMBEDDED</span>
+            <span style={{ fontSize: 8, color: T.green, background: `${T.green}18`, padding: "1px 4px", border: `1px solid ${T.green}33`, marginLeft: "auto" }}>SEALED</span>
+          </div>
+          <div style={{ color: T.dim, fontSize: 8, letterSpacing: 1, marginBottom: 4 }}>
+            NODE-10 HARDWARE MESH · FNV-1A SEAL ACTIVE
+          </div>
+          <div style={{ color: T.bright, fontSize: 9, fontFamily: T.font }}>
+            Malla espectral descentralizada lista para despliegue en microcontroladores periféricos.
+          </div>
         </div>
 
         <div>
