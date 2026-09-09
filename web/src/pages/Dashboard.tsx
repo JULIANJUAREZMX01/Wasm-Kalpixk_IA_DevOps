@@ -335,7 +335,8 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
-    { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "VANGUARD", desc: "MC9300 Handhelds",   load: 28, port: 8086, status: "ACTIVE" },
+    { id: "NODE-10",  desc: "EMBEDDED_DEFENDER", load: 18, port: 8087, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [

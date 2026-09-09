@@ -144,3 +144,31 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Decentralized Embedded Node Defense & Hardware Tamper Neutralization
+
+**Vector de Ataque Analizado:**
+1. **Sondeos Físicos y Debug Remoto:** Infiltración en nodos de borde y dispositivos embebidos mediante interfaces JTAG/UART desprotegidas, volcados de memoria flash SPI y depuración remota.
+2. **Inyección en Buses Hardware y Envenenamiento de Borde:** Inyección de paquetes sintéticos en buses industriales/embebidos y manipulación de telemetría directamente en la fuente antes de ser procesada por la malla WASM.
+3. **Evasión por Deriva no Declarada:** Ataques dirigidos a la inicialización del ensemble en backend donde variables de umbral no inicializadas provocaban excepciones de tiempo de ejecución (`NameError`).
+
+**Defensa Implementada (v10.0-DECENTRALIZED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (Rust/WASM):**
+   - Implementación del décimo nodo de defensa heurística en `defense_nodes.rs` para captura e intercepción inmediata de intentos de sondeo hardware, volcado de flash, inyección de bus SPI/JTAG y envenenamiento de datos de borde.
+   - Disparo automático de protocolo de `lockdown` crítico ante eventos sospechosos de manipulacion embebida.
+2. **Model Ensemble Threshold Calibration (Python):**
+   - Resolución de referencias de umbral adaptativo en `DetectionEnsemble.predict` asignando `current_threshold` desde `AdversarialDriftGuard`.
+3. **SAC_OS Embedded UI Integration (React):**
+   - Integración visual táctica de nodos de borde (MC9300 Handhelds & NODE-10 EMBEDDED_DEFENDER) en la consola de mando de SAC_OS.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Inserción de trampas de bus y punteros corruptos en los canales de depuración del agresor.
+   - Aislamiento de hardware y desorientación del vector C2 del atacante mediante la inyección de firmas falsas de telemetría de guerra.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ACTIVE
+- Ensemble Predict Pipeline: STABLE
+- SAC_OS Edge Monitoring: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
