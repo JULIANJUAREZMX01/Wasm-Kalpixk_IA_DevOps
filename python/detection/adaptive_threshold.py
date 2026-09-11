@@ -116,18 +116,23 @@ class AdversarialDriftGuard:
         Accepts float, list of floats, or numpy array.
         """
         if isinstance(scores, (float, int)):
-            scores_list = [float(scores)]
+            scores_arr = np.array([float(scores)])
         elif isinstance(scores, np.ndarray):
-            scores_list = scores.tolist()
+            scores_arr = scores
         else:
-            scores_list = [float(s) for s in scores]
+            scores_arr = np.array(scores, dtype=float)
 
         with self._lock:
-            for score in scores_list:
-                if is_confirmed_benign or score < self._current_threshold:
-                    self._buffer.append(score)
-                    self._updates_since_recalc += 1
-                    self._total_updates += 1
+            if is_confirmed_benign:
+                valid_scores = scores_arr
+            else:
+                valid_scores = scores_arr[scores_arr < self._current_threshold]
+
+            if len(valid_scores) > 0:
+                self._buffer.extend(valid_scores.tolist())
+                n_added = len(valid_scores)
+                self._updates_since_recalc += n_added
+                self._total_updates += n_added
 
             if force_recalibrate or (
                 self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
