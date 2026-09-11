@@ -89,7 +89,10 @@ fn test_embedded_node_defender() {
 
     // NODE-10: EMBEDDED_NODE_DEFENDER should be triggered
     assert!(
-        v["node"].as_str().unwrap_or("").contains("EMBEDDED_NODE_DEFENDER"),
+        v["node"]
+            .as_str()
+            .unwrap_or("")
+            .contains("EMBEDDED_NODE_DEFENDER"),
         "Expected EMBEDDED_NODE_DEFENDER node, got: {}",
         v["node"]
     );
