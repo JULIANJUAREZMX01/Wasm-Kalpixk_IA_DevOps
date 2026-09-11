@@ -24,3 +24,12 @@ def test_features_endpoint():
     data = response.json()
     assert data["feature_dim"] == 32
     assert len(data["features"]) == 32
+
+def test_security_headers():
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "object-src 'none'" in response.headers["Content-Security-Policy"]
+    assert "Strict-Transport-Security" in response.headers
+    assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
