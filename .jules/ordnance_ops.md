@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENDER] - Decentralized Embedded Node Defense & Hardware Tamper Protection
+
+**Vector de Ataque Analizado:**
+1. **Physical & Firmware Probing on Embedded Nodes:** Infiltrados físicos o sondas automatizadas (JTAG, UART, OpenOCD, esptool) intentando extraer el firmware del nodo de defensa embebido o alterar los pesos de inferencia local.
+2. **Side-Channel & Glitching Attacks:** Inyección de fallos de voltaje o reloj (voltage/clock glitching) para desviar la ejecución del sandbox WASM en dispositivos embebidos descentralizados.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (defense_nodes.rs):**
+   - Detección proactiva de patrones de sondeo JTAG/UART, comandos de manipulación de firmware (`esptool`, `openocd`) y manipulaciones directas de hardware.
+   - Evaluación en tiempo real de eventos `embedded_probe` y `embedded_tamper` para bloqueo inmediato y aislamiento del nodo descentralizado.
+2. **Ensemble Drift Guard Threshold Alignment (ensemble.py):**
+   - Corrección del flujo de actualización de umbrales adaptativos en la canalización de inferencia combinada (Isolation Forest + Autoencoder).
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_HARDWARE_LOCKDOWN:**
+   - Activación de firmas de amenaza en la malla global al detectar manipulación física en nodos embebidos.
+   - Aislamiento instantáneo del canal de comunicación del nodo comprometido y envenenamiento de los buffers de respuesta expuestos a los analizadores de firmware del atacante.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ENGAGED
+- Decentralized Mesh Safeguard: ACTIVE
+- Retaliation Engine: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Ataque para Defender. Ningún punto de entrada, físico o digital, quedará sin represalia.*

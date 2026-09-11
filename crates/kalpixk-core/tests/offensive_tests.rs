@@ -78,3 +78,21 @@ fn test_lateral_poisoning() {
         "timestamp should be present"
     );
 }
+
+#[test]
+fn test_embedded_node_defender() {
+    let raw = "Unauthorized JTAG probe detected: esptool attached to UART_PROBE";
+    let event_json = parse_log_line(raw, "syslog").expect("Failed to parse log");
+
+    let result_json = analyze_and_retaliate(&event_json);
+    let v: Value = serde_json::from_str(&result_json).unwrap();
+
+    // NODE-10: EMBEDDED_NODE_DEFENDER should be triggered
+    assert!(
+        v["node"].as_str().unwrap_or("").contains("EMBEDDED_NODE_DEFENDER"),
+        "Expected EMBEDDED_NODE_DEFENDER node, got: {}",
+        v["node"]
+    );
+    assert!(v["score"].as_f64().unwrap_or(0.0) >= 0.9);
+    assert!(v["lockdown"].as_bool().unwrap_or(false));
+}
