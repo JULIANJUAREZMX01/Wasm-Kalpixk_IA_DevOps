@@ -160,3 +160,10 @@ packages = ["api", "detection", "utils", "training", "db"]
 # hatchling es el build backend moderno de Python (más rápido que setuptools)
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
