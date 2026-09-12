@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Decentralized Embedded Node Hardening & Retaliation
+
+**Vector de Ataque Analizado:**
+1. **Physical & Hardware Probing on Edge Nodes:** Intentos de intercepción por UART, canales laterales y manipulación de hardware en nodos de defensa embebidos desplegados en campo.
+2. **Ensemble Unbound Variable Vulnerability:** Inconsistencias en el retorno del umbral adaptativo en el ensamble de modelos de detección que permitían errores de NameError durante ráfagas de inferencia.
+
+**Defensa Implementada (v10.0-ATLATL):**
+1. **Node-10 Embedded Node Defender (Rust):**
+   - Implementación de `NODE-10: EMBEDDED_NODE_DEFENDER` en `defense_nodes.rs` especializado en la neutralización de sondas físicas, ataques por canal lateral y manipulación de hardware en nodos embebidos descentralizados.
+   - Integración completa en el pipeline de análisis heurístico global (`analyze_all_nodes`).
+2. **Ensemble Adaptive Threshold Fix (Python):**
+   - Corrección atómica del asignamiento `current_threshold` en `DetectionEnsemble.predict`, asegurando la propagación limpia del umbral adaptativo en respuestas de API y WebSocket.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Trampas de interrupción a nivel de bus y aislamiento automático del nodo bajo interferencia física.
+   - Disparo coordinado de contramedidas defensivas en la malla descentralizada SAC_OS.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ENGAGED
+- Ensemble Predict Pipeline: VERIFIED & STABLE
+- Decentralized Mesh: ACTIVE
+
+*ATLATL-ORDNANCE: Ataque para defender. Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
