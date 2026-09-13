@@ -83,6 +83,32 @@ function Bar({ pct, color }: { pct: number; color: string }) {
   );
 }
 
+
+const ClockDisplay = React.memo(() => {
+  const [clock, setClock] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
+  return (
+    <div style={{
+      color: T.amber, fontSize: 17, fontWeight: 700, letterSpacing: 3,
+      borderLeft: `1px solid ${T.border}`, paddingLeft: 16,
+    }}>
+      {fmt(clock)}
+    </div>
+  );
+});
+
+const CRTScanline = React.memo(() => {
+  const [scan, setScan] = useState(0);
+  useEffect(() => { const t = setInterval(() => setScan((p) => (p + 1) % 100), 70); return () => clearInterval(t); }, []);
+  return (
+    <div style={{
+      position:"fixed", left:0, right:0, height:3, top:`${scan}%`,
+      background:"linear-gradient(transparent,rgba(16,185,129,.06),transparent)",
+      zIndex:998, pointerEvents:"none",
+    }}/>
+  );
+});
+
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const alerts        = useAlertStore((s) => s.alerts);
@@ -92,15 +118,11 @@ export default function Dashboard() {
   const metrics       = useMetricsStore();
   const wasm          = useWasmStore();
 
-  const [clock, setClock]     = useState(new Date());
   const [chart, setChart]     = useState(seedChart);
-  const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
   const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
-  useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
-  useEffect(() => { const t = setInterval(() => setScan((p) => (p + 1) % 100), 70); return () => clearInterval(t); }, []);
 
   // Update chart and terminal when new alert arrives
   useEffect(() => {
@@ -144,11 +166,7 @@ export default function Dashboard() {
         position:"fixed", inset:0, zIndex:999, pointerEvents:"none",
         background:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.035) 3px,rgba(0,0,0,0.035) 4px)",
       }}/>
-      <div style={{
-        position:"fixed", left:0, right:0, height:3, top:`${scan}%`,
-        background:"linear-gradient(transparent,rgba(16,185,129,.06),transparent)",
-        zIndex:998, pointerEvents:"none",
-      }}/>
+      <CRTScanline />
 
       {/* ═══ HEADER ═══════════════════════════════════════════════════════════ */}
       <header style={{
@@ -201,12 +219,7 @@ export default function Dashboard() {
               <div style={{ color: c, fontSize: 15, fontWeight: 700, lineHeight: 1.1 }}>{v}</div>
             </div>
           ))}
-          <div style={{
-            color: T.amber, fontSize: 17, fontWeight: 700, letterSpacing: 3,
-            borderLeft: `1px solid ${T.border}`, paddingLeft: 16,
-          }}>
-            {fmt(clock)}
-          </div>
+          <ClockDisplay />
         </div>
       </header>
 
