@@ -78,3 +78,23 @@ fn test_lateral_poisoning() {
         "timestamp should be present"
     );
 }
+
+#[test]
+fn test_embedded_node_defender() {
+    let raw = "Alert: embedded_tamper detected on SPI bus bus_probing firmware_dump attempt";
+    let event_json = parse_log_line(raw, "embedded_node_probe").expect("Failed to parse log");
+
+    let result_json = analyze_and_retaliate(&event_json);
+    let v: Value = serde_json::from_str(&result_json).unwrap();
+
+    // NODE-10: EMBEDDED_NODE_DEFENDER is the dominant node
+    assert!(
+        v["node"]
+            .as_str()
+            .unwrap_or("")
+            .contains("EMBEDDED_NODE_DEFENDER"),
+        "Expected EMBEDDED_NODE_DEFENDER node, got: {}",
+        v["node"]
+    );
+    assert!(v["score"].as_f64().unwrap_or(0.0) >= 0.9);
+}

@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V9_EMBEDDED_DEFENDER] - Decentralized Embedded Node Shield & Ensemble Threshold Stabilization
+
+**Vector de Ataque Analizado:**
+1. **Embedded Node Tampering & Bus Probing:** Ataques directos a nodos descentralizados en sistemas embebidos mediante sondeo de buses (SPI/I2C), volcado de firmware o análisis de canales laterales para comprometer la malla de defensa.
+2. **Ensemble Execution Failure via NameError:** Un fallo imprevisto en la propagación del umbral adaptativo (`current_threshold`) en `python/models/ensemble.py` causaba interrupciones en el endpoint `/api/detect`.
+
+**Defensa Implementada (v9.0.0-EMBEDDED):**
+1. **Rust Metal Layer (defense_nodes.rs):**
+   - Implementación de `Node-10: EMBEDDED_NODE_DEFENDER` para identificar sondeos de buses de hardware, volcados de firmware, y ataques de manipulación en nodos embebidos descentralizados.
+   - Actualización del registrador de parsers para interpretar eventos de `embedded_node_probe`.
+2. **Python Ensemble Repair (ensemble.py):**
+   - Asignación explícita del retorno de `self.drift_guard.update()` a `current_threshold`, estabilizando las métricas adaptativas de la red neurona-ensamble.
+
+**Contra-Ataque (Fase Negra):**
+1. **EMBEDDED_HARDENING_RETALIATION:**
+   - Aislamiento automático del nodo embebido comprometido y envenenamiento de firmas enviadas al vector de ataque.
+   - Retaliación activa de la malla para prevenir pivoteo lateral hacia la infraestructura central.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED
+- Ensemble Threshold Engine: STABILIZED
+- Retaliation Protocol: ENGAGED
+
+*ATLATL-ORDNANCE: Ataque para Defender.*

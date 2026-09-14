@@ -33,6 +33,7 @@ pub fn get_parser(source_type: &str) -> Option<Box<dyn LogParser>> {
         "windows" => Some(Box::new(WindowsEventParser::new())),
         "db2" => Some(Box::new(Db2AuditParser::new())),
         "netflow" => Some(Box::new(NetflowParser::new())),
+        "embedded_node_probe" => Some(Box::new(SyslogParser::new())),
         _ => None,
     }
 }
