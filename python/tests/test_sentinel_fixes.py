@@ -88,3 +88,40 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+@pytest.mark.asyncio
+async def test_non_finite_features_validation():
+    import httpx
+
+    from python.api.kalpixk_api import app
+
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret", "Content-Type": "application/json"},
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        # Invalid payload with 1e999 (Infinity)
+        payload_json = '{"features": [' + ','.join(['0.1']*31) + ', 1e999], "source_type": "test"}'
+        response = await client.post(
+            "/api/detect",
+            content=payload_json,
+        )
+        assert response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_security_headers():
+    import httpx
+
+    from python.api.kalpixk_api import app
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/api/health")
+        assert response.status_code == 200
+        headers = response.headers
+        assert headers.get("X-Content-Type-Options") == "nosniff"
+        assert headers.get("X-Frame-Options") == "DENY"
+        assert headers.get("Strict-Transport-Security") == "max-age=31536000; includeSubDomains"
+        assert headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"

@@ -9,6 +9,7 @@ Endpoints:
 """
 
 import json
+import math
 import os
 import secrets
 import signal as _signal
@@ -31,7 +32,10 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi import status as fastapi_status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -70,6 +74,27 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+def _sanitize_non_finite(obj):
+    if isinstance(obj, float):
+        if not math.isfinite(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_non_finite(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_non_finite(x) for x in obj]
+    return obj
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    sanitized_errors = _sanitize_non_finite(exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder({"detail": sanitized_errors}),
+    )
+
 # -- Security & Rate Limiting --
 API_KEY_NAME = "X-Kalpixk-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
@@ -95,7 +120,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -182,15 +209,20 @@ class LogRequest(BaseModel):
     def validate_features(cls, v):
         if not v:
             return v
-        # Pydantic may have already converted to floats, but let's check structure
         first = v[0]
         if isinstance(first, (int, float)):
             if len(v) != 32:
                 raise ValueError(f"Single event features must have 32 dimensions, got {len(v)}")
+            for x in v:
+                if isinstance(x, float) and not math.isfinite(x):
+                    raise ValueError("Features must contain finite float values (no NaN or Inf)")
         elif isinstance(first, list):
             for i, row in enumerate(v):
                 if len(row) != 32:
                     raise ValueError(f"Batch event features at index {i} must have 32 dimensions, got {len(row)}")
+                for x in row:
+                    if isinstance(x, float) and not math.isfinite(x):
+                        raise ValueError(f"Batch event features at index {i} contain non-finite float values")
         return v
 
     @model_validator(mode="after")
@@ -224,7 +256,8 @@ class AnomalyResponse(BaseModel):
 
 
 @app.get("/api/health")
-async def health():
+@limiter.limit("60/minute")
+async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
