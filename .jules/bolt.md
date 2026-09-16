@@ -1,31 +1,3 @@
-## 2026-04-09 - Frontend & Backend Performance Boost
-**Learning:** React re-renders in Dashboards can be severely impacted by unfiltered derivations like `events.reduce` and `events.filter` inside the render function. Meanwhile, native Python loops in performance critical ML sections (like autoencoder normalisation and Isolation Forest score computations) bottleneck the system throughput on GPU-accelerated environments like MI300X.
-**Action:** Always wrap derived states with `useMemo` in React components when processing large arrays of logs (like `events`). For Python, replace list comprehensions in array transformations with `numpy` vectorized operations (`np.clip`, `np.abs`) to exploit fast vector arithmetic.
-## 2024-05-19 - [React `useMemo` Optimization for Derived State]
-**Learning:** Found unnecessary recalculations of arrays and derived states (`chartData`, `avgSev`, and inline filters) during re-renders in `Dashboard.tsx`. These recalcs were triggered frequently by `addLog` state updates to `wasmLog`, even though the source dependency (`events`) did not change.
-**Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original array (e.g. `events`) as the dependency array. This prevents performance degradation when independent state variables (like localized terminal logs) trigger component re-renders.
-## 2024-04-13 - [Dashboard derived state optimization]
-**Learning:** In a highly reactive system like a SIEM dashboard with frequent log updates (`wasmLog`), calculating derived states (like mapped chart data or severity averages) directly in the component body triggers expensive O(N) array operations on every minor state change, leading to unnecessary CPU load.
-**Action:** Always wrap heavy derived state computations (map, filter, reduce) inside `useMemo` hooks with tight dependency arrays (e.g., `[events]`) to ensure they only recalculate when the specific underlying data changes.
-
-## 2024-04-14 - [Frontend list rendering optimization with React.memo]
-**Learning:** In a real-time SIEM dashboard, rendering prepended lists with array index as keys causes React to unmount and remount every single row whenever a new log arrives, creating a huge O(N) rendering bottleneck as `events` size grows up to 100 items. This triggers expensive `new Date()` calculations and string slice operations repeatedly.
-**Action:** Always use stable unique keys (like timestamp + raw log) for frequently updated lists and extract the list item into a separate component wrapped with `React.memo()` to skip re-rendering rows that haven't changed.
-
-## 2025-04-15 - [Optimize ML prediction loops with NumPy vectorization]
-**Learning:** In machine learning prediction loops, native Python list comprehensions for calculating scores and confidences from arrays create a severe performance bottleneck. Native loops iterate item by item in Python's evaluation loop, whereas NumPy vectorized operations push the iteration down into optimized C code.
-**Action:** Always prefer native NumPy vectorized operations (like `np.clip`, `np.abs`, and direct arithmetic) over Python loops or list comprehensions when processing arrays or tensors, particularly in hot paths like ML prediction.
-
-## 2024-04-16 - [List Rendering Optimization with React.memo]
-**Learning:** In a real-time SIEM dashboard, rendering prepended lists with inline complex components (like alert streams) causes React to repeatedly re-render the entire list of O(N) components on every tick when a new event arrives. This creates a rendering bottleneck due to constant DOM updates for elements that have not changed.
-**Action:** Always use stable unique keys (like unique alert IDs) for frequently updated lists and extract the list item into a separate component wrapped with `React.memo()` to skip re-rendering rows that haven`t changed.
-
-## 2024-05-20 - [React.memo for Heavy Child Components with High-Frequency Intervals]
-**Learning:** When a parent component uses high-frequency intervals (e.g., `setInterval` for a clock or animation scanline running every 70ms-1000ms), it triggers continuous top-down render cascades. If heavy, static or independently-managed child components (like Dashboard tabs) are not memoized, they re-render constantly, consuming significant CPU and degrading performance.
-**Action:** Always extract and wrap heavy child components (like distinct UI regions or tabs) in `React.memo()` when their parent component utilizes high-frequency interval state updates, ensuring the render cascade stops at the memoized boundary.
-## 2024-05-21 - [Optimize API insertions with bulk executemany]
-**Learning:** Performing multiple independent asynchronous inserts via an `await` loop (e.g. inserting anomalies individually using N queries in the `/analyze` endpoint) causes a severe N+1 problem, which acts as a bottleneck and degrades API throughput when analyzing large batches of logs.
-**Action:** Always batch related database write operations. Accumulate payloads and use `executemany` (e.g. a single `await db.executemany(query, alerts_list)`) to insert them inside a single transaction.
-## 2026-08-14 - [React useMemo Optimization for Array Derivations]
-**Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
-**Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
+## 2024-05-24 - [Avoid list conversion for ML inference loops]
+**Learning:** [Avoid converting NumPy arrays to Python lists (`.tolist()`) inside ML inference loops like `predict()`. Natively handling numpy arrays and using vectorized filters significantly reduces processing overhead for large arrays, preventing CPU bottlenecks.]
+**Action:** [Use native numpy masking (e.g., `scores[scores < self._current_threshold]`) and remove `.tolist()` conversions until the very final serialization step when constructing APIs.]
