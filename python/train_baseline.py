@@ -47,7 +47,11 @@ def main():
     print("[3/3] Validando con anomalia sintetica (ransomware)...")
     anomaly = np.ones((1, FEATURE_DIM), dtype=np.float32)
     anomaly[0, [9, 16, 25, 26]] = 1.0
-    score, detected = ensemble.predict(anomaly)
+    import torch
+    anomaly_tensor = torch.tensor(anomaly, dtype=torch.float32).to(device)
+    scores, techniques, confidences, adaptive_threshold = ensemble.predict(anomaly_tensor)
+    score = float(scores[0])
+    detected = score > adaptive_threshold
     assert detected, "ERROR: modelo no detecta anomalia obvia"
     print(f"    Score: {score:.4f} | Detectado: {detected}")
 

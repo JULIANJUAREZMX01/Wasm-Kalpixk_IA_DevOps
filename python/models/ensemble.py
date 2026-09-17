@@ -18,7 +18,7 @@ class DetectionEnsemble:
         self.drift_guard = AdversarialDriftGuard()
         logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
 
-    def predict(self, features: torch.Tensor) -> tuple[list[float], list[str], list[float], float]:
+    def predict(self, features: torch.Tensor) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         features_np = features.cpu().numpy()
 
         # Inferencia
@@ -26,22 +26,21 @@ class DetectionEnsemble:
         ae_scores, ae_conf = self.autoencoder.predict(features_np)
 
         # Combinar: 45% IF + 55% AE
-        if_scores_np = np.asarray(if_scores)
-        ae_scores_np = np.asarray(ae_scores)
-        ensemble_scores = 0.45 * if_scores_np + 0.55 * ae_scores_np
+        ensemble_scores = 0.45 * if_scores + 0.55 * ae_scores
+        ensemble_scores = np.clip(ensemble_scores, 0.0, 1.0)
 
         # Determinar método dominante y confianza
-        methods = np.where(if_scores_np > ae_scores_np, "isolation_forest", "autoencoder").tolist()
+        methods = np.where(if_scores > ae_scores, "isolation_forest", "autoencoder")
 
         # Confianza basada en el acuerdo entre modelos o el promedio de confianzas
-        confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
+        confidences = (if_conf + ae_conf) / 2
 
         # Update and get adaptive threshold
-        self.drift_guard.update(ensemble_scores.tolist())
+        adaptive_threshold = self.drift_guard.update(ensemble_scores)
 
         return (
-            ensemble_scores.tolist(),
+            ensemble_scores,
             methods,
             confidences,
-            current_threshold,
+            adaptive_threshold,
         )

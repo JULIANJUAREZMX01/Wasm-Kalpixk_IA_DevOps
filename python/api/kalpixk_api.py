@@ -309,9 +309,9 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
         score = float(scores[i])
         results.append({
             "anomaly_score": score,
-            "technique": techniques[i],
+            "technique": str(techniques[i]),
             "confidence": float(confidences[i]),
-            "adaptive_threshold": adaptive_threshold
+            "adaptive_threshold": float(adaptive_threshold)
         })
 
         if score > adaptive_threshold:
@@ -360,7 +360,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
 
     features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _, adaptive_threshold = ens.predict(features_array)
-    score = scores[0]
+    score = float(scores[0])
     is_anomaly = score > adaptive_threshold
     latency = (time.time() - t0) * 1000
 
