@@ -29,3 +29,6 @@
 ## 2026-08-14 - [React useMemo Optimization for Array Derivations]
 **Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
 **Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
+## 2026-10-25 - [Optimize Adaptive Threshold Updates]
+**Learning:** Found unnecessary list conversions in ML inference logic during the adaptive threshold updates (`self.drift_guard.update(ensemble_scores.tolist())`). Using native NumPy array handling avoids unnecessary `.tolist()` conversion and significantly reduces CPU overhead during predictions.
+**Action:** Always maintain arrays natively as `np.ndarray` objects throughout the inference lifecycle (including return types of predictions like `scores`, `methods`, and `confidences`), converting them to Python types only at the final API serialization step.

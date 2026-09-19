@@ -307,11 +307,13 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 
     for i in range(len(scores)):
         score = float(scores[i])
+        tech = str(techniques[i])
+        conf = float(confidences[i])
         results.append({
             "anomaly_score": score,
-            "technique": techniques[i],
-            "confidence": float(confidences[i]),
-            "adaptive_threshold": adaptive_threshold
+            "technique": tech,
+            "confidence": conf,
+            "adaptive_threshold": float(adaptive_threshold)
         })
 
         if score > adaptive_threshold:
@@ -328,8 +330,8 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
                 "anomaly_score": score,
                 "event_type": req.source_type,
                 "severity": severity,
-                "technique": techniques[i],
-                "confidence": float(confidences[i]),
+                "technique": tech,
+                "confidence": conf,
                 "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
                 "source": req.source or "agent"
             }
@@ -360,7 +362,8 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
 
     features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _, adaptive_threshold = ens.predict(features_array)
-    score = scores[0]
+    score = float(scores[0])
+    adaptive_threshold = float(adaptive_threshold)
     is_anomaly = score > adaptive_threshold
     latency = (time.time() - t0) * 1000
 
@@ -457,6 +460,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
                 features_array = torch.from_numpy(arr).to(_device)
                 scores, _, _, adaptive_threshold = ens.predict(features_array)
                 score = float(scores[0])
+                adaptive_threshold = float(adaptive_threshold)
                 is_anomaly = score > adaptive_threshold
                 severity = "HIGH" if score > 0.6 else "LOW"
 
