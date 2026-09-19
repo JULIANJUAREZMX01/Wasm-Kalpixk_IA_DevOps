@@ -144,3 +144,27 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENDER] - Decentralized Node Tampering Defense & Ensemble Pipeline Resolution
+
+**Vector de Ataque Analizado:**
+1. **Unassigned Adaptive Threshold Pipeline Bypass:** Invocación de inferencia ensemble sin captura de `current_threshold`, causando colapso por `NameError` en tiempo de ejecución de la API REST.
+2. **Physical/Hardware Probing on Edge Nodes:** Invasión física o sondeos de firmware (JTAG debug, UART shell, flash write tampertalk) en nodos de defensa desatendidos desplegados en sistemas embebidos ARM64.
+
+**Defensa Implementada:**
+1. **Ensemble Pipeline Normalization:**
+   - Asignación explícita del resultado de `self.drift_guard.update(ensemble_scores.tolist())` a `current_threshold` en `python/models/ensemble.py`, garantizando la devolución fluida de métricas de adaptación de deriva.
+2. **Rust Embedded Node Defender (`Node-10`):**
+   - Implementación de `detect_embedded_node_tampering` en `crates/kalpixk-core/src/defense_nodes.rs` para capturar sondeos de firmware, escrituras flash no autorizadas e intentos de invasión de consola serial en nodos embebidos.
+   - Integración nativa en `analyze_all_nodes` y compilación hermética comprobada para `wasm32-unknown-unknown`.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_HARDWARE_RETALIATION:**
+   - Auto-aislamiento inmediato del nodo desatendido ante manipulación física detectada, invalidando claves de la malla en memoria antes de la exfiltración y notificando a la malla central con firmas de severidad CRITICAL.
+
+**Estado de la Misión:**
+- Ensemble Pipeline: OPERATIONAL & VERIFIED
+- Node-10 Embedded Defender: ARMED & ACTIVE
+- WASM Core Portability: COMPILING ALL TARGETS
+
+*ATLATL-ORDNANCE: El Macuahuitl se afila en los extremos de la red; la frontera embebida no se defiende, extermina.*
