@@ -482,33 +482,6 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     ]
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_embedded_node_defender() {
-        let event = KalpixkEvent {
-            timestamp_ms: 1000,
-            event_type: crate::event::EventType::Unknown,
-            local_severity: 0.9,
-            source: "192.168.1.100".to_string(),
-            destination: None,
-            user: None,
-            process: None,
-            metadata: HashMap::new(),
-            raw: "firmware_tamper detected on arm64 edge node".to_string(),
-            source_type: "embedded_sensor_tamper".to_string(),
-            fingerprint: "test_fp".to_string(),
-        };
-
-        let result = detect_embedded_node_tampering(&event);
-        assert_eq!(result.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
-        assert!(result.score >= 0.9);
-        assert_eq!(result.level, SeverityLevel::Critical);
-    }
-}
-
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
     // Prefer earlier nodes in case of score ties to satisfy legacy tests
@@ -542,5 +515,32 @@ pub fn sync_threats(external_threats: Vec<String>) {
         for threat in external_threats {
             registry.insert(threat);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_embedded_node_defender() {
+        let event = KalpixkEvent {
+            timestamp_ms: 1000,
+            event_type: crate::event::EventType::Unknown,
+            local_severity: 0.9,
+            source: "192.168.1.100".to_string(),
+            destination: None,
+            user: None,
+            process: None,
+            metadata: HashMap::new(),
+            raw: "firmware_tamper detected on arm64 edge node".to_string(),
+            source_type: "embedded_sensor_tamper".to_string(),
+            fingerprint: "test_fp".to_string(),
+        };
+
+        let result = detect_embedded_node_tampering(&event);
+        assert_eq!(result.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+        assert!(result.score >= 0.9);
+        assert_eq!(result.level, SeverityLevel::Critical);
     }
 }
