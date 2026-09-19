@@ -88,3 +88,21 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+@pytest.mark.asyncio
+async def test_non_finite_features_validation():
+    from pydantic import ValidationError
+
+    from python.api.kalpixk_api import LogRequest
+
+    # Test single event with NaN
+    nan_features = [0.1] * 31 + [float("nan")]
+    with pytest.raises(ValidationError) as excinfo:
+        LogRequest(features=nan_features)
+    assert "finite numbers" in str(excinfo.value)
+
+    # Test batch event with Inf
+    inf_features = [[0.1] * 32, [0.1] * 31 + [float("inf")]]
+    with pytest.raises(ValidationError) as excinfo:
+        LogRequest(features=inf_features)
+    assert "finite numbers" in str(excinfo.value)
