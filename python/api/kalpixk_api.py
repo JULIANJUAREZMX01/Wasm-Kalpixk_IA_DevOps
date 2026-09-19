@@ -95,7 +95,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
@@ -182,15 +184,19 @@ class LogRequest(BaseModel):
     def validate_features(cls, v):
         if not v:
             return v
-        # Pydantic may have already converted to floats, but let's check structure
+        import math
         first = v[0]
         if isinstance(first, (int, float)):
             if len(v) != 32:
                 raise ValueError(f"Single event features must have 32 dimensions, got {len(v)}")
+            if not all(math.isfinite(x) for x in v):
+                raise ValueError("Feature values must be finite numbers")
         elif isinstance(first, list):
             for i, row in enumerate(v):
                 if len(row) != 32:
                     raise ValueError(f"Batch event features at index {i} must have 32 dimensions, got {len(row)}")
+                if not all(math.isfinite(x) for x in row):
+                    raise ValueError(f"Batch event features at index {i} must be finite numbers")
         return v
 
     @model_validator(mode="after")
@@ -224,7 +230,8 @@ class AnomalyResponse(BaseModel):
 
 
 @app.get("/api/health")
-async def health():
+@limiter.limit("60/minute")
+async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
