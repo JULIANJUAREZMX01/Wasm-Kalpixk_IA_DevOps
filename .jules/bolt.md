@@ -29,3 +29,6 @@
 ## 2026-08-14 - [React useMemo Optimization for Array Derivations]
 **Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
 **Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
+## 2026-10-25 - [NumPy Vectorized Boolean Masking in ML Loop]
+**Learning:** In ML loops processing arrays or tensors (e.g. `AdversarialDriftGuard.update`), converting `np.ndarray` to a Python list using `.tolist()` and then iterating over it to filter values below a threshold (`scores[scores < threshold]`) causes a severe CPU bottleneck in performance-critical inference sections.
+**Action:** Always prefer native NumPy vectorized boolean masking when filtering arrays. Ensure that inputs natively passed as `np.ndarray` are masked directly via indexing (e.g. `scores[scores < threshold]`) instead of being converted into lists and evaluated natively by Python.
