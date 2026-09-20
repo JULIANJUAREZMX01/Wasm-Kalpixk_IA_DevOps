@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Evento de seguridad normalizado — formato canónico de Kalpixk
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct KalpixkEvent {
     /// Timestamp en millisegundos epoch UTC
     pub timestamp_ms: i64,
@@ -45,9 +45,10 @@ pub struct KalpixkEvent {
 }
 
 /// Tipos de evento soportados por Kalpixk
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum EventType {
+    #[default]
     LoginSuccess,
     LoginFailure,
     LoginBruteForce,
