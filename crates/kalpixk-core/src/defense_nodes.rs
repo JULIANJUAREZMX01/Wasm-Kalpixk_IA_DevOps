@@ -434,6 +434,35 @@ pub fn detect_xochimilco_adversarial(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_embedded_node_defender(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = event.raw.to_lowercase();
+
+    if raw.contains("embedded_probe")
+        || raw.contains("firmware_tamper")
+        || raw.contains("mc9300_override")
+        || raw.contains("handheld_spoof")
+    {
+        score += 0.95;
+        techniques.push("T1200".to_string());
+    }
+
+    if event.source_type == "embedded_node_tamper" || event.source_type == "rogue_handheld" {
+        score = 1.0;
+        techniques.push("T1496".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-10: EMBEDDED_NODE_DEFENDER".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Detection of probing, firmware tampering, and rogue sync against embedded defense nodes"
+            .to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -449,6 +478,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
         detect_xochimilco_adversarial(event),
+        detect_embedded_node_defender(event),
     ]
 }
 
@@ -485,5 +515,24 @@ pub fn sync_threats(external_threats: Vec<String>) {
         for threat in external_threats {
             registry.insert(threat);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_embedded_node_defender() {
+        let event = KalpixkEvent {
+            raw: "Unauthorized firmware_tamper attempt on handheld device".to_string(),
+            source_type: "embedded_node_tamper".to_string(),
+            ..Default::default()
+        };
+
+        let result = detect_embedded_node_defender(&event);
+        assert_eq!(result.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+        assert!(result.score >= 0.95);
+        assert_eq!(result.level, SeverityLevel::Critical);
     }
 }
