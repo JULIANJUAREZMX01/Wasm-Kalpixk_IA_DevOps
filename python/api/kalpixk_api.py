@@ -307,11 +307,12 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
 
     for i in range(len(scores)):
         score = float(scores[i])
+        technique = str(techniques[i])
         results.append({
             "anomaly_score": score,
-            "technique": techniques[i],
+            "technique": technique,
             "confidence": float(confidences[i]),
-            "adaptive_threshold": adaptive_threshold
+            "adaptive_threshold": float(adaptive_threshold)
         })
 
         if score > adaptive_threshold:
@@ -328,7 +329,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
                 "anomaly_score": score,
                 "event_type": req.source_type,
                 "severity": severity,
-                "technique": techniques[i],
+                "technique": technique,
                 "confidence": float(confidences[i]),
                 "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
                 "source": req.source or "agent"
@@ -360,7 +361,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
 
     features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _, adaptive_threshold = ens.predict(features_array)
-    score = scores[0]
+    score = float(scores[0])
     is_anomaly = score > adaptive_threshold
     latency = (time.time() - t0) * 1000
 
@@ -376,7 +377,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
         alert_data = {
             "ts": datetime.utcnow().isoformat(),
             "ip": request.client.host if request.client else "unknown",
-            "anomaly_score": float(score),
+            "anomaly_score": score,
             "event_type": req.source_type,
             "severity": severity,
             "technique": "unknown", # /analyze endpoint doesn't return technique currently

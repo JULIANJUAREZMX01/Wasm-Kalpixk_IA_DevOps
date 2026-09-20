@@ -115,19 +115,29 @@ class AdversarialDriftGuard:
         Add score(s) to buffer and return current threshold.
         Accepts float, list of floats, or numpy array.
         """
-        if isinstance(scores, (float, int)):
-            scores_list = [float(scores)]
-        elif isinstance(scores, np.ndarray):
-            scores_list = scores.tolist()
-        else:
-            scores_list = [float(s) for s in scores]
-
         with self._lock:
-            for score in scores_list:
-                if is_confirmed_benign or score < self._current_threshold:
-                    self._buffer.append(score)
-                    self._updates_since_recalc += 1
-                    self._total_updates += 1
+            if isinstance(scores, np.ndarray):
+                if is_confirmed_benign:
+                    valid_scores = scores
+                else:
+                    valid_scores = scores[scores < self._current_threshold]
+
+                # NumPy arrays can be extended efficiently
+                self._buffer.extend(valid_scores.tolist())
+                added_count = len(valid_scores)
+                self._updates_since_recalc += added_count
+                self._total_updates += added_count
+            else:
+                if isinstance(scores, (float, int)):
+                    scores_list = [float(scores)]
+                else:
+                    scores_list = [float(s) for s in scores]
+
+                for score in scores_list:
+                    if is_confirmed_benign or score < self._current_threshold:
+                        self._buffer.append(score)
+                        self._updates_since_recalc += 1
+                        self._total_updates += 1
 
             if force_recalibrate or (
                 self._updates_since_recalc >= self.recalibrate_every and len(self._buffer) >= 10
