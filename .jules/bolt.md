@@ -29,3 +29,7 @@
 ## 2026-08-14 - [React useMemo Optimization for Array Derivations]
 **Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
 **Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
+
+## 2024-05-22 - [JSON Serialization Errors with NumPy Scalars]
+**Learning:** Returning scalar NumPy types (like `np.float64` or `np.str_` generated from functions like `np.where` or list comprehensions of arrays) directly through a FastAPI endpoint crashes the server because these objects are not natively JSON serializable by standard python json encoders.
+**Action:** When extracting values from a NumPy array to return via API, explicitly cast them to native Python types using `str()`, `float()`, or `int()` before inserting them into dictionaries meant for JSON response serialization.

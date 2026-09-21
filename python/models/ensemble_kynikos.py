@@ -11,6 +11,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from python.detection.adaptive_threshold import AdversarialDriftGuard
+
 logger = logging.getLogger("kalpixk.detection.ensemble")
 
 # Directorio de modelos guardados
@@ -35,13 +37,14 @@ class DetectionEnsemble:
         # Cargar o inicializar modelos
         self.iso_forest = self._load_isolation_forest()
         self.autoencoder = self._load_autoencoder()
+        self.drift_guard = AdversarialDriftGuard()
         
-        logger.info(f"Ensemble inicializado en {device}")
+        logger.info(f"Ensemble inicializado en {device} with AdversarialDriftGuard")
     
     def predict(
         self, 
         features: torch.Tensor
-    ) -> tuple[list[float], list[str], list[float]]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         """
         Predecir scores de anomalía para un batch de features.
         
@@ -49,10 +52,11 @@ class DetectionEnsemble:
             features: Tensor [N, 32] de features normalizadas
             
         Returns:
-            Tuple de (scores, methods, confidences)
-            - scores: lista de floats [0,1] — qué tan anómalo es cada evento
+            Tuple de (scores, methods, confidences, threshold)
+            - scores: array de floats [0,1] — qué tan anómalo es cada evento
             - methods: método de detección que ganó para cada evento
             - confidences: confianza del modelo en cada predicción
+            - threshold: adaptive threshold devuelto por drift_guard
         """
         
         # Inference en GPU
@@ -70,14 +74,17 @@ class DetectionEnsemble:
         
         # Determinar método ganador y confianza
         diffs = np.abs(if_scores - ae_scores)
-        confidences = np.maximum(0.5, 1.0 - diffs).tolist()
+        confidences = np.maximum(0.5, 1.0 - diffs)
         if_greater = if_scores > ae_scores
-        methods = np.where(if_greater, "isolation_forest", "autoencoder").tolist()
+        methods = np.where(if_greater, "isolation_forest", "autoencoder")
+
+        current_threshold = self.drift_guard.update(ensemble_scores)
         
         return (
-            ensemble_scores.tolist(),
+            ensemble_scores,
             methods,
             confidences,
+            current_threshold,
         )
     
     def _predict_isolation_forest(self, features_np: np.ndarray) -> np.ndarray:
