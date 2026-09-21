@@ -95,7 +95,7 @@ export default function Dashboard() {
   const [clock, setClock]     = useState(new Date());
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
-  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
+  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion"|"embedded">("realtime");
   const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
@@ -221,6 +221,7 @@ export default function Dashboard() {
           ["benchmark", "📊 Benchmark"],
           ["mitre",     "🛡 MITRE ATT&CK"],
           ["warroom",   "💀 War Room"],
+          ["embedded",  "📡 Embedded Mesh"],
           ["simulacion","🎯 Simulación"],
         ] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
@@ -297,6 +298,7 @@ export default function Dashboard() {
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "mitre"    && <MitreTab />}
         {tab === "warroom"  && <WarRoomTab terminalOutput={terminalOutput} />}
+        {tab === "embedded" && <EmbeddedMeshTab />}
         {tab === "simulacion" && <AttackSimulator />}
       </div>
 
@@ -811,6 +813,73 @@ const BenchmarkTab = React.memo(function BenchmarkTab() {
           <div style={{ marginTop: 10, padding: 8, background: T.surface, fontFamily: T.font, fontSize: 10, color: T.dim }}>
             python training/train_models.py --dataset synthetic --n-samples 100000 --device auto --benchmark
           </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: EMBEDDED MESH (DECENTRALIZED DEFENSE NODES)
+// ═══════════════════════════════════════════════════════════════════════════════
+const EmbeddedMeshTab = React.memo(function EmbeddedMeshTab() {
+  const EMBEDDED_NODES = [
+    { id: "EMB-MC9300-01", type: "Handheld Zebra MC9300", location: "CEDIS Cancún Pasillo 12", cpu: "Snapdragon SD660", memory: "4GB RAM", status: "ONLINE", nodeDefender: "ACTIVE (NODE-10)", latency: "4ms", threatsBlocked: 12 },
+    { id: "EMB-MC9300-02", type: "Handheld Zebra MC9300", location: "CEDIS Cancún Pasillo 28", cpu: "Snapdragon SD660", memory: "4GB RAM", status: "ONLINE", nodeDefender: "ACTIVE (NODE-10)", latency: "6ms", threatsBlocked: 5 },
+    { id: "EMB-EDGE-GW01", type: "NVIDIA Jetson Orin Nano / ARM64", location: "CEDIS Cancún Rack A-04", cpu: "6-core ARM Cortex-A78AE", memory: "8GB LPDDR5", status: "ONLINE", nodeDefender: "ARMED (NODE-10)", latency: "2ms", threatsBlocked: 38 },
+    { id: "EMB-RISCV-01", type: "SiFive HiFive Unmatched / RISC-V", location: "CEDIS Cancún Substation B", cpu: "Freedom U740 64-bit RISC-V", memory: "16GB DDR4", status: "ONLINE", nodeDefender: "GHOST_MODE (NODE-10)", latency: "3ms", threatsBlocked: 19 },
+  ];
+
+  return (
+    <div style={{ flex: 1, padding: 20, overflow: "auto", background: T.panel }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, borderBottom: `1px solid ${T.border}`, paddingBottom: 10 }}>
+          <div>
+            <h2 style={{ fontFamily: T.display, color: T.green, fontSize: 22, fontWeight: 800, letterSpacing: 4 }}>
+              DECENTRALIZED EMBEDDED DEFENSE NODES
+            </h2>
+            <p style={{ color: T.dim, fontSize: 10, letterSpacing: 2 }}>
+              SAC_OS SPECTRAL MESH · NODE-10 EMBEDDED_NODE_DEFENDER · CEDIS CANCÚN 427
+            </p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ color: T.green, fontSize: 10, letterSpacing: 2, fontWeight: 700 }} className="blink">
+              ● MESH_SYNC: OPTIMAL
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 20 }}>
+          {EMBEDDED_NODES.map((node) => (
+            <div key={node.id} style={{
+              background: T.surface, border: `1px solid ${T.border}`,
+              borderLeft: `4px solid ${T.green}`, padding: 12, position: "relative"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ color: T.green, fontWeight: 800, fontSize: 13 }}>{node.id}</span>
+                <span style={{ color: T.amber, fontSize: 9, padding: "2px 6px", border: `1px solid ${T.amber}44`, background: `${T.amber}11` }}>
+                  {node.nodeDefender}
+                </span>
+              </div>
+              <div style={{ color: T.bright, fontSize: 11, marginBottom: 4, fontWeight: 600 }}>{node.type}</div>
+              <div style={{ color: T.dim, fontSize: 9, marginBottom: 8 }}>📍 {node.location}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, borderTop: `1px solid ${T.border}`, paddingTop: 8, fontSize: 9 }}>
+                <div><span style={{ color: T.dim }}>CPU:</span> <span style={{ color: T.text }}>{node.cpu}</span></div>
+                <div><span style={{ color: T.dim }}>RAM:</span> <span style={{ color: T.text }}>{node.memory}</span></div>
+                <div><span style={{ color: T.dim }}>LATENCY:</span> <span style={{ color: T.green }}>{node.latency}</span></div>
+                <div><span style={{ color: T.dim }}>BLOCKS:</span> <span style={{ color: T.amber, fontWeight: 700 }}>{node.threatsBlocked} events</span></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: 14, background: `${T.green}08`, border: `1px solid ${T.green}33` }}>
+          <div style={{ color: T.green, fontSize: 10, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>
+            🛡 NODE-10 SPECTRAL HARDENING ACTIVE
+          </div>
+          <p style={{ color: T.text, fontSize: 10, lineHeight: 1.6 }}>
+            The decentralized defense nodes execute local WASM edge filters and report side-channel / tampering signals directly to the MI300X orchestrator. Any physical probe or side-channel excitation triggers instant pointer-poisoning retaliation and hardware firewall isolation.
+          </p>
         </div>
       </div>
     </div>
