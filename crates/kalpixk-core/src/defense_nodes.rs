@@ -458,8 +458,9 @@ pub fn detect_embedded_node_tampering(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Detection of probing, tampering, and side-channel analysis on embedded defense nodes"
-            .to_string(),
+        description:
+            "Detection of probing, tampering, and side-channel analysis on embedded defense nodes"
+                .to_string(),
     }
 }
 
@@ -535,7 +536,8 @@ mod tests {
             user: None,
             destination: None,
             process: None,
-            raw: "CRITICAL: UNAUTHORIZED_ACCESS side_channel attack detected on handheld MC9300".to_string(),
+            raw: "CRITICAL: UNAUTHORIZED_ACCESS side_channel attack detected on handheld MC9300"
+                .to_string(),
             metadata: std::collections::HashMap::new(),
         };
 
