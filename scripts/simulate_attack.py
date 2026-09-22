@@ -85,9 +85,12 @@ def build_features(
 
 def send_event(backend_url: str, features: list[float], source: str = "simulator") -> dict:
     try:
+        api_key = os.getenv("KALPIXK_API_KEY", "development_secret")
+        headers = {"X-Kalpixk-Key": api_key}
         resp = requests.post(
             f"{backend_url}/api/detect",
             json={"features": features, "source": source, "raw_log": None},
+            headers=headers,
             timeout=3,
         )
         return resp.json() if resp.ok else {"error": resp.status_code}

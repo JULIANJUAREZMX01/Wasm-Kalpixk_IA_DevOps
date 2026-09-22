@@ -523,9 +523,13 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
     if _sim_state["proc"] and _sim_state["proc"].poll() is None:
         return {"status": "already_running", "phase": _sim_state["phase"]}
 
-    sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
-    sim_script = os.path.abspath(sim_script)
+    sim_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py"))
+    if not os.path.isfile(sim_script):
+        raise HTTPException(status_code=500, detail="Simulator script not found")
+
     backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+    if not (backend_url.startswith("http://") or backend_url.startswith("https://")) or any(c in backend_url for c in " \t\n\r\'\"$`;&|"):
+        raise HTTPException(status_code=400, detail="Invalid KALPIXK_BACKEND_URL parameter")
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],
