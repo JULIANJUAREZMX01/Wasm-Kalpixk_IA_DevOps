@@ -88,3 +88,23 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_simulate_start_backend_url_validation(monkeypatch):
+    import httpx
+
+    from python.api.kalpixk_api import app
+
+    # Test invalid backend_url with command/arg injection character
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "http://localhost:8000; rm -rf /")
+
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret"},
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://localhost:8000"
+    ) as c:
+        resp = await c.post("/api/simulate/start")
+
+    assert resp.status_code == 400
+    assert "Invalid KALPIXK_BACKEND_URL parameter" in resp.json()["detail"]
