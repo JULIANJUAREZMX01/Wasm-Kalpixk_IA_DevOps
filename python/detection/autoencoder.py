@@ -207,7 +207,7 @@ class KalpixkAutoencoder:
 
     def predict(
         self, X: np.ndarray
-    ) -> tuple[list[float], list[float]]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Score anomaly via reconstruction error.
 
@@ -231,7 +231,7 @@ class KalpixkAutoencoder:
 
         # Confidence: certainty scales with distance from 0.5
         conf = np.clip(np.abs(norm - 0.5) * 2, 0.3, 1.0)
-        return norm.tolist(), conf.tolist()
+        return norm, conf
 
     def get_latent(self, X: np.ndarray) -> np.ndarray:
         """Return latent (bottleneck) vectors — useful for visualization."""
