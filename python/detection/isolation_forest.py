@@ -156,7 +156,7 @@ class KalpixkIsolationForest:
 
     def predict(
         self, X: np.ndarray
-    ) -> tuple[list[float], list[float], float]:
+    ) -> tuple[np.ndarray, np.ndarray, float]:
         """
         Score anomaly for each event.
 
@@ -186,7 +186,7 @@ class KalpixkIsolationForest:
         # Confidence: distance from the 0.5 boundary
         confidences = np.clip(np.abs(normalized - 0.5) * 2, 0.3, 1.0)
 
-        return normalized.tolist(), confidences.tolist(), self.threshold.current_threshold
+        return normalized, confidences, self.threshold.current_threshold
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
