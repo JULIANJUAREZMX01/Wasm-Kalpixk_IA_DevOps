@@ -448,7 +448,9 @@ pub fn detect_embedded_node_defender(event: &KalpixkEvent) -> NodeResult {
         techniques.push("T1200".to_string());
     }
 
-    if event.source_type == "embedded_defense_node" && (raw.contains("tamper") || raw.contains("glitch")) {
+    if event.source_type == "embedded_defense_node"
+        && (raw.contains("tamper") || raw.contains("glitch"))
+    {
         score = 1.0;
         techniques.push("T1495".to_string());
     }
