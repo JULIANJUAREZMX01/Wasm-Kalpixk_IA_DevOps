@@ -301,16 +301,20 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
     scores, techniques, confidences, adaptive_threshold = ens.predict(features_array)
     latency = (time.time() - t0) * 1000
 
+    scores_list = scores.tolist()
+    techniques_list = techniques.tolist()
+    confidences_list = confidences.tolist()
+
     results = []
     total_anomalies = 0
     alerts_to_insert = []
 
-    for i in range(len(scores)):
-        score = float(scores[i])
+    for i in range(len(scores_list)):
+        score = float(scores_list[i])
         results.append({
             "anomaly_score": score,
-            "technique": techniques[i],
-            "confidence": float(confidences[i]),
+            "technique": techniques_list[i],
+            "confidence": float(confidences_list[i]),
             "adaptive_threshold": adaptive_threshold
         })
 
@@ -328,8 +332,8 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
                 "anomaly_score": score,
                 "event_type": req.source_type,
                 "severity": severity,
-                "technique": techniques[i],
-                "confidence": float(confidences[i]),
+                "technique": techniques_list[i],
+                "confidence": float(confidences_list[i]),
                 "features_json": req.features[i] if isinstance(req.features[0], list) else req.features,
                 "source": req.source or "agent"
             }
@@ -360,7 +364,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
 
     features_array = torch.from_numpy(features_np).to(_device)
     scores, _, _, adaptive_threshold = ens.predict(features_array)
-    score = scores[0]
+    score = float(scores[0])
     is_anomaly = score > adaptive_threshold
     latency = (time.time() - t0) * 1000
 
