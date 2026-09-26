@@ -32,3 +32,35 @@ async def test_get_alerts_clamps_negative_and_oversized_limits(tmp_db):
     assert len(oversized_alerts) == 3
     assert invalid_total == 3
     assert len(invalid_alerts) == 3
+
+
+@pytest.mark.asyncio
+async def test_api_alerts_clamping_endpoint(tmp_db):
+    import httpx
+
+    from python.api.kalpixk_api import app
+
+    await init_db()
+    for index in range(5):
+        await insert_alert(
+            {
+                "ts": f"2026-01-01T00:00:0{index}Z",
+                "ip": f"10.0.0.{index + 1}",
+                "anomaly_score": 0.8,
+            }
+        )
+
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret"},
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://localhost:8000",
+    ) as c:
+        resp = await c.get("/api/alerts?limit=-50")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["alerts"]) == 1
+
+        resp_over = await c.get("/api/alerts?limit=1000")
+        assert resp_over.status_code == 200
+        data_over = resp_over.json()
+        assert len(data_over["alerts"]) == 5
