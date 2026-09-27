@@ -88,3 +88,29 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+def test_validate_features_rejects_non_finite():
+    from pydantic import ValidationError
+
+    from python.api.kalpixk_api import LogRequest
+
+    # Single feature array with NaN
+    nan_features = [0.1] * 31 + [float("nan")]
+    with pytest.raises(ValidationError):
+        LogRequest(features=nan_features)
+
+    # Single feature array with Infinity
+    inf_features = [0.1] * 31 + [float("inf")]
+    with pytest.raises(ValidationError):
+        LogRequest(features=inf_features)
+
+    # Batch feature array with NaN
+    batch_nan_features = [[0.1] * 32, [0.1] * 31 + [float("nan")]]
+    with pytest.raises(ValidationError):
+        LogRequest(features=batch_nan_features)
+
+    # Valid feature array should pass
+    valid_features = [0.1] * 32
+    req = LogRequest(features=valid_features)
+    assert len(req.features) == 32
