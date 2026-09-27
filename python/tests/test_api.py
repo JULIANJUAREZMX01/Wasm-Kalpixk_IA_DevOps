@@ -24,3 +24,13 @@ def test_features_endpoint():
     data = response.json()
     assert data["feature_dim"] == 32
     assert len(data["features"]) == 32
+
+
+def test_detect_nan_features_rejected():
+    raw_json = '{"features": [' + ','.join(['NaN'] * 32) + ']}'
+    response = client.post(
+        "/api/detect",
+        content=raw_json,
+        headers={"Content-Type": "application/json", "X-Kalpixk-Key": "development_secret"},
+    )
+    assert response.status_code == 422
