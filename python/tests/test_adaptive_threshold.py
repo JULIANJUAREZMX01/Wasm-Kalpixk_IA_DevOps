@@ -121,3 +121,18 @@ def test_adversarial_drift_guard_resists_poisoning():
     # Threshold should remain stable and not drift upwards due to unconfirmed anomalies
     assert guard.current_threshold == normal_thresh
     assert guard.is_anomaly(0.85)
+
+
+def test_detection_ensemble_returns_adaptive_threshold():
+    import torch
+
+    from python.models.ensemble import DetectionEnsemble
+
+    ensemble = DetectionEnsemble(device=torch.device("cpu"))
+    dummy_features = torch.rand((5, 32))
+    scores, methods, confidences, adaptive_thresh = ensemble.predict(dummy_features)
+
+    assert len(scores) == 5
+    assert len(methods) == 5
+    assert len(confidences) == 5
+    assert isinstance(adaptive_thresh, float)
