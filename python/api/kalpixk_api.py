@@ -9,6 +9,7 @@ Endpoints:
 """
 
 import json
+import math
 import os
 import secrets
 import signal as _signal
@@ -182,15 +183,18 @@ class LogRequest(BaseModel):
     def validate_features(cls, v):
         if not v:
             return v
-        # Pydantic may have already converted to floats, but let's check structure
         first = v[0]
         if isinstance(first, (int, float)):
             if len(v) != 32:
                 raise ValueError(f"Single event features must have 32 dimensions, got {len(v)}")
+            if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in v):
+                raise ValueError("Features must contain finite numbers (no NaN or Infinity)")
         elif isinstance(first, list):
             for i, row in enumerate(v):
                 if len(row) != 32:
                     raise ValueError(f"Batch event features at index {i} must have 32 dimensions, got {len(row)}")
+                if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in row):
+                    raise ValueError(f"Batch event features at index {i} must contain finite numbers (no NaN or Infinity)")
         return v
 
     @model_validator(mode="after")
