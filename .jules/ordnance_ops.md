@@ -144,3 +144,29 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_ORDNANCE] - Embedded Mesh Hardening & Decentralized Defense Node Integration
+
+**Vector de Ataque Analizado:**
+1. **Punto ciego en Nodos Embebidos:** Los dispositivos periféricos y sensores descentralizados son vulnerables a sondas dirigidas y balizamiento C2 sin respuesta activa.
+2. **Exposición de memoria en buffers de telemetría:** Intentos de corrupción de punteros o inyección durante la sincronización de malla entre nodos distribuidos.
+
+**Defensa Implementada (v10.0.0-EMBEDDED_ORDNANCE):**
+1. **Rust / Metal Layer:**
+   - Inclusión de `Node-10: EMBEDDED_NODE_DEFENDER` en `defense_nodes.rs` para capturar maniobras de manipulación y sondas en nodos embebidos.
+   - Implementación de `v10_embedded_mesh_shield` en `motor.rs` para encriptar y proteger buffers de memoria en tiempo de ejecución.
+2. **Backend & Model Repair:**
+   - Subsanación de `current_threshold` en `python/models/ensemble.py` permitiendo la actualización fluida del umbral adaptativo frente a anomalías.
+3. **SAC_OS UI Alignment:**
+   - Integración de Node-10 y actualización de versión táctica en `web/src/pages/Dashboard.tsx`.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Despliegue de contra-ataques coordinados y neutralización de canales C2 maliciosos desde los nodos embebidos.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ACTIVE
+- Embedded Mesh Shield: HARDENED
+- All Core & Backend Tests: PASSED
+
+*ATLATL-ORDNANCE: El Centro de Mando confirma la consolidación de los nodos embebidos.*
