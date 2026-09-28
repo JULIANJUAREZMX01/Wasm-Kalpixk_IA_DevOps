@@ -115,3 +115,14 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }
+
+pub fn v10_embedded_mesh_shield(target: &mut [u8], key: u64) {
+    let mut state = key;
+    for (idx, byte) in target.iter_mut().enumerate() {
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add((idx as u64) + 1);
+        let mask = (state >> 32) as u8;
+        *byte ^= mask.rotate_left(3);
+    }
+}
