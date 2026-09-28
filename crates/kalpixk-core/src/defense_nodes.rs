@@ -439,7 +439,10 @@ pub fn detect_embedded_node_defender(event: &KalpixkEvent) -> NodeResult {
     let mut techniques = Vec::new();
     let raw = event.raw.to_lowercase();
 
-    if raw.contains("embedded_probe") || raw.contains("tamper_attempt") || raw.contains("c2_beaconing") {
+    if raw.contains("embedded_probe")
+        || raw.contains("tamper_attempt")
+        || raw.contains("c2_beaconing")
+    {
         score += 0.95;
         techniques.push("T1200".to_string());
     }
