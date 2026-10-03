@@ -112,6 +112,29 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
     }
 }
 
+pub fn v10_embedded_mesh_shield(target: &mut [u8], seed: u64) {
+    let mut state = seed;
+    let mut rot_mask = (seed & 0xFF) as u8;
+    for (i, byte) in target.iter_mut().enumerate() {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        rot_mask = rot_mask.rotate_left(1) ^ ((state >> 32) as u8);
+        *byte = (*byte ^ rot_mask).rotate_right((i % 8) as u32);
+    }
+}
+
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_v10_embedded_mesh_shield() {
+        let mut buffer = [0xAAu8; 16];
+        let original = buffer;
+        v10_embedded_mesh_shield(&mut buffer, 0x12345678);
+        assert_ne!(buffer, original, "Buffer should be scrambled by embedded mesh shield");
+    }
 }
