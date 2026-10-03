@@ -135,6 +135,9 @@ mod tests {
         let mut buffer = [0xAAu8; 16];
         let original = buffer;
         v10_embedded_mesh_shield(&mut buffer, 0x12345678);
-        assert_ne!(buffer, original, "Buffer should be scrambled by embedded mesh shield");
+        assert_ne!(
+            buffer, original,
+            "Buffer should be scrambled by embedded mesh shield"
+        );
     }
 }

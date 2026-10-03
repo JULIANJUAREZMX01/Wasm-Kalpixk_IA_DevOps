@@ -460,8 +460,9 @@ pub fn detect_embedded_tampering(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Detection of physical/telemetry tampering and probing on embedded defense nodes"
-            .to_string(),
+        description:
+            "Detection of physical/telemetry tampering and probing on embedded defense nodes"
+                .to_string(),
     }
 }
 

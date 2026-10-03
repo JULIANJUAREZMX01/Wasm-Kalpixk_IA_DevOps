@@ -88,7 +88,10 @@ fn test_embedded_tampering() {
     let v: Value = serde_json::from_str(&result_json).unwrap();
 
     assert!(
-        v["node"].as_str().unwrap_or("").contains("EMBEDDED_NODE_DEFENDER"),
+        v["node"]
+            .as_str()
+            .unwrap_or("")
+            .contains("EMBEDDED_NODE_DEFENDER"),
         "Expected EMBEDDED_NODE_DEFENDER node, got: {}",
         v["node"]
     );
