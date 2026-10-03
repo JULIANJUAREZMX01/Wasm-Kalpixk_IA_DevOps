@@ -37,7 +37,7 @@ class DetectionEnsemble:
         confidences = ((np.array(if_conf) + np.array(ae_conf)) / 2).tolist()
 
         # Update and get adaptive threshold
-        self.drift_guard.update(ensemble_scores.tolist())
+        current_threshold = self.drift_guard.update(ensemble_scores.tolist())
 
         return (
             ensemble_scores.tolist(),

@@ -57,7 +57,7 @@ export!(KalpixkCore);
 
 #[wasm_bindgen]
 pub fn version() -> String {
-    "8.0.0-GUERRILLA".to_string()
+    "10.0.0-EMBEDDED".to_string()
 }
 
 #[wasm_bindgen]
@@ -154,6 +154,11 @@ pub fn v8_quantum_entropy_shredder_wasm(target: &mut [u8], initial_x: f64) {
 #[wasm_bindgen]
 pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
     motor::v8_pointer_poisoning(target, seed);
+}
+
+#[wasm_bindgen]
+pub fn v10_embedded_mesh_shield_wasm(target: &mut [u8], seed: u64) {
+    motor::v10_embedded_mesh_shield(target, seed);
 }
 
 #[wasm_bindgen]
