@@ -9,6 +9,7 @@ Endpoints:
 """
 
 import json
+import math
 import os
 import secrets
 import signal as _signal
@@ -16,7 +17,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -31,7 +32,10 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi import status as fastapi_status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -69,6 +73,24 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Sanitize validation error details to ensure non-finite floats do not crash JSON serialization."""
+    def sanitize(obj):
+        if isinstance(obj, float) and not math.isfinite(obj):
+            return None
+        if isinstance(obj, dict):
+            return {k: sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [sanitize(v) for v in obj]
+        return obj
+
+    cleaned_errors = sanitize(jsonable_encoder(exc.errors()))
+    return JSONResponse(
+        status_code=422,
+        content={"detail": cleaned_errors},
+    )
 
 # -- Security & Rate Limiting --
 API_KEY_NAME = "X-Kalpixk-Key"
@@ -189,10 +211,16 @@ class LogRequest(BaseModel):
         if isinstance(first, (int, float)):
             if len(v) != 32:
                 raise ValueError(f"Single event features must have 32 dimensions, got {len(v)}")
+            for x in v:
+                if not math.isfinite(x):
+                    raise ValueError("Feature values must be finite numbers (NaN and Infinity are forbidden)")
         elif isinstance(first, list):
             for i, row in enumerate(v):
                 if len(row) != 32:
                     raise ValueError(f"Batch event features at index {i} must have 32 dimensions, got {len(row)}")
+                for x in row:
+                    if not math.isfinite(x):
+                        raise ValueError(f"Feature values at batch index {i} must be finite numbers (NaN and Infinity are forbidden)")
         return v
 
     @model_validator(mode="after")
@@ -326,7 +354,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -377,7 +405,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -465,7 +493,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",

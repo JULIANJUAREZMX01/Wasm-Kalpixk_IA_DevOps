@@ -88,3 +88,36 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+def test_non_finite_floats_rejected_by_api(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from python.api.kalpixk_api import app
+
+    monkeypatch.setenv("KALPIXK_ENV", "development")
+    monkeypatch.delenv("KALPIXK_API_KEY", raising=False)
+
+    client = TestClient(app)
+
+    import json
+
+    headers = {"Content-Type": "application/json"}
+
+    # Test single features with NaN via raw json payload
+    raw_nan_json = json.dumps({"features": [0.1] * 31 + [float("nan")]}, allow_nan=True)
+    resp = client.post("/analyze", content=raw_nan_json, headers=headers)
+    assert resp.status_code == 422
+    assert "finite numbers" in resp.text
+
+    # Test single features with Infinity via raw json payload
+    raw_inf_json = json.dumps({"features": [float("inf")] + [0.1] * 31}, allow_nan=True)
+    resp = client.post("/api/detect", content=raw_inf_json, headers=headers)
+    assert resp.status_code == 422
+    assert "finite numbers" in resp.text
+
+    # Test batch features with NaN via raw json payload
+    raw_batch_nan_json = json.dumps({"features": [[0.1] * 32, [0.1] * 30 + [float("nan"), 0.1]]}, allow_nan=True)
+    resp = client.post("/api/detect", content=raw_batch_nan_json, headers=headers)
+    assert resp.status_code == 422
+    assert "finite numbers" in resp.text
