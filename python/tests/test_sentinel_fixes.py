@@ -88,3 +88,20 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+def test_ensemble_prediction_adaptive_threshold_dos_protection():
+    import numpy as np
+    import torch
+
+    from python.models.ensemble import DetectionEnsemble
+
+    ensemble = DetectionEnsemble(torch.device("cpu"))
+    features = torch.tensor(np.random.rand(1, 32).astype(np.float32))
+
+    # Ensures predict returns adaptive threshold correctly without NameError DoS crash
+    scores, methods, confidences, adaptive_threshold = ensemble.predict(features)
+    assert isinstance(scores, list)
+    assert len(scores) == 1
+    assert isinstance(adaptive_threshold, float)
+    assert adaptive_threshold > 0.0
