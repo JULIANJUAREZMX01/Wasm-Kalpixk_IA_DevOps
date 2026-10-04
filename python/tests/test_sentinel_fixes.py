@@ -93,6 +93,7 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
 def test_ensemble_prediction_adaptive_threshold_dos_protection():
     import numpy as np
     import torch
+
     from python.models.ensemble import DetectionEnsemble
 
     ensemble = DetectionEnsemble(torch.device("cpu"))
