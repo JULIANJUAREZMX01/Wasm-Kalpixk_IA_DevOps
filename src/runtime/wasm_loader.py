@@ -1,5 +1,5 @@
 import os
-from wasmtime import Engine, Module, Store
+from wasmtime import Engine, Module
 from loguru import logger
 
 class WasmLoader:

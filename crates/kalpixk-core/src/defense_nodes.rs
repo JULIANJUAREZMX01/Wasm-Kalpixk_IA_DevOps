@@ -117,6 +117,33 @@ impl SeverityLevel {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_embedded_node_defender() {
+        let event = KalpixkEvent {
+            timestamp_ms: 0,
+            event_type: crate::event::EventType::Unknown,
+            local_severity: 0.0,
+            source: "10.0.0.1".to_string(),
+            destination: None,
+            user: None,
+            process: None,
+            metadata: HashMap::new(),
+            raw: "embedded_probe detected on GPIO bus".to_string(),
+            source_type: "embedded_defense_node".to_string(),
+            fingerprint: "test".to_string(),
+        };
+
+        let result = detect_embedded_node_threat(&event);
+        assert_eq!(result.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+        assert!(result.score >= 0.95);
+        assert!(result.mitre_techniques.contains(&"T1200".to_string()));
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeResult {
     pub node: String,
@@ -434,6 +461,44 @@ pub fn detect_xochimilco_adversarial(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_embedded_node_threat(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = event.raw.to_lowercase();
+
+    if raw.contains("embedded_probe")
+        || raw.contains("firmware_tamper")
+        || raw.contains("bus_sniffing")
+        || raw.contains("jtag_intrusion")
+    {
+        score += 0.95;
+        techniques.push("T1200".to_string());
+    }
+
+    if event.source_type == "embedded_defense_node" || event.source_type == "embedded_telemetry" {
+        if event
+            .metadata
+            .get("tamper_flag")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            score = 1.0;
+            techniques.push("T1495".to_string());
+        } else if score == 0.0 {
+            score = 0.1;
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: EMBEDDED_NODE_DEFENDER".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Detection of hardware tampering, bus probing, and unauthorized telemetry access on embedded defense nodes"
+            .to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -449,6 +514,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
         detect_xochimilco_adversarial(event),
+        detect_embedded_node_threat(event),
     ]
 }
 

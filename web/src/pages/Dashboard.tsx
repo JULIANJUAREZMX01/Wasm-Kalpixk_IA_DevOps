@@ -96,7 +96,12 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([
+    "[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.",
+    "[SYSTEM] Mesh operating in GHOST MODE v8.",
+    "[SYSTEM] Node-10 Decentralized Embedded Defense Active.",
+    "[SYSTEM] Awaiting aggressor vectors...",
+  ]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -335,7 +340,8 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
-    { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "EMBEDDED", desc: "Node-10 Mesh",       load: 5,  port: 8086, status: "ACTIVE" },
+    { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8087, status: "MAINT"  },
   ];
 
   const HONEYPOTS = [

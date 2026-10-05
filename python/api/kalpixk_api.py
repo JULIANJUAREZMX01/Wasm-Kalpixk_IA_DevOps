@@ -574,3 +574,64 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str | None = Field(None, max_length=128)
+    tamper_flag: bool = Field(False)
+    raw_telemetry: str | None = Field(None, max_length=1000)
+    features: list[float] | None = Field(None)
+
+    @field_validator("features")
+    @classmethod
+    def validate_features(cls, v):
+        if v is not None and len(v) != 32:
+            raise ValueError(f"Features must have 32 dimensions, got {len(v)}")
+        return v
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def embedded_node_sync(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """[ATLATL-ORDNANCE] Node-10 Decentralized Embedded Defense Node Telemetry & Threat Synchronization."""
+    ens = ensure_ensemble()
+
+    anomaly_score = 0.1
+    is_tampered = payload.tamper_flag or "firmware_tamper" in (payload.raw_telemetry or "").lower()
+
+    if is_tampered:
+        anomaly_score = 1.0
+
+    if payload.features:
+        features_np = np.array([payload.features], dtype=np.float32)
+        features_tensor = torch.from_numpy(features_np).to(_device)
+        scores, _, _, _ = ens.predict(features_tensor)
+        anomaly_score = max(anomaly_score, float(scores[0]))
+
+    severity = "CRITICAL" if anomaly_score >= 0.8 else "HIGH" if anomaly_score >= 0.6 else "LOW"
+
+    if anomaly_score > ens.drift_guard.current_threshold:
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": anomaly_score,
+            "event_type": "embedded_defense_node",
+            "severity": severity,
+            "technique": "T1200" if is_tampered else "T1495",
+            "features_json": payload.features or [0.0] * 32,
+            "source": f"embedded_node:{payload.node_id}",
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synchronized",
+        "node_id": payload.node_id,
+        "anomaly_score": anomaly_score,
+        "tamper_detected": is_tampered,
+        "severity": severity,
+    }

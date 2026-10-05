@@ -3,7 +3,6 @@ Kalpixk Threat Detection Agent — DigitalOcean Gradient ADK
 Deploy: gradient agent deploy
 """
 from gradient_adk import entrypoint, trace_tool, RequestContext
-import json
 
 @trace_tool("threat_detection")
 async def analyze_threat(event_data: dict) -> dict:
