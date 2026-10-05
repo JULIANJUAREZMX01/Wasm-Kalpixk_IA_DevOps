@@ -1,5 +1,4 @@
 import numpy as np
-from src.runtime.feature_extractor import feature_extractor
 from src.runtime.fallback import fallback_extractor
 
 def test_fallback_shape():

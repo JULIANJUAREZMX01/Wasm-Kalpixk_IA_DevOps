@@ -3,7 +3,12 @@ Kalpixk — Real-time Sensor
 Lee /sandbox/logs/events.jsonl, extrae 32 features reales,
 y las envía a la API Kalpixk via HTTP POST /analyze.
 """
-import json, time, math, os, logging, requests
+import json
+import time
+import math
+import os
+import logging
+import requests
 from pathlib import Path
 from datetime import datetime
 

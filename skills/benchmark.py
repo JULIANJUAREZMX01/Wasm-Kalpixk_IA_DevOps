@@ -4,7 +4,10 @@ Skill: benchmark
 Mide throughput del motor Kalpixk en AMD MI300X
 Uso: python skills/benchmark.py [--samples 100000] [--runs 5] [--notify]
 """
-import sys, os, argparse, time
+import sys
+import os
+import argparse
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def run():
@@ -21,7 +24,7 @@ def run():
 
     KalpixkTheme.print_banner()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"\n⚡ BENCHMARK KALPIXK")
+    print("\n⚡ BENCHMARK KALPIXK")
     print(f"  Device:  {device}")
     if device.type == "cuda":
         props = torch.cuda.get_device_properties(0)

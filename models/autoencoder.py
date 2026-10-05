@@ -4,7 +4,6 @@ Anomaly detection engine core
 """
 import torch
 import torch.nn as nn
-import numpy as np
 
 ANOMALY_THRESHOLDS = {
     'CLEAN': (0, 10),

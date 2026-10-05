@@ -19,7 +19,6 @@ Con .env configurado:
 import asyncio
 import json
 import os
-import pickle
 import time
 import datetime
 import hashlib

@@ -1,6 +1,6 @@
 """Dashboard API routes for Nanobot"""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pathlib import Path
 import json
 import os

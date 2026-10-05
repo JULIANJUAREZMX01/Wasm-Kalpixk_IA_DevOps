@@ -15,8 +15,6 @@ import json
 import datetime
 import argparse
 import hashlib
-from pathlib import Path
-from typing import Optional
 
 # ─── 32 features — contrato REAL con el modelo WASM ────────────────────────────
 # Estos nombres deben coincidir exactamente con crates/kalpixk-core/src/features.rs
