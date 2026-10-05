@@ -144,3 +144,31 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_NODES] - Decentralized Embedded Defense Nodes & SAC_OS Hardening v10
+
+**Vector de Ataque Analizado:**
+1. **Physical & Bus Probing on Embedded Hardware:** Atacantes intentando interceptar líneas de bus GPIO, SPI o depuración JTAG en nodos embebidos descentralizados para corromper la telemetría de la red espectral.
+2. **Firmware Tampering:** Inyección de firmware alterado en nodos embebidos para evadir la detección de anomalías y desacoplar el monitoreo distribuido.
+3. **Telemetry Manipulation:** Intentos de adulterar los datos de telemetría de nodos remotos para cegar al SIEM central sin alterar las respuestas de salud (heartbeat) tradicionales.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Rust Metal Layer (`motor.rs` & `defense_nodes.rs`):**
+   - `v10_embedded_mesh_shield`: Ofuscación a nivel de bits con rotación dinámica y máscaras XOR deterministas para proteger los buffers de telemetría en dispositivos embebidos.
+   - `Node-10: EMBEDDED_NODE_DEFENDER`: Implementación en la matriz de detección para identificar intrusiones físicas, manipulación de firmware y anomalías en buses de datos remotos.
+2. **Python API & Telemetry Pipeline (`kalpixk_api.py`):**
+   - Endpoint `/api/v1/guerrilla/embedded_node/sync`: Sincronización en tiempo real de heartbeats, firmas de firmware y alertas de manipulación física desde nodos embebidos.
+3. **SAC_OS UI Dashboard (`Dashboard.tsx`):**
+   - Integración visual de indicadores y monitores tácticos para la malla de nodos de defensa embebidos descentralizados.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Neutralización inmediata de canales de comunicación comprometidos mediante el aislamiento atómico de nodos adulterados.
+   - Disparo de contramedidas de sobrecarga de canal y trampas de punteros caóticos contra cualquier vector que intente sondear la malla embebida.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED
+- Bitwise Memory Shield: ACTIVE
+- Telemetry Pipeline: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
