@@ -88,3 +88,41 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_alert_timestamp_utc_isoformat(tmp_db):
+    from datetime import datetime
+
+    from starlette.requests import Request
+
+    await init_db()
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/analyze",
+        "headers": [],
+        "client": ("127.0.0.1", 12345),
+    }
+    request = Request(scope)
+
+    class DummyReq:
+        features = [1.0] * 32
+        source_type = "test_event"
+        source = "test_source"
+
+    # Mock ensemble prediction to force anomaly (score > threshold)
+    import python.api.kalpixk_api as api_mod
+    ens = api_mod.ensure_ensemble()
+    ens.predict = lambda x: ([0.99], ["test_tech"], [0.95], 0.5)
+
+    res = await api_mod.analyze(request, DummyReq(), api_key=None)
+    assert res.is_anomaly is True
+
+    alerts, total = await get_alerts(limit=1)
+    assert total >= 1
+    ts_str = alerts[0]["ts"]
+    assert "+00:00" in ts_str or ts_str.endswith("Z")
+    dt = datetime.fromisoformat(ts_str)
+    assert dt.tzinfo is not None
