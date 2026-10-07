@@ -94,6 +94,7 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
 async def test_simulate_start_backend_url_validation(monkeypatch):
     from fastapi import HTTPException
     from starlette.requests import Request
+
     from python.api.kalpixk_api import simulate_start
 
     scope = {
