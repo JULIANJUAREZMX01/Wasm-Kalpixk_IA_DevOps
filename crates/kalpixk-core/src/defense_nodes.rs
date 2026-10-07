@@ -449,7 +449,12 @@ pub fn detect_embedded_node_tampering(event: &KalpixkEvent) -> NodeResult {
     }
 
     if event.source_type == "embedded_telemetry" {
-        if event.metadata.get("tampered").and_then(|v| v.as_bool()).unwrap_or(false) {
+        if event
+            .metadata
+            .get("tampered")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
             score = 1.0;
             techniques.push("T1495".to_string());
         } else if score == 0.0 {
