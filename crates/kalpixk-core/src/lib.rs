@@ -157,6 +157,11 @@ pub fn v8_pointer_poisoning_wasm(target: &mut [u8], seed: u64) {
 }
 
 #[wasm_bindgen]
+pub fn v10_embedded_mesh_shield_wasm(target: &mut [u8], seed: u64) {
+    motor::v10_embedded_mesh_shield(target, seed);
+}
+
+#[wasm_bindgen]
 pub fn v7_audit_tensor_wasm(tensor_data: &[f32]) -> bool {
     let _ = tensor_data;
     true

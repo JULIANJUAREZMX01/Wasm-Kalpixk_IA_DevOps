@@ -144,3 +144,32 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_NODES] - Decentralized Embedded Defense Nodes & Mesh Hardening
+
+**Vector de Ataque Analizado:**
+1. **Physical & Firmware Tampering:** Atacantes intentando modificar o sondear el firmware de nodos embebidos periféricos para corromper la telemetría antes de que llegue a la GPU central.
+2. **Side-Channel Analysis:** Análisis de consumo o de bus de memoria en dispositivos IoT/embebidos para extraer las llaves de autenticación de la malla.
+3. **Telemetry Spoofing:** Inyección de paquetes de telemetría falsificados para cegar a Node-10 y el backend de detección en tiempo real.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Rust Metal Layer (defense_nodes.rs & motor.rs):**
+   - `Node-10: EMBEDDED_NODE_DEFENDER`: Detección en tiempo real de manipulación de firmware, sondeo de hardware y vulnerabilidades en dispositivos de borde.
+   - `v10_embedded_mesh_shield`: Rotación bit a bit de máscaras XOR y scrambling a nivel de byte para proteger los buffers de telemetría contra análisis de canal lateral.
+   - Exportación WASM `v10_embedded_mesh_shield_wasm`.
+2. **Python Backend Integration (kalpixk_api.py):**
+   - Endpoint seguro `POST /api/v1/guerrilla/embedded_node/sync` con validación Pydantic `EmbeddedNodeTelemetry`, verificación de API key y alerta automática en caso de manipulación de hardware.
+3. **SAC_OS UI Integration (Dashboard.tsx):**
+   - Incorporación de Node-10 en la vista táctica de KynicOS Nodes y mapa de cobertura MITRE ATT&CK (T1200 / T1495).
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Inserción de alertas de severidad CRITICAL y revocación instantánea de llaves para cualquier nodo embebido detectado como comprometido.
+   - Saturación y envenenamiento de datos hacia el atacante mediante respuesta automatizada de la malla indetectable.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ENGAGED
+- Embedded Mesh Shield: ACTIVE (v10.0)
+- Telemetry Sync API: SECURED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
