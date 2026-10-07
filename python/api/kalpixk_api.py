@@ -17,6 +17,7 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
+from urllib.parse import urlparse
 
 import msgpack
 import numpy as np
@@ -526,9 +527,27 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
     if _sim_state["proc"] and _sim_state["proc"].poll() is None:
         return {"status": "already_running", "phase": _sim_state["phase"]}
 
-    sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
-    sim_script = os.path.abspath(sim_script)
+    sim_script = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
+    )
+    if not os.path.isfile(sim_script):
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST, detail="Simulator script not found"
+        )
+
     backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+    parsed_url = urlparse(backend_url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST,
+            detail="Invalid backend URL scheme or netloc",
+        )
+
+    if any(char in backend_url for char in ("\r", "\n", " ", "\t", "\0")):
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST,
+            detail="Invalid characters in backend URL",
+        )
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],

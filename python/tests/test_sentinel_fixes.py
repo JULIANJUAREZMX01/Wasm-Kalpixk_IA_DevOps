@@ -88,3 +88,34 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_simulate_start_backend_url_validation(monkeypatch):
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    from python.api.kalpixk_api import simulate_start
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/simulate/start",
+        "headers": [],
+        "client": ("127.0.0.1", 12345),
+    }
+    req = Request(scope)
+
+    # Invalid scheme
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "ftp://localhost:8000")
+    with pytest.raises(HTTPException) as exc_info:
+        await simulate_start(req, api_key="dummy")
+    assert exc_info.value.status_code == 400
+    assert "Invalid backend URL scheme" in exc_info.value.detail
+
+    # Invalid characters / CRLF / spaces
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "http://localhost:8000\r\nHeader: injected")
+    with pytest.raises(HTTPException) as exc_info:
+        await simulate_start(req, api_key="dummy")
+    assert exc_info.value.status_code == 400
+    assert "Invalid characters" in exc_info.value.detail
