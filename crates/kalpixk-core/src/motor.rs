@@ -112,6 +112,14 @@ pub fn v8_pointer_poisoning(target: &mut [u8], seed: u64) {
     }
 }
 
+pub fn v10_embedded_mesh_shield(target: &mut [u8], seed: u64) {
+    let mut mask = seed ^ 0xA5A5_5A5A_DEAD_BEEF;
+    for (i, byte) in target.iter_mut().enumerate() {
+        mask = mask.rotate_left(7).wrapping_add(i as u64);
+        *byte ^= (mask & 0xFF) as u8;
+    }
+}
+
 pub fn validate_atomic_access(ptr: &AtomicU8, expected: u8) -> bool {
     ptr.load(Ordering::Relaxed) == expected
 }

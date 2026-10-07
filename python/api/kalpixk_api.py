@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -213,6 +213,17 @@ class LogRequest(BaseModel):
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
+
+
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_version: str = Field(..., max_length=50)
+    firmware_hash: str = Field(..., max_length=128)
+    hardware_tampered: bool = False
+    cpu_load_pct: float = Field(0.0, ge=0.0, le=100.0)
+    battery_pct: float = Field(100.0, ge=0.0, le=100.0)
+    active_threats_detected: int = Field(0, ge=0)
+    raw_logs: list[str] | None = Field(None, max_length=100)
 
 
 class AnomalyResponse(BaseModel):
@@ -574,3 +585,34 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def embedded_node_sync(
+    request: Request,
+    telemetry: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """[ATLATL-ORDNANCE] Sync threat intelligence and firmware integrity for Node-10 embedded defense nodes."""
+    status_str = "COMPROMISED" if telemetry.hardware_tampered else "HEALTHY"
+    if telemetry.hardware_tampered:
+        alert_data = {
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0,
+            "event_type": "embedded_telemetry",
+            "severity": "CRITICAL",
+            "technique": "T1200",
+            "features_json": [1.0] * 32,
+            "source": telemetry.node_id,
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "node_id": telemetry.node_id,
+        "status": status_str,
+        "mesh_node_type": "NODE-10: EMBEDDED_NODE_DEFENDER",
+        "synced": True,
+        "tamper_alert": telemetry.hardware_tampered,
+    }
