@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_MESH] - Decentralized Embedded Node Shield & Node-10 Tamper Defense
+
+**Vector de Ataque Analizado:**
+1. **Physical Bus Sniffing & JTAG Probing:** Atacantes buscando intervenir físicamente los buses SPI/I2C de nodos embebidos descentralizados para interceptar telemetría o inyectar comandos maliciosos.
+2. **Node ID Spoofing & Firmware Tampering:** Alteración del firmware original en dispositivos IoT/embebidos para suplantar la identidad del nodo dentro de la malla.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Node-10 EMBEDDED_NODE_DEFENDER (Rust):**
+   - Implementación de `detect_embedded_node_tampering` en `defense_nodes.rs` para capturar firmas de ataques físicos, bus sniffing y manipulación de firmware (MITRE T1200 / T1553).
+2. **v10 Embedded Mesh Shield (Rust/WASM):**
+   - Implementación de `v10_embedded_mesh_shield` en `motor.rs` y expuesto mediante WASM FFI en `lib.rs` para ofuscar y proteger buffers de memoria y telemetría en microcontroladores y nodos embebidos mediante rotación de máscaras bitwise.
+3. **API Synchronization Endpoint (Python):**
+   - Incorporación de `POST /api/v1/guerrilla/embedded_node/sync` en `kalpixk_api.py` para la ingesta, validación y respuesta en tiempo real ante intentos de sabotaje físico o lógico en nodos descentralizados.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Aislamiento automático del nodo embebido vulnerado y envenenamiento de canal para neutralizar sondeadores físicos JTAG/SPI.
+
+**Estado de la Misión:**
+- Node-10 Defender: ARMED
+- Embedded Mesh Shield: ENGAGED
+- Decentralized Node Sync: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
