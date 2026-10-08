@@ -434,7 +434,6 @@ pub fn detect_xochimilco_adversarial(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
-
 pub fn detect_embedded_node_tampering(event: &KalpixkEvent) -> NodeResult {
     let mut score = 0.0;
     let mut techniques = Vec::new();
@@ -459,8 +458,9 @@ pub fn detect_embedded_node_tampering(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Protection and detection of probing or tampering against decentralized embedded nodes"
-            .to_string(),
+        description:
+            "Protection and detection of probing or tampering against decentralized embedded nodes"
+                .to_string(),
     }
 }
 
@@ -519,11 +519,10 @@ pub fn sync_threats(external_threats: Vec<String>) {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::event::{KalpixkEvent, EventType};
+    use crate::event::{EventType, KalpixkEvent};
 
     #[test]
     fn test_node_10_embedded_node_tampering() {
