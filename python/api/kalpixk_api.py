@@ -215,6 +215,16 @@ class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_version: str = Field(..., max_length=50)
+    cpu_usage_pct: float = Field(..., ge=0.0, le=100.0)
+    memory_usage_pct: float = Field(..., ge=0.0, le=100.0)
+    tamper_detected: bool = False
+    bus_anomaly: bool = False
+    raw_event: str | None = Field(None, max_length=1000)
+
+
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
@@ -574,3 +584,37 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def sync_embedded_node(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key)
+):
+    """[ATLATL-ORDNANCE] Synchronize telemetry and threat intelligence for Node-10 embedded defense nodes."""
+    is_threat = payload.tamper_detected or payload.bus_anomaly
+    severity = "CRITICAL" if payload.tamper_detected else "HIGH" if payload.bus_anomaly else "CLEAN"
+
+    if is_threat:
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0 if payload.tamper_detected else 0.85,
+            "event_type": "embedded_node_tampering",
+            "severity": severity,
+            "technique": "T1200",
+            "confidence": 1.0,
+            "features_json": [payload.cpu_usage_pct, payload.memory_usage_pct],
+            "source": f"embedded_node:{payload.node_id}"
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synchronized",
+        "node_id": payload.node_id,
+        "shield_active": True,
+        "threat_status": severity,
+        "timestamp": datetime.utcnow().isoformat(),
+    }

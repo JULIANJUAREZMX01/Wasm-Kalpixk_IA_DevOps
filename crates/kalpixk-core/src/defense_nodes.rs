@@ -434,6 +434,36 @@ pub fn detect_xochimilco_adversarial(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+
+pub fn detect_embedded_node_tampering(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = event.raw.to_lowercase();
+
+    if raw.contains("firmware_tamper")
+        || raw.contains("bus_sniffing")
+        || raw.contains("jtag_probe")
+        || raw.contains("side_channel_leak")
+    {
+        score += 0.95;
+        techniques.push("T1200".to_string());
+    }
+
+    if event.source_type == "embedded_telemetry_probe" || raw.contains("spoofed_node_id") {
+        score = 1.0;
+        techniques.push("T1553".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-10: EMBEDDED_NODE_DEFENDER".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Protection and detection of probing or tampering against decentralized embedded nodes"
+            .to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -449,6 +479,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
         detect_xochimilco_adversarial(event),
+        detect_embedded_node_tampering(event),
     ]
 }
 
@@ -485,5 +516,33 @@ pub fn sync_threats(external_threats: Vec<String>) {
         for threat in external_threats {
             registry.insert(threat);
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::event::{KalpixkEvent, EventType};
+
+    #[test]
+    fn test_node_10_embedded_node_tampering() {
+        let event = KalpixkEvent {
+            timestamp_ms: 0,
+            event_type: EventType::Unknown,
+            local_severity: 0.0,
+            source: "sensor".to_string(),
+            destination: None,
+            user: None,
+            process: None,
+            metadata: std::collections::HashMap::new(),
+            raw: "Firmware_tamper detected on SPI flash bus_sniffing".to_string(),
+            source_type: "embedded".to_string(),
+            fingerprint: "fp".to_string(),
+        };
+        let res = detect_embedded_node_tampering(&event);
+        assert_eq!(res.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+        assert!(res.score >= 0.95);
+        assert!(res.mitre_techniques.contains(&"T1200".to_string()));
     }
 }
