@@ -12,9 +12,7 @@ import argparse
 import math
 import os
 import random
-import sys
 import time
-from collections.abc import Generator
 from pathlib import Path
 
 import requests
@@ -22,7 +20,6 @@ import requests
 try:
     from rich.console import Console
     from rich.panel import Panel
-    from rich.progress import track
 
     RICH = True
     console = Console()
@@ -85,9 +82,14 @@ def build_features(
 
 def send_event(backend_url: str, features: list[float], source: str = "simulator") -> dict:
     try:
+        headers = {}
+        api_key = os.getenv("KALPIXK_API_KEY")
+        if api_key:
+            headers["X-Kalpixk-Key"] = api_key
         resp = requests.post(
             f"{backend_url}/api/detect",
             json={"features": features, "source": source, "raw_log": None},
+            headers=headers,
             timeout=3,
         )
         return resp.json() if resp.ok else {"error": resp.status_code}
