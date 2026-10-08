@@ -121,9 +121,9 @@ pub fn v10_embedded_mesh_shield(target: &mut [u8], seed: u64) {
         return;
     }
     let mut state = seed ^ 0x0102030405060708;
-    for i in 0..target.len() {
+    for (i, byte) in target.iter_mut().enumerate() {
         state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
         let mask = (state >> 32) as u8;
-        target[i] ^= mask.rotate_left((i % 8) as u32);
+        *byte ^= mask.rotate_left((i % 8) as u32);
     }
 }
