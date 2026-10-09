@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_NODES] - Decentralized Embedded Node Defense
+
+**Vector de Ataque Analizado:**
+1. **Physical Hardware Probing:** Atacantes intentando acceder físicamente a nodos de defensa embebidos mediante sondeos JTAG, ataques de fallo por voltaje (voltage glitching) e interfaces UART/Bus Pirate.
+2. **Firmware Tampering:** Inyección maliciosa en memorias flash e intentos de desprotección del bootloader para inhabilitar la recolección de telemetría local.
+
+**Defensa Implementada (v9.0.0-XOCHIMILCO / Node-10):**
+1. **Node-10 Embedded Node Defender (Rust):**
+   - Implementación de `detect_embedded_node_defender` en `defense_nodes.rs` para capturar intentos de sonda física, escritura no autorizada en memoria flash y modificaciones de bootloader.
+2. **Embedded Node Sync API (Python):**
+   - Incorporación del modelo Pydantic `EmbeddedNodeTelemetry` y el endpoint `POST /api/v1/guerrilla/embedded_node/sync` con verificación de firmas, clave de API y limitación de tasa.
+3. **SAC_OS Tactical Monitoring (Web UI):**
+   - Integración visual del estado del nodo embebido `NODE-10` en el panel de control de KYNICOS NODES.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_HARDWARE_RETALIATION:**
+   - Bloqueo instantáneo y aislamiento de red del nodo comprometido, junto con la generación de alertas críticas de severidad 1.0 para contener la infiltración física inmediatamente.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ENGAGED
+- Embedded Sync API: LIVE
+- SAC_OS Telemetry: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Quien toque el hardware de la defensa hallará su propio colapso.*
