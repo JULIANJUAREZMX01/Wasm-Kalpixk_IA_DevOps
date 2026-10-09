@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -210,6 +210,14 @@ class LogRequest(BaseModel):
                 if len(self.metadata) != expected:
                     raise ValueError("features and metadata must have the same length")
         return self
+
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    arch: str = Field("armv7", max_length=50)
+    firmware_hash: str = Field(..., max_length=128)
+    tampered: bool = False
+    hardware_alerts: list[str] = Field(default_factory=list, max_length=100)
+    telemetry_data: dict = Field(default_factory=dict)
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -574,3 +582,37 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def embedded_node_sync(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """[Node-10] Synchronizes telemetry and threat intelligence for decentralized embedded defense nodes."""
+    severity = "CRITICAL" if payload.tampered or payload.hardware_alerts else "LOW"
+    score = 1.0 if payload.tampered else 0.8 if payload.hardware_alerts else 0.1
+
+    if payload.tampered or payload.hardware_alerts:
+        alert_data = {
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": score,
+            "event_type": "embedded_node_telemetry",
+            "severity": severity,
+            "technique": "T1200",
+            "confidence": 1.0,
+            "features_json": [0.0] * 32,
+            "source": f"embedded_node:{payload.node_id}",
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synchronized",
+        "node_id": payload.node_id,
+        "tampered": payload.tampered,
+        "threat_score": score,
+        "action_required": payload.tampered,
+    }
