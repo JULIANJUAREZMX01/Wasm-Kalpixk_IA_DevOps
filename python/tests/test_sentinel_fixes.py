@@ -1,5 +1,7 @@
 
 
+from datetime import UTC
+
 import pytest
 
 from python.db.database import get_alerts, init_db, insert_alert
@@ -88,3 +90,33 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_utc_timestamp_generation():
+    from datetime import datetime
+
+    from httpx import ASGITransport, AsyncClient
+
+    from python.api.kalpixk_api import app
+
+    headers = {"X-Kalpixk-Key": "development_secret"}
+    async with AsyncClient(headers=headers, transport=ASGITransport(app=app), base_url="http://test") as client:
+        # High anomaly payload to trigger alert insertion
+        anomaly_payload = {
+            "features": [[1.0] * 32],
+            "source": "unit_test"
+        }
+        res = await client.post("/api/detect", json=anomaly_payload)
+        assert res.status_code == 200
+
+        # Retrieve inserted alerts and check ISO8601 UTC timestamp
+        res_alerts = await client.get("/api/alerts")
+        assert res_alerts.status_code == 200
+        alerts = res_alerts.json()["alerts"]
+        assert len(alerts) > 0
+
+        latest_ts = alerts[0]["ts"]
+        parsed_dt = datetime.fromisoformat(latest_ts)
+        assert parsed_dt.tzinfo is not None, "Timestamp must be timezone-aware!"
+        assert parsed_dt.utcoffset() == UTC.utcoffset(parsed_dt), "Timestamp must be in UTC!"
