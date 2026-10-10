@@ -215,6 +215,23 @@ class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str = Field(..., max_length=128)
+    tamper_flag: bool = Field(False)
+    cpu_load: float = Field(..., ge=0.0, le=100.0)
+    vram_mb: float = Field(..., ge=0.0)
+    features: list[float] | None = Field(None)
+    raw_log: str | None = Field(None, max_length=1000)
+
+    @field_validator("features")
+    @classmethod
+    def validate_node_features(cls, v):
+        if v is not None and len(v) != 32:
+            raise ValueError(f"Embedded node features must have 32 dimensions, got {len(v)}")
+        return v
+
+
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
@@ -574,3 +591,65 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def sync_embedded_node(
+    request: Request,
+    telemetry: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key)
+):
+    """[ATLATL-ORDNANCE] Node-10 Decentralized Embedded Defense Node Telemetry Sync."""
+    ens = ensure_ensemble()
+    ip = request.client.host if request.client else "unknown"
+
+    status_code = "NOMINAL"
+    is_anomaly = False
+    anomaly_score = 0.0
+
+    if telemetry.tamper_flag:
+        status_code = "TAMPER_DETECTED"
+        is_anomaly = True
+        anomaly_score = 1.0
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": ip,
+            "anomaly_score": 1.0,
+            "event_type": "embedded_telemetry",
+            "severity": "CRITICAL",
+            "technique": "T1495",
+            "confidence": 1.0,
+            "features_json": telemetry.features or [0.0] * 32,
+            "source": f"embedded_node_{telemetry.node_id}"
+        }
+        await insert_alert(alert_data)
+
+    elif telemetry.features:
+        features_np = np.array([telemetry.features], dtype=np.float32)
+        features_tensor = torch.from_numpy(features_np).to(_device)
+        scores, techniques, confidences, adaptive_threshold = ens.predict(features_tensor)
+        anomaly_score = float(scores[0])
+        if anomaly_score > adaptive_threshold:
+            is_anomaly = True
+            status_code = "ANOMALY_DETECTED"
+            alert_data = {
+                "ts": datetime.utcnow().isoformat(),
+                "ip": ip,
+                "anomaly_score": anomaly_score,
+                "event_type": "embedded_telemetry",
+                "severity": "HIGH" if anomaly_score > 0.6 else "LOW",
+                "technique": techniques[0],
+                "confidence": float(confidences[0]),
+                "features_json": telemetry.features,
+                "source": f"embedded_node_{telemetry.node_id}"
+            }
+            await insert_alert(alert_data)
+
+    return {
+        "node_id": telemetry.node_id,
+        "status": status_code,
+        "is_anomaly": is_anomaly,
+        "anomaly_score": anomaly_score,
+        "sync_timestamp": datetime.utcnow().isoformat(),
+    }

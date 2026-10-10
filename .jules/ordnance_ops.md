@@ -144,3 +144,30 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_NODE10_EMBEDDED_DEFENSE] - Node-10 Embedded Defense & Decentralized Synchronization
+
+**Vector de Ataque Analizado:**
+1. **Physical Hardware Probing & JTAG Access:** Intentos de extracción de claves de memoria y alteración de firmas en el firmware de nodos de defensa instalados en hardware embebido/periférico.
+2. **Desincronización y Inyección de Telemetría:** Atacantes interceptando y alterando los datos de estado enviando falsa telemetría de rendimiento para cegar la malla de nodos.
+3. **Bypass de Sensores en Nodos Remotos:** Intentos de deshabilitar los hooks de detección locales en dispositivos periféricos para operar sin ser detectados por el servidor central.
+
+**Defensa Implementada (Node-10 & Sync API):**
+1. **Rust Metal Layer (Node-10: EMBEDDED_NODE_DEFENDER):**
+   - Módulo `detect_embedded_node_defender` en `defense_nodes.rs` para capturar firmas de sondas JTAG (`T1200`), manipulación física de sensores y banderas de alteración de firmware (`T1495`).
+2. **Python Central Telemetry Sync API:**
+   - Endpoint seguro `POST /api/v1/guerrilla/embedded_node/sync` con modelo Pydantic `EmbeddedNodeTelemetry`, validación estricta de vector de 32 dimensiones, autenticación por API Key y rate-limiting.
+   - Generación e inserción automática de alertas críticas e inmediatas al detectar violaciones de integridad física o alteración de firmware (`tamper_flag=True`).
+3. **SAC_OS UI Operational Dashboard:**
+   - Integración de sección visual dedicada a nodos de defensa embebidos descentralizados con tokens militares SAC_OS (High-vis Amber, Toxic Green, Plasma Red y Electric Blue) en `web/src/pages/Dashboard.tsx`.
+
+**Contra-Ataque (Fase Negra):**
+1. **Lockdown Automático y Reporte de Exterminio:**
+   - Neutralización inmediata de nodos tamperizados, aíslamiento del canal de comunicaciones y disparo de respuesta defensiva en la malla sin impactar la operación central.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ENGAGED & ARMED
+- Telemetry Sync API: ACTIVE
+- SAC_OS Embedded Telemetry UI: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
