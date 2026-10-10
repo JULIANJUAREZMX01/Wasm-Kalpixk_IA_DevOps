@@ -335,6 +335,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
+    { id: "NODE-10",  desc: "Embedded Defense",   load: 18, port: 8087, status: "ACTIVE" },
     { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
   ];
 
@@ -399,6 +400,30 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
                   ⚡ ACTIVE — collecting intel
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <Label text="EMBEDDED DEFENSE NODES (NODE-10)" accent={T.blue} />
+          {[
+            { id: "EMBEDDED-CEDIS-01", firmware: "v9.0.0-OK", tamper: false, status: "NOMINAL" },
+            { id: "EMBEDDED-CEDIS-02", firmware: "v9.0.0-OK", tamper: false, status: "NOMINAL" },
+            { id: "EMBEDDED-MOBILE-01", firmware: "v9.0.0-OK", tamper: true, status: "TAMPER_ALERT" },
+          ].map((en) => (
+            <div key={en.id} style={{
+              marginBottom: 5, padding: "5px 8px",
+              background: en.tamper ? `${T.red}12` : T.surface,
+              border: `1px solid ${en.tamper ? T.red : T.border}`,
+              borderLeft: `3px solid ${en.tamper ? T.red : T.green}`,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: en.tamper ? T.red : T.bright, fontSize: 9, fontWeight: 700 }}>{en.id}</span>
+                <span style={{ color: en.tamper ? T.red : T.green, fontSize: 8, letterSpacing: 1 }}>{en.status}</span>
+              </div>
+              <div style={{ color: T.dim, fontSize: 8, marginTop: 2 }}>
+                FW: {en.firmware} | TAMPER: {en.tamper ? "DETECTED ⚠" : "SECURE ✓"}
+              </div>
             </div>
           ))}
         </div>
