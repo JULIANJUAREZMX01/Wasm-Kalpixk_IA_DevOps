@@ -499,7 +499,9 @@ pub fn detect_embedded_node_defender(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Detection of probing, tampering, and physical attacks on decentralized embedded nodes".to_string(),
+        description:
+            "Detection of probing, tampering, and physical attacks on decentralized embedded nodes"
+                .to_string(),
     }
 }
 
