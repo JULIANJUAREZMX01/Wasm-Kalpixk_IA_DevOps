@@ -33,3 +33,15 @@ def test_security_headers():
     assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert "object-src 'none'" in response.headers["Content-Security-Policy"]
+
+def test_simulate_start_invalid_backend_url(monkeypatch):
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "ftp://invalid-url-scheme")
+    response = client.post("/api/simulate/start")
+    assert response.status_code == 400
+    assert "Invalid KALPIXK_BACKEND_URL scheme or format" in response.json()["detail"]
+
+def test_simulate_start_whitespace_backend_url(monkeypatch):
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "http://localhost:8000 --malicious-flag")
+    response = client.post("/api/simulate/start")
+    assert response.status_code == 400
+    assert "Invalid KALPIXK_BACKEND_URL scheme or format" in response.json()["detail"]
