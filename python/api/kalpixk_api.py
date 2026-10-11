@@ -599,17 +599,16 @@ async def embedded_node_sync(
     """[ATLATL-ORDNANCE] Node-10: Synchronize decentralized embedded defense node telemetry."""
     status_action = "quarantine" if body.tamper_detected else "ok"
     if body.tamper_detected:
-        log_entry = {
+        alert_data = {
             "ts": datetime.now(UTC).isoformat(),
-            "source": f"embedded-node-{body.node_id}",
-            "msg": f"CRITICAL: Hardware/Firmware tampering detected on node {body.node_id}",
-            "score": 1.0,
             "ip": request.client.host if request.client else "unknown",
-            "geo": "EMB",
-            "eventType": "embedded_tamper",
-            "id": f"emb-{time.time_ns()}",
+            "anomaly_score": 1.0,
+            "event_type": "embedded_tamper",
+            "severity": "CRITICAL",
+            "source": f"embedded-node-{body.node_id}",
+            "technique": "T1200",
         }
-        _alert_history.appendleft(log_entry)
+        await insert_alert(alert_data)
 
     return {
         "status": "synchronized",
