@@ -96,7 +96,12 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([
+    "[SYSTEM] ATLATL-ORDNANCE v9.0.0-XOCHIMILCO initialized.",
+    "[SYSTEM] Ghost Mesh operating in v9 indetectable mode.",
+    "[SYSTEM] Node-10 Embedded Defense Nodes synchronized.",
+    "[SYSTEM] Awaiting aggressor vectors..."
+  ]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -170,7 +175,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v8.0.0-GUERRILLA · AMD MI300X MESH
+              GUERRILLA ALGORÍTMICA · v9.0.0-XOCHIMILCO · AMD MI300X MESH
             </div>
           </div>
         </div>
@@ -238,18 +243,18 @@ export default function Dashboard() {
               onClick={async () => {
                 try {
                   const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
-                  const res = await fetch("/api/v1/guerrilla/v8/strike", {
+                  const res = await fetch("/api/v1/guerrilla/v9/strike", {
                     method: "POST",
                     headers: { "X-Kalpixk-Key": apiKey }
                   });
                   const data = await res.json();
                   setTerminalOutput(prev => [
                     ...prev,
-                    `[STRIKE] v8 ALGORITHMIC GUILLOTINE ENGAGED.`,
+                    `[STRIKE] v9 ALGORITHMIC GUILLOTINE ENGAGED (v9.0.0-XOCHIMILCO).`,
                     `[STRIKE] STATUS: ${data.status}`,
                     ...Object.keys(data.collapse_results || {}).map(v => `[STRIKE] VECTOR ${v}: SUCCESS`)
                   ]);
-                  alert("v7 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
+                  alert("v9 ALGORITHMIC GUILLOTINE ENGAGED: SYSTEMIC COLLAPSE INITIATED");
                 } catch (e) {
                   console.error("Strike failed", e);
                 }
@@ -313,7 +318,7 @@ export default function Dashboard() {
           </span>
         ))}
         <span style={{ marginLeft: "auto", color: T.dim, whiteSpace: "nowrap", letterSpacing: 1 }}>
-          sac sentinel watch --live · KynicOS v8.0-GUERRILLA
+          sac sentinel watch --live · KynicOS v9.0.0-XOCHIMILCO
         </span>
       </footer>
     </div>
@@ -336,6 +341,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
     { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "NODE-10",  desc: "Embedded Defender",  load: 4,  port: 8087, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [
