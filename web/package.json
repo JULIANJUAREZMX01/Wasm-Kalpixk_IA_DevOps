@@ -1,6 +1,6 @@
 {
   "name": "kalpixk-dashboard",
-  "version": "8.0.0-GUERRILLA",
+  "version": "9.0.0-XOCHIMILCO",
   "private": true,
   "scripts": {
     "dev": "vite",

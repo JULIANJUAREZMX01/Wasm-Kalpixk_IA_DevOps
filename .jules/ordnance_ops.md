@@ -144,3 +144,33 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DESCENTRALIZED] - Node-10 Embedded Defense Nodes & Algorithmic Guillotine v9
+
+**Vector de Ataque Analizado:**
+1. **Physical Probing & GPIO Tampering:** Intentos de intrusión física y manipulación de hardware en nodos embebidos periféricos para corromper la telemetría antes de la sincronización central.
+2. **Firmware Corruption & Flash Tampering:** Inyección de payloads maliciosos en la memoria flash de microcontroladores/dispositivos Edge para eludir la inspección de red tradicional.
+3. **Ghost Mesh Disruption:** Ataques dirigidos a desincronizar los latidos de la malla indetectable y saturar el canal de sincronización de inteligencia con telemetría malformada.
+
+**Defensa Implementada (v9.0.0-XOCHIMILCO Ext. / Node-10):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (Rust Metal Layer):**
+   - Detección proactiva de sondeos GPIO, corrupción de firmware y manipulación de hardware en `crates/kalpixk-core/src/defense_nodes.rs`.
+   - Evaluación en tiempo real de severidad crítica (Score 1.0 / Level CRITICAL) con tagging MITRE ATT&CK T1200 / T1495.
+2. **Embedded Node Sync API (`python/api/kalpixk_api.py`):**
+   - Pydantic model `EmbeddedNodeTelemetry` con validación estricta de tipos, límites de longitud y detección instantánea de banderas de alteración física/firmware.
+   - Endpoint `POST /api/v1/guerrilla/embedded_node/sync` con limitación de tasa (30/min) para aislamiento y cuarentena automática de nodos comprometidos.
+3. **SAC_OS UI Integration (`web/src/pages/Dashboard.tsx`):**
+   - Visualización táctica del Node-10 Embedded Defender en el tablero de comando SAC_OS.
+   - Handlers actualizados para el disparador de represalia `v9_strike` (`/api/v1/guerrilla/v9/strike`).
+
+**Contra-Ataque (Fase Negra):**
+1. **Node-10 Isolation & Retaliation:**
+   - Aislamiento automático del nodo embebido alterado en la red física (Cuarentena).
+   - Inyección de banderas de envenenamiento en la telemetría de retorno para neutralizar la recolección de inteligencia del atacante.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ONLINE
+- Telemetry Sync Endpoint: ACTIVE
+- Workspace Manifests: ALIGNED v9.0.0-XOCHIMILCO
+
+*ATLATL-ORDNANCE: La defensa no termina en el bloqueo. La presencia embebida devora la agresión en el origen.*
