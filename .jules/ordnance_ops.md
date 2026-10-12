@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Node-10 Embedded Defense Nodes & Hardware Tampering Shield
+
+**Vector de Ataque Analizado:**
+1. **Physical & Hardware Tampering:** Intentos de sondeo físico (JTAG/glitch attacks) en microcontroladores y dispositivos embebidos descentralizados para extraer firmware o llaves de comunicación.
+2. **Unauthorized Node Telemetry Sync:** Inyección de paquetes de sincronización falsos desde nodos comprometidos para corromper la telemetría de red.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Node-10 Rust Core Detector:**
+   - Implementación de `NODE-10: EMBEDDED_NODE_DEFENDER` en `crates/kalpixk-core/src/defense_nodes.rs` para detectar intrusiones de firmware y sondeo de hardware.
+2. **Backend API Endpoint & Validation:**
+   - Endpoint `/api/v1/guerrilla/embedded_node/sync` en FastAPI con modelo `EmbeddedNodeTelemetry` para validar telemetría de temperatura, firmware y banderas de alteración de hardware.
+3. **SAC_OS Tactical UI:**
+   - Panel de estado e indicadores de Node-10 en el dashboard SAC_OS (`web/src/pages/Dashboard.tsx`).
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_HARDWARE_LOCKDOWN:**
+   - Registro inmediato de firma de amenaza en caso de `tamper_flag=true` y aislamiento automático del nodo en la malla.
+
+**Estado de la Misión:**
+- Node-10 Defender: ARMED
+- Telemetry Sync: ACTIVE
+- Hardware Shield: ENGAGED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*

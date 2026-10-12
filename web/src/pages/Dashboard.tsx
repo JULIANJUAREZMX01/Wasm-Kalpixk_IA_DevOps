@@ -335,7 +335,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
-    { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "NODE-10",  desc: "Embedded Defender",  load: 18, port: 8086, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [
@@ -553,6 +553,24 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
             </span>
           </div>
         ))}
+
+        <div style={{ marginTop: 10 }}>
+          <Label text="NODE-10 EMBEDDED" accent={T.green} />
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "6px 8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+              <span style={{ color: T.green, fontWeight: 700, fontSize: 9 }}>STATUS</span>
+              <span style={{ color: T.green, fontSize: 9 }}>ONLINE</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+              <span style={{ color: T.dim, fontSize: 9 }}>FIRMWARE</span>
+              <span style={{ color: T.text, fontSize: 9 }}>v10.0-EMBEDDED</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: T.dim, fontSize: 9 }}>HARDWARE TAMPER</span>
+              <span style={{ color: T.green, fontSize: 9 }}>SECURE</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
