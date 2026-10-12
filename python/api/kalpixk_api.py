@@ -215,6 +215,23 @@ class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_version: str = Field(..., max_length=50)
+    tamper_flag: bool = False
+    hardware_temp_c: float = Field(..., ge=-50.0, le=150.0)
+    cpu_usage_pct: float = Field(..., ge=0.0, le=100.0)
+    features: list[float] | None = Field(None, max_length=1000)
+    source_ip: str | None = Field(None, max_length=50)
+
+    @field_validator("features")
+    @classmethod
+    def validate_embedded_features(cls, v):
+        if v is not None and len(v) != 32:
+            raise ValueError(f"Embedded node features must have 32 dimensions, got {len(v)}")
+        return v
+
+
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
@@ -574,3 +591,48 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def sync_embedded_node(
+    request: Request,
+    telemetry: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """[ATLATL-ORDNANCE] Node-10 Embedded Defense Node Sync & Threat Registration."""
+    ens = ensure_ensemble()
+
+    src_ip = telemetry.source_ip or (request.client.host if request.client else "unknown")
+    is_anomaly = False
+    score = 0.0
+
+    if telemetry.features:
+        features_np = np.array([telemetry.features], dtype=np.float32)
+        features_tensor = torch.from_numpy(features_np).to(_device)
+        scores, _, _, adaptive_threshold = ens.predict(features_tensor)
+        score = float(scores[0])
+        is_anomaly = score > adaptive_threshold
+
+    if telemetry.tamper_flag or is_anomaly:
+        severity = "CRITICAL" if telemetry.tamper_flag or score > 0.8 else "HIGH"
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": src_ip,
+            "anomaly_score": score if is_anomaly else 1.0,
+            "event_type": "embedded_node_tamper" if telemetry.tamper_flag else "embedded_node_anomaly",
+            "severity": severity,
+            "technique": "T1195" if telemetry.tamper_flag else "T1055",
+            "features_json": telemetry.features or [],
+            "source": f"embedded_node:{telemetry.node_id}",
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synchronized",
+        "node_id": telemetry.node_id,
+        "tamper_flag": telemetry.tamper_flag,
+        "anomaly_score": round(score, 4),
+        "is_anomaly": is_anomaly,
+        "ts": datetime.utcnow().isoformat(),
+    }
