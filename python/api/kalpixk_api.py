@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -211,6 +211,16 @@ class LogRequest(BaseModel):
                     raise ValueError("features and metadata must have the same length")
         return self
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str = Field(..., max_length=128)
+    tamper_detected: bool = False
+    cpu_usage: float = Field(0.0, ge=0.0, le=100.0)
+    memory_usage: float = Field(0.0, ge=0.0, le=100.0)
+    threat_level: str = Field("CLEAN", max_length=20)
+    timestamp: str | None = None
+
+
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
@@ -231,9 +241,9 @@ async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -326,7 +336,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -377,7 +387,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -465,7 +475,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -567,10 +577,41 @@ async def simulate_status(request: Request, api_key: str = Depends(verify_api_ke
         return {"running": False, "phase": "idle"}
     return {"running": True, "phase": _sim_state["phase"]}
 
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def embedded_node_sync(
+    request: Request, telemetry: EmbeddedNodeTelemetry, api_key: str = Depends(verify_api_key)
+):
+    """Synchronize threat intelligence and firmware tampering flags for Node-10 embedded defense nodes."""
+    severity = "CRITICAL" if telemetry.tamper_detected else telemetry.threat_level
+    if telemetry.tamper_detected or telemetry.threat_level in ["ANOMALY", "CRITICAL"]:
+        alert_data = {
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 0.98 if telemetry.tamper_detected else 0.75,
+            "event_type": "embedded_node_probe",
+            "severity": severity,
+            "technique": "T1200",
+            "confidence": 0.99,
+            "features_json": {"node_id": telemetry.node_id, "firmware": telemetry.firmware_hash},
+            "source": f"embedded_node_{telemetry.node_id}",
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synchronized",
+        "node_id": telemetry.node_id,
+        "tamper_alert": telemetry.tamper_detected,
+        "action": "LOCKDOWN" if telemetry.tamper_detected else "MONITORING",
+    }
+
+
+@app.post("/api/v1/guerrilla/v9/strike")
 @app.post("/api/v1/guerrilla/v8/strike")
 @limiter.limit("2/minute")
-async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
-    """[ATLATL-ORDNANCE] v8 Algorithmic Guillotine trigger."""
+async def v9_strike(request: Request, api_key: str = Depends(verify_api_key)):
+    """[ATLATL-ORDNANCE] v9 Algorithmic Guillotine trigger."""
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
+    result["version"] = "9.0.0-XOCHIMILCO"
     return result
