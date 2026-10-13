@@ -49,7 +49,7 @@ async def insert_alert(alert_dict):
             return
 
         features = filtered_data.get("features_json")
-        if isinstance(features, list):
+        if isinstance(features, (list, dict)):
             filtered_data["features_json"] = json.dumps(features)
 
         if "ts" not in filtered_data:
@@ -129,7 +129,7 @@ async def insert_alerts(alerts_list):
             continue
 
         features = filtered_data.get("features_json")
-        if isinstance(features, list):
+        if isinstance(features, (list, dict)):
             filtered_data["features_json"] = json.dumps(features)
         if "ts" not in filtered_data:
             filtered_data["ts"] = datetime.now(UTC).isoformat()

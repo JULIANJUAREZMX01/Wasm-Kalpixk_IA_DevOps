@@ -138,9 +138,14 @@
    - Inyección de trampas de memoria caóticas y punteros envenenados en canales de exfiltración detectados.
    - Saturación activa de infraestructura atacante coordinada mediante la malla indetectable de nodos WASM.
 
+4. **Node-10 Decentralized Embedded Defense:**
+   - Implementación de `Node-10: EMBEDDED_NODE_DEFENDER` en Rust (`defense_nodes.rs`) para la detección activa de sondeos y manipulación de firmware en dispositivos embebidos.
+   - Endpoint de sincronización `/api/v1/guerrilla/embedded_node/sync` y orquestación de respuesta inmediata LOCKDOWN en telemetría de red.
+   - Integración táctica en el dashboard SAC_OS (`Dashboard.tsx`) con orquestación v9 Algorithmic Guillotine (`/api/v1/guerrilla/v9/strike`).
+
 **Estado de la Misión:**
 - Adversarial Drift Guard: ARMED & CALIBRATED
-- Node-9 Detector: ENGAGED
-- WASM Core: FULLY PORTABLE
+- Node-9 & Node-10 Detectors: ENGAGED & ACTIVE
+- WASM Core: FULLY PORTABLE & EMBEDDED READY
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
