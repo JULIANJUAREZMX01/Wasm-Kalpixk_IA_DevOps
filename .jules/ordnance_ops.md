@@ -144,3 +144,31 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_GUERRILLA] - Decentralized Embedded Node Defense & Hardware Tamper Shield
+
+**Vector de Ataque Analizado:**
+1. **Physical Probing & Firmware Tampering:** Ataques físicos y extracción de firmware dirigidos a nodos de defensa embebidos descentralizados en arquitecturas ARM64.
+2. **Unauthorized GPIO Exploitation:** Inyección de señales en buses de hardware y conectores GPIO para eludir la inspección de red del host principal.
+3. **Unsynchronized Node Isolation:** Intentos de aislar nodos embebidos periféricos para prevenir el reporte en tiempo real de anomalías a la malla central.
+
+**Defensa Implementada (v10.0.0-EMBEDDED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (Rust Metal Layer):**
+   - Implementación de `detect_embedded_node_defense` en `defense_nodes.rs` para capturar sondeos de firmware, manipulación física de hardware e intrusiones GPIO en tiempo real.
+   - Derivación canónica `Default` en `KalpixkEvent` y `EventType` para sincronización fluida entre la malla embebida y el motor de análisis.
+2. **Python API Telemetry Synchronization:**
+   - Endpoint `/api/v1/guerrilla/embedded_node/sync` y modelo `EmbeddedNodeTelemetry` con validación estricta de hashes de firmware y alerta automática de manipulación física.
+3. **SAC_OS UI Decentralized Node Monitoring:**
+   - Visualización táctica en `Dashboard.tsx` con integración del nodo `NODE-10: Embedded Node Defender (ARM64)` y cobertura de técnicas MITRE T1200.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Inserción automática de firmas de amenaza crítica y aislamiento inmediato de direcciones atacantes en la base de datos distribuida del SIEM.
+   - Activación de tramas de interferencia y trampas de telemetría desde los nodos embebidos comprometidos para cegar al agresor.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ACTIVE
+- Telemetry Sync Endpoint: ENGAGED
+- SAC_OS Tactical Dashboard: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: La guerra no se libra solo en la nube; la malla de defensa habita hasta en el último milímetro de silicio.*

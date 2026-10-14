@@ -335,7 +335,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
-    { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "NODE-10",  desc: "Embedded Node Defender (ARM64)", load: 18, port: 8086, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [
@@ -834,6 +834,7 @@ const MitreTab = React.memo(function MitreTab() {
     { id: "T1136",   name: "Create Account",             tactic: "Persistence",       count: 2,  severity: 0.75 },
     { id: "T1005",   name: "Data from Local System",     tactic: "Collection",        count: 3,  severity: 0.83 },
     { id: "T1071",   name: "App Layer Protocol",         tactic: "C2",                count: 2,  severity: 0.88 },
+    { id: "T1200",   name: "Hardware / Embedded Probe",   tactic: "Initial Access",    count: 5,  severity: 0.95 },
   ];
 
   return (
