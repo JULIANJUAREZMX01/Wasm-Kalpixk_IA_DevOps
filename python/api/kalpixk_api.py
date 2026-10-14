@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -326,7 +326,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -377,7 +377,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -465,7 +465,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -574,3 +574,44 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    arch: str = Field("arm64", max_length=50)
+    firmware_hash: str = Field(..., max_length=128)
+    tamper_flag: bool = False
+    cpu_temp: float = Field(..., ge=-50.0, le=150.0)
+    memory_usage_pct: float = Field(..., ge=0.0, le=100.0)
+    active_traps: int = Field(0, ge=0)
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("10/minute")
+async def sync_embedded_node_telemetry(
+    request: Request,
+    telemetry: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """[ATLATL-ORDNANCE] Node-10 embedded defense telemetry and threat sync."""
+    if telemetry.tamper_flag:
+        alert_data = {
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0,
+            "event_type": "embedded_node_telemetry",
+            "severity": "CRITICAL",
+            "technique": "T1565",
+            "confidence": 1.0,
+            "features_json": json.dumps({"node_id": telemetry.node_id, "firmware_hash": telemetry.firmware_hash}),
+            "source": f"embedded_node:{telemetry.node_id}",
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synchronized",
+        "node_id": telemetry.node_id,
+        "tamper_detected": telemetry.tamper_flag,
+        "active_traps": telemetry.active_traps,
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
