@@ -526,9 +526,11 @@ mod tests {
 
     #[test]
     fn test_detect_embedded_node_defense() {
-        let mut event = KalpixkEvent::default();
-        event.raw = "firmware_tamper detected on arm_gpio".to_string();
-        event.source_type = "embedded_node_telemetry".to_string();
+        let event = KalpixkEvent {
+            raw: "firmware_tamper detected on arm_gpio".to_string(),
+            source_type: "embedded_node_telemetry".to_string(),
+            ..Default::default()
+        };
 
         let res = detect_embedded_node_defense(&event);
         assert_eq!(res.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
