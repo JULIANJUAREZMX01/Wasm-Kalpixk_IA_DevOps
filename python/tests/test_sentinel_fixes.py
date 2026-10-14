@@ -88,3 +88,39 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_insert_alert_dict_features_json(tmp_db):
+    await init_db()
+
+    # Alert payload with dictionary features_json
+    alert_payload = {
+        "anomaly_score": 0.95,
+        "severity": "CRITICAL",
+        "features_json": {"cpu_spike": True, "process": "malware.exe"}
+    }
+
+    await insert_alert(alert_payload)
+
+    alerts, total = await get_alerts(limit=10)
+    assert total == 1
+    assert alerts[0]["features_json"] == {"cpu_spike": True, "process": "malware.exe"}
+
+
+@pytest.mark.asyncio
+async def test_insert_alert_utc_timestamp(tmp_db):
+    await init_db()
+
+    # Alert without explicit ts field
+    alert_payload = {
+        "anomaly_score": 0.75,
+        "severity": "HIGH"
+    }
+
+    await insert_alert(alert_payload)
+
+    alerts, total = await get_alerts(limit=10)
+    assert total == 1
+    ts_str = alerts[0]["ts"]
+    assert "+00:00" in ts_str or ts_str.endswith("Z")
