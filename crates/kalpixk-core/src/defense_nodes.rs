@@ -448,8 +448,7 @@ pub fn detect_embedded_node_defense(event: &KalpixkEvent) -> NodeResult {
         techniques.push("T1200".to_string());
     }
 
-    if event.source_type == "embedded_node_telemetry"
-        || event.metadata.contains_key("tamper_flag")
+    if event.source_type == "embedded_node_telemetry" || event.metadata.contains_key("tamper_flag")
     {
         score = 1.0;
         techniques.push("T1565".to_string());
@@ -460,8 +459,9 @@ pub fn detect_embedded_node_defense(event: &KalpixkEvent) -> NodeResult {
         score,
         level: SeverityScore::new(score).as_level(),
         mitre_techniques: techniques,
-        description: "Detection of probing and tampering attacks against decentralized embedded nodes"
-            .to_string(),
+        description:
+            "Detection of probing and tampering attacks against decentralized embedded nodes"
+                .to_string(),
     }
 }
 
