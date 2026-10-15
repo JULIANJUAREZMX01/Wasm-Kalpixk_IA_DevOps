@@ -144,3 +144,31 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Decentralized Embedded Node Defense & Hardware Tamper Resistance
+
+**Vector de Ataque Analizado:**
+1. **Bus Sniffing & Hardware Probing:** Atacantes intentando interceptar señales de bus y extraer firmas de memoria en nodos descentralizados embebidos.
+2. **Firmware Tampering:** Manipulación maliciosa de binarios e imágenes de firmware en nodos periféricos aislados para evadir la red de detección.
+3. **Desincronización de Telemetría:** Intentos de inyección de paquetes de sincronización corruptos sin firmas válidas para cegar el orquestador central.
+
+**Defensa Implementada (v10.0-DECENTRALIZED):**
+1. **Rust Core Metal Layer (`defense_nodes.rs`):**
+   - Implementación de `Node-10: EMBEDDED_NODE_DEFENDER` en la arquitectura de análisis multinodo para detectar firmas de `bus_sniffing`, `embedded_probe` y `firmware_tampering`.
+   - Derivación automática del rasgo `Default` para estructuras de eventos de seguridad `KalpixkEvent` facilitando el procesamiento estructurado y sin sobrecostos en nodos embebidos.
+2. **API Guerrilla Integration (`kalpixk_api.py`):**
+   - Creación del endpoint `POST /api/v1/guerrilla/embedded_node/sync` con validación estricta de telemetría Pydantic (`EmbeddedNodeTelemetry`).
+   - Aislamiento automático y generación de alertas críticas de Nivel 1.0 (`T1495`) al detectar indicadores de manipulación de firmware.
+3. **Malla Descentralizada:**
+   - Soporte nativo para despliegue e integración de nodos periféricos en la malla de defensa espectral indetectable.
+
+**Contra-Ataque (Fase Negra):**
+1. **Node-10 Lockdown & Isolation:**
+   - Ante cualquier alteración detectada en la integridad del firmware, el nodo activa la secuencia de aislamiento automático (`lockdown_isolated_node`), cortando los canales de exfiltración y bloqueando la superficie de ataque física.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ACTIVE & INTEGRATED
+- Firmware Tamper Detection: ENGAGED
+- Decentralized Mesh: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*

@@ -211,6 +211,15 @@ class LogRequest(BaseModel):
                     raise ValueError("features and metadata must have the same length")
         return self
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str = Field(..., max_length=128)
+    tampered: bool = False
+    threat_count: int = Field(0, ge=0)
+    cpu_temp: float | None = None
+    memory_usage: float | None = None
+
+
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
@@ -574,3 +583,37 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def sync_embedded_node(
+    request: Request,
+    telemetry: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """Synchronizes threat intelligence and firmware tampering flags for Node-10 embedded defense nodes."""
+    if telemetry.tampered:
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0,
+            "event_type": "embedded_node_sync",
+            "severity": "CRITICAL",
+            "technique": "T1495",
+            "source": f"embedded_node:{telemetry.node_id}",
+        }
+        await insert_alert(alert_data)
+        return {
+            "status": "alert_triggered",
+            "node_id": telemetry.node_id,
+            "action": "lockdown_isolated_node",
+            "tampered": True,
+        }
+
+    return {
+        "status": "synchronized",
+        "node_id": telemetry.node_id,
+        "tampered": False,
+        "active_mesh": True,
+    }
