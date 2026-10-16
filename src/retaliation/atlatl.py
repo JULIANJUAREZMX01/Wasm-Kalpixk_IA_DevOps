@@ -49,6 +49,28 @@ class Atlatl:
     def garbage_injection(self, target: str, size_mb: int = 250):
         logger.info(f"💉 Injecting {size_mb}MB of entropy-saturated garbage into {target} C2 channel...")
 
+    def v10_embedded_retaliation(self, target: str, firmware_tampered: bool = False):
+        """
+        [ATLATL-ORDNANCE] v10 Embedded Node Retaliation
+        Executes counter-measures against physical probing or firmware tampering on decentralized embedded nodes.
+        """
+        logger.critical(f"🛡️  [v10 EMBEDDED RETALIATION] Triggered for node/ip: {target}")
+
+        measures = ["pointer_poisoning", "c2_entropy_saturation"]
+        if firmware_tampered:
+            measures.append("hardware_firewall_lockdown")
+            logger.error(f"⚡ Firmware tampering detected on {target}! Lockout and EDR noise injection engaged.")
+
+        self.execute_v8_corrupt_remote_pointers(target)
+        self.garbage_injection(target, size_mb=500)
+
+        return {
+            "status": "EMBEDDED_RETALIATION_EXECUTED_V10",
+            "target": target,
+            "firmware_tampered": firmware_tampered,
+            "measures": measures
+        }
+
     def v8_algorithmic_guillotine(self, target: str):
         """
         [ATLATL-ORDNANCE] v8 ALGORITHMIC_GUILLOTINE

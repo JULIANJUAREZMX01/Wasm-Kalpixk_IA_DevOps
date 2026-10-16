@@ -182,6 +182,54 @@ async def test_mismatched_counts_rejected():
     assert r.status_code in (400, 422)
 
 
+# ── Embedded Node Sync Endpoint ───────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_embedded_node_sync_success():
+    payload = {
+        "node_id": "NODE-10-EMBEDDED-01",
+        "firmware_hash": "a1b2c3d4e5f67890",
+        "hardware_status": "OK",
+        "bus_probing_detected": False,
+        "firmware_tampered": False,
+        "telemetry": {"temp_c": 38.5, "voltage_v": 3.3},
+    }
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret"},
+        transport=httpx.ASGITransport(app=app),
+        base_url=BASE,
+    ) as c:
+        r = await c.post("/api/v1/guerrilla/embedded_node/sync", json=payload)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "SYNC_SUCCESS"
+    assert data["node_id"] == "NODE-10-EMBEDDED-01"
+
+
+@pytest.mark.asyncio
+async def test_embedded_node_sync_tampering():
+    payload = {
+        "node_id": "NODE-10-EMBEDDED-02",
+        "firmware_hash": "invalid_hash_corrupted",
+        "hardware_status": "TAMPER_ALERT",
+        "bus_probing_detected": True,
+        "firmware_tampered": True,
+        "telemetry": {},
+    }
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret"},
+        transport=httpx.ASGITransport(app=app),
+        base_url=BASE,
+    ) as c:
+        r = await c.post("/api/v1/guerrilla/embedded_node/sync", json=payload)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "TAMPERING_DETECTED"
+    assert data["lockdown"] is True
+    assert "retaliation" in data
+
+
 # ── Metrics endpoint ──────────────────────────────────────────────────────────
 
 

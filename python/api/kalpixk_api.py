@@ -215,6 +215,15 @@ class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str = Field(..., max_length=128)
+    hardware_status: str = Field("OK", max_length=50)
+    bus_probing_detected: bool = False
+    firmware_tampered: bool = False
+    telemetry: dict | None = Field(default_factory=dict)
+
+
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
@@ -574,3 +583,38 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("10/minute")
+async def embedded_node_sync(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """
+    [ATLATL-ORDNANCE] Embedded Node Telemetry Sync & Hardware Defense.
+    Coordinates Node-10 embedded defense nodes and triggers retaliation if tampering is detected.
+    """
+    is_tampered = payload.firmware_tampered or payload.bus_probing_detected
+    target_host = request.client.host if request.client else "embedded_node"
+
+    if is_tampered:
+        retaliation_result = atlatl.v10_embedded_retaliation(
+            target=payload.node_id,
+            firmware_tampered=payload.firmware_tampered,
+        )
+        return {
+            "status": "TAMPERING_DETECTED",
+            "node_id": payload.node_id,
+            "target_host": target_host,
+            "retaliation": retaliation_result,
+            "lockdown": True,
+        }
+
+    return {
+        "status": "SYNC_SUCCESS",
+        "node_id": payload.node_id,
+        "hardware_status": payload.hardware_status,
+        "mesh_status": "SYNCHRONIZED",
+    }

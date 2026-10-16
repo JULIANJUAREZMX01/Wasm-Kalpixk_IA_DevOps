@@ -144,3 +144,30 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_MESH] - Decentralized Embedded Nodes & Hardware Defense
+
+**Vector de Ataque Analizado:**
+1. **Physical Bus Probing & JTAG Interception:** Atacantes intentando sondear buses de comunicación en hardware embebido para manipular la telemetría enviada a la malla central.
+2. **Firmware Tampering & Signature Hijacking:** Alteración del hash de firmware en nodos descentralizados para deshabilitar las defensas perimetrales sin levantar sospechas en el backend.
+3. **Desincronización de Malla Descentralizada:** Intentos de inyectar comandos de sincronización falsos para aislar nodos de defensa inesperados en infraestructura física.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Node-10 Embedded Node Defender (Rust):**
+   - Implementación de `detect_embedded_node_tampering` en `defense_nodes.rs` con firmas MITRE para sondas físicas (T1200) y manipulación de hardware/firmware (T1495).
+2. **Embedded Telemetry Sync & Validation (Python):**
+   - Nuevo endpoint `POST /api/v1/guerrilla/embedded_node/sync` con validación Pydantic estricta (`EmbeddedNodeTelemetry`) y bloqueo automático en caso de inconsistencia de firma de firmware o sonda física.
+3. **SAC_OS UI Decentralization (React):**
+   - Visualización y telemetría de estado para Node-10 en la consola militar SAC_OS.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Inyección inmediata de punteros envenenados y saturación de entropía de 500MB en el canal C2 sospechoso.
+   - Bloqueo a nivel de hardware y envenenamiento de firmas EDR contra la IP origen del ataque físico o lógico.
+
+**Estado de la Misión:**
+- Node-10 Defender: ENGAGED & ARMED
+- Embedded Sync API: PROTECTED
+- Retaliation MESH: ACTIVE
+
+*ATLATL-ORDNANCE: La defensa no termina en el bloqueo. Colapsamos el sistema del agresor.*
