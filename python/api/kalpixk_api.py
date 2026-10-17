@@ -9,6 +9,7 @@ Endpoints:
 """
 
 import json
+import math
 import os
 import secrets
 import signal as _signal
@@ -16,7 +17,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -31,7 +32,10 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi import status as fastapi_status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field, field_validator, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -69,6 +73,27 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Sanitize non-finite float values in error details to avoid 500 crashes during JSON serialization."""
+    def sanitize_non_finite(obj):
+        if isinstance(obj, float):
+            if not math.isfinite(obj):
+                return None
+            return obj
+        elif isinstance(obj, dict):
+            return {k: sanitize_non_finite(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [sanitize_non_finite(x) for x in obj]
+        return obj
+
+    sanitized_errors = sanitize_non_finite(exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder({"detail": sanitized_errors}),
+    )
 
 # -- Security & Rate Limiting --
 API_KEY_NAME = "X-Kalpixk-Key"
@@ -184,6 +209,17 @@ class LogRequest(BaseModel):
     def validate_features(cls, v):
         if not v:
             return v
+
+        def check_finite(val):
+            if isinstance(val, (int, float)):
+                if not math.isfinite(val):
+                    raise ValueError("Feature values must be finite numbers (NaN and Infinity are not allowed)")
+            elif isinstance(val, list):
+                for item in val:
+                    check_finite(item)
+
+        check_finite(v)
+
         # Pydantic may have already converted to floats, but let's check structure
         first = v[0]
         if isinstance(first, (int, float)):
@@ -326,7 +362,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -377,7 +413,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -465,7 +501,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -529,6 +565,12 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
     sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
     sim_script = os.path.abspath(sim_script)
     backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+
+    if not os.path.isfile(sim_script):
+        raise HTTPException(status_code=fastapi_status.HTTP_404_NOT_FOUND, detail="Simulator script not found")
+
+    if not backend_url.startswith(("http://", "https://")) or any(c in backend_url for c in " \t\r\n;;&|"):
+        raise HTTPException(status_code=fastapi_status.HTTP_400_BAD_REQUEST, detail="Invalid backend URL format")
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],

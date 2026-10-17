@@ -88,3 +88,45 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+def test_non_finite_features_rejected(tmp_db):
+    from fastapi.testclient import TestClient
+
+    from python.api.kalpixk_api import app
+
+    client = TestClient(app)
+
+    # Test raw Infinity payload
+    inf_payload = '{"features": [' + ",".join(["Infinity"] + ["0.3"] * 31) + "]}"
+    response = client.post(
+        "/analyze",
+        content=inf_payload,
+        headers={"X-Kalpixk-Key": "development_secret", "Content-Type": "application/json"},
+    )
+    assert response.status_code == 422
+
+    # Test raw NaN payload
+    nan_payload = '{"features": [' + ",".join(["NaN"] + ["0.3"] * 31) + "]}"
+    response = client.post(
+        "/analyze",
+        content=nan_payload,
+        headers={"X-Kalpixk-Key": "development_secret", "Content-Type": "application/json"},
+    )
+    assert response.status_code == 422
+
+
+def test_simulate_start_input_validation(monkeypatch, tmp_db):
+    from fastapi.testclient import TestClient
+
+    from python.api.kalpixk_api import app
+
+    client = TestClient(app)
+
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "ftp://invalid-scheme.com")
+    response = client.post(
+        "/api/simulate/start",
+        headers={"X-Kalpixk-Key": "development_secret"},
+    )
+    assert response.status_code == 400
+    assert "Invalid backend URL format" in response.json()["detail"]
