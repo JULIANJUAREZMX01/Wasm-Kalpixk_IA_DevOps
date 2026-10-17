@@ -33,3 +33,15 @@ def test_security_headers():
     assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert "object-src 'none'" in response.headers["Content-Security-Policy"]
+
+def test_health_version():
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["version"] == "9.0.0-XOCHIMILCO"
+
+def test_simulate_start_invalid_backend_url(monkeypatch):
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "ftp://invalid-scheme.com")
+    response = client.post("/api/simulate/start")
+    assert response.status_code == 400
+    assert "Invalid backend URL" in response.json()["detail"]

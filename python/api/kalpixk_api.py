@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -231,9 +231,9 @@ async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -326,7 +326,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -377,7 +377,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -465,7 +465,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -528,7 +528,12 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
 
     sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
     sim_script = os.path.abspath(sim_script)
+    if not os.path.isfile(sim_script):
+        raise HTTPException(status_code=400, detail="Simulator script not found")
+
     backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+    if not backend_url.startswith(("http://", "https://")) or any(c in backend_url for c in " \t\r\n"):
+        raise HTTPException(status_code=400, detail="Invalid backend URL")
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],
