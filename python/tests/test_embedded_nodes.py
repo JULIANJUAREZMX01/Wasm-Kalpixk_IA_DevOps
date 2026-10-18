@@ -1,5 +1,6 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
+
 from python.api.kalpixk_api import app
 
 HEADERS = {"X-Kalpixk-Key": "development_secret"}

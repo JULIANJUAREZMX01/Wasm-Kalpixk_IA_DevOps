@@ -482,41 +482,6 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     ]
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_node_10_embedded_defender_detects_tamper() {
-        let mut metadata = HashMap::new();
-        metadata.insert("dst_port".to_string(), serde_json::json!(8080));
-        let event = KalpixkEvent {
-            raw: "CRITICAL: firmware_tamper attempt detected on embedded node ARM64".to_string(),
-            source: "192.168.1.100".to_string(),
-            source_type: "embedded_node".to_string(),
-            metadata,
-            ..Default::default()
-        };
-
-        let result = detect_embedded_node_defender(&event);
-        assert!(result.score >= 0.95);
-        assert_eq!(result.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
-    }
-
-    #[test]
-    fn test_node_10_unauthorized_sync() {
-        let event = KalpixkEvent {
-            raw: "embedded node sync payload".to_string(),
-            source: "10.0.0.5".to_string(),
-            source_type: "embedded_sync".to_string(),
-            ..Default::default()
-        };
-
-        let result = detect_embedded_node_defender(&event);
-        assert_eq!(result.score, 1.0);
-    }
-}
-
 pub fn get_max_severity(event: &KalpixkEvent) -> NodeResult {
     let results = analyze_all_nodes(event);
     // Prefer earlier nodes in case of score ties to satisfy legacy tests
@@ -550,5 +515,40 @@ pub fn sync_threats(external_threats: Vec<String>) {
         for threat in external_threats {
             registry.insert(threat);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_node_10_embedded_defender_detects_tamper() {
+        let mut metadata = HashMap::new();
+        metadata.insert("dst_port".to_string(), serde_json::json!(8080));
+        let event = KalpixkEvent {
+            raw: "CRITICAL: firmware_tamper attempt detected on embedded node ARM64".to_string(),
+            source: "192.168.1.100".to_string(),
+            source_type: "embedded_node".to_string(),
+            metadata,
+            ..Default::default()
+        };
+
+        let result = detect_embedded_node_defender(&event);
+        assert!(result.score >= 0.95);
+        assert_eq!(result.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+    }
+
+    #[test]
+    fn test_node_10_unauthorized_sync() {
+        let event = KalpixkEvent {
+            raw: "embedded node sync payload".to_string(),
+            source: "10.0.0.5".to_string(),
+            source_type: "embedded_sync".to_string(),
+            ..Default::default()
+        };
+
+        let result = detect_embedded_node_defender(&event);
+        assert_eq!(result.score, 1.0);
     }
 }
