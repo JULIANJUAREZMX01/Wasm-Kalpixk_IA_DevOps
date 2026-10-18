@@ -144,3 +144,32 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_SAC_OS] - Decentralized Embedded Defense Nodes & SAC_OS Tactical Visuals
+
+**Vector de Ataque Analizado:**
+1. **Ataques a Nodos Embebidos Descentralizados:** Intentos de alteración física de firmware, manipulación de GPIO o elusión de U-Boot en nodos periféricos para envenenar la telemetría enviada al orquestador.
+2. **Sincronización No Autorizada de Telemetría:** Intentos de suplantar nodos de defensa periféricos enviando payloads de sincronización sin credenciales válidas para corromper la base de alertas.
+3. **Ofuscación Táctica de Interfaz:** Intentos de evadir la visibilidad centralizada en el Dashboard de Comando mediante variaciones de payload no categorizadas.
+
+**Defensa Implementada (v10.0.0-EMBEDDED):**
+1. **Node-10 Embedded Node Defender (Rust):**
+   - Implementación de `detect_embedded_node_defender` en `defense_nodes.rs` para identificar manipulación de firmware, sondeo de hardware y sincronizaciones no autorizadas de telemetría.
+   - Detección automática en `analyze_all_nodes`.
+2. **Embedded Node Telemetry Sync API (Python FastAPI):**
+   - Endpoint `POST /api/v1/guerrilla/embedded_node/sync` con validación estricta via `EmbeddedNodeTelemetry` en `kalpixk_api.py`.
+   - Generación de alertas críticas automáticas con registro forense ISO8601 UTC en caso de alertas de manipulación física o hash de firmware corrupto.
+3. **SAC_OS Tactical Dashboard HUD (React/TypeScript):**
+   - Integración de indicadores HUD para nodos embebidos descentralizados en `Dashboard.tsx`, mostrando estado de firmware, sincronización de malla y estadísticas de defensa en tiempo real.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_DECENTRALIZED_DEFENSE_RETALIATION:**
+   - Aislamiento automático de nodos periféricos comprometidos con reporte instantáneo de firma T1200 al registro global de amenazas.
+   - Respuesta coordinada mediante el envenenamiento de los canales de exfiltración detectados desde los nodos embebidos.
+
+**Estado de la Misión:**
+- Node-10 Defender: ARMED & ENGAGED
+- Embedded Sync Endpoint: ACTIVE
+- SAC_OS Tactical UI: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: La defensa no termina en el bloqueo. Colapsamos el sistema de quien ose tocar la infraestructura.*

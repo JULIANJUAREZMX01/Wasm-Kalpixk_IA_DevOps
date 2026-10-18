@@ -336,6 +336,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
     { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "NODE-10",  desc: "Embedded Node Defender", load: 18, port: 8087, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [
@@ -376,6 +377,24 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
               </div>
             </div>
           ))}
+        </div>
+
+        <div>
+          <Label text="EMBEDDED DEFENSE NODES (NODE-10)" accent={T.blue} />
+          <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "8px 10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ color: T.dim, fontSize: 9 }}>ACTIVE EMBEDDED NODES</span>
+              <span style={{ color: T.green, fontSize: 9, fontWeight: 700 }}>4 / 4 ONLINE</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ color: T.dim, fontSize: 9 }}>FIRMWARE INTEGRITY</span>
+              <span style={{ color: T.blue, fontSize: 9, fontWeight: 700 }}>VERIFIED</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: T.dim, fontSize: 9 }}>DECENTRALIZED MESH</span>
+              <span style={{ color: T.green, fontSize: 9, fontWeight: 700 }}>SYNCHRONIZED</span>
+            </div>
+          </div>
         </div>
 
         <div>
