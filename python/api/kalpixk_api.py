@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -210,6 +210,14 @@ class LogRequest(BaseModel):
                 if len(self.metadata) != expected:
                     raise ValueError("features and metadata must have the same length")
         return self
+
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str = Field(..., max_length=128)
+    hardware_status: str = Field("OK", max_length=50)
+    tamper_detected: bool = False
+    threat_events: list[dict] = Field(default_factory=list, max_length=100)
+    embedded_key: str | None = Field(None, max_length=200)
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -574,3 +582,37 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def embedded_node_sync(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key)
+):
+    """Synchronizes telemetry and validates firmware integrity for decentralized embedded defense nodes."""
+    ens = ensure_ensemble()
+
+    tamper_alert = payload.tamper_detected or ("tamper" in payload.hardware_status.lower())
+    sync_status = "CRITICAL_TAMPER" if tamper_alert else "SYNCHRONIZED"
+
+    if tamper_alert:
+        await insert_alert({
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0,
+            "event_type": "embedded_sync",
+            "severity": "CRITICAL",
+            "technique": "T1200",
+            "confidence": 1.0,
+            "features_json": json.dumps({"node_id": payload.node_id, "firmware_hash": payload.firmware_hash}),
+            "source": f"embedded_node:{payload.node_id}"
+        })
+
+    return {
+        "status": sync_status,
+        "node_id": payload.node_id,
+        "firmware_valid": not tamper_alert,
+        "active_threshold": ens.drift_guard.to_dict()["current_threshold"],
+        "timestamp": datetime.now(UTC).isoformat()
+    }
