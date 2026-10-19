@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 //! Defense Nodes — MITRE ATT&CK Detection for Kalpixk
 //!
-//! 8 nodes for detecting Red Team techniques:
+//! 10 nodes for detecting Red Team techniques:
 //! - Node-1 to Node-6: MITRE Heuristics
 //! - Node-7: MESH_INTEGRITY (v4.0-ATLATL)
 //! - Node-8: GUERRILLA (v8.0.0-GUERRILLA)
+//! - Node-9: XOCHIMILCO_ADVERSARIAL_DETECTOR
+//! - Node-10: EMBEDDED_NODE_DEFENDER
 //!
-//! [ATLATL-ORDNANCE] Version 8.0: Guerrilla Mesh Coordination
+//! [ATLATL-ORDNANCE] Version 9.0: Embedded Node Protection & Guerrilla Mesh
 
 use crate::event::KalpixkEvent;
 use serde::{Deserialize, Serialize};
@@ -434,6 +436,35 @@ pub fn detect_xochimilco_adversarial(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_embedded_node_defender(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = event.raw.to_lowercase();
+
+    if raw.contains("embedded_tamper")
+        || raw.contains("bus_probing")
+        || raw.contains("firmware_dump")
+        || raw.contains("side_channel")
+    {
+        score += 0.95;
+        techniques.push("T1200".to_string());
+    }
+
+    if event.source_type == "embedded_node_probe" {
+        score = 1.0;
+        techniques.push("T1497".to_string());
+    }
+
+    NodeResult {
+        node: "NODE-10: EMBEDDED_NODE_DEFENDER".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Protection and threat detection for decentralized embedded defense nodes"
+            .to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -449,6 +480,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
         detect_xochimilco_adversarial(event),
+        detect_embedded_node_defender(event),
     ]
 }
 
