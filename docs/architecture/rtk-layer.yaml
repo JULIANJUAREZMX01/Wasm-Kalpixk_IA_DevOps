@@ -1,0 +1,48 @@
+version: 1
+name: kalpixk-rtk-llm-context-layer
+status: prototype
+source:
+  repository: rtk-ai/rtk
+  branch: develop
+  observed_version: 0.42.4
+  license: Apache-2.0
+responsibility:
+  include:
+    - shell_output_compression
+    - context_noise_reduction
+    - command_output_normalization
+  exclude:
+    - llm_inference
+    - model_routing
+    - model_memory
+    - wasm_inference
+    - security_decision_authority
+    - forensic_evidence_authority
+pipeline:
+  - agent_request
+  - policy_gate
+  - raw_command_execution
+  - raw_evidence_capture
+  - optional_rtk_compaction
+  - context_projection
+  - llm_agent
+contracts:
+  raw_output_preserved: true
+  fail_open: true
+  structured_security_output_bypass: true
+  lossy_output_is_non_authoritative: true
+  force_merge: false
+  destructive_resolution: false
+compatibility:
+  integration_mode: subprocess_adapter
+  vendor_rtk: false
+  cargo_workspace_member: false
+  reason: upstream_develop_declares_rust_1_91
+verification:
+  required:
+    - rtk_version_check
+    - golden_output_tests
+    - semantic_preservation_tests
+    - failure_fallback_test
+    - latency_benchmark
+    - context_size_benchmark
