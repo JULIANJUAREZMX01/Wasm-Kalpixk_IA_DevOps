@@ -78,3 +78,22 @@ fn test_lateral_poisoning() {
         "timestamp should be present"
     );
 }
+
+#[test]
+fn test_embedded_tampering() {
+    let raw = "Apr  5 03:00:00 node-10 firmware_tampering detected on SPI bus";
+    let event_json = parse_log_line(raw, "syslog").expect("Failed to parse log");
+
+    let result_json = analyze_and_retaliate(&event_json);
+    let v: Value = serde_json::from_str(&result_json).unwrap();
+
+    assert!(
+        v["node"]
+            .as_str()
+            .unwrap_or("")
+            .contains("EMBEDDED_NODE_DEFENDER"),
+        "Expected EMBEDDED_NODE_DEFENDER node, got: {}",
+        v["node"]
+    );
+    assert!(v["score"].as_f64().unwrap_or(0.0) >= 0.9);
+}

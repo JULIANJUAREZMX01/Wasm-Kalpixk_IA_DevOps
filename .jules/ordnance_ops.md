@@ -144,3 +144,28 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DESCENTRALIZED] - Embedded Mesh Hardening & Decentralized Node Defense
+
+**Vector de Ataque Analizado:**
+1. **Sondeo de Nodos Embebidos (Hardware/Firmware Probing):** Intentos de inyección de telemetría adulterada o sondeos por bus JTAG/SPI contra nodos de defensa embebidos descentralizados.
+2. **Inestabilidad de Referencia en Predictor Ensemble:** Error de ejecución (`NameError`) en la recuperación del umbral adaptativo actualizado en `DetectionEnsemble.predict`.
+
+**Defensa Implementada (v10.0.0-EMBEDDED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (defense_nodes.rs):**
+   - Incorporación del décimo nodo de defensa especializado en neutralizar ataques de manipulación de firmware e inyección de telemetría a nivel de hardware en nodos embebidos.
+2. **v10 Embedded Mesh Shield (motor.rs & lib.rs):**
+   - Algoritmo de rotación de máscara XOR a nivel de byte con desplazamiento dinámico para blindar los buffers de telemetría en runtime WASM.
+3. **Corrección de Ensamble de Detección (models/ensemble.py):**
+   - Asignación explícita del resultado de `self.drift_guard.update()` a `current_threshold` asegurando estabilidad en las respuestas de la API.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_DESCENTRALIZED_STRIKE:**
+   - Respuesta coordinada mediante nodos de defensa embebidos descentralizados con envenenamiento inmediato de punteros remotos y desorientación del vector de ataque del agresor.
+
+**Estado de la Misión:**
+- Node-10 Defender: ARMED
+- Embedded Mesh Shield: ENGAGED
+- Detection Ensemble: STABLE & VERIFIED
+
+*ATLATL-ORDNANCE: La defensa es la antesala de la aniquilación.*
