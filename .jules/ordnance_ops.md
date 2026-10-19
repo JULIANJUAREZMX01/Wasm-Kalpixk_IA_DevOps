@@ -144,3 +144,29 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_MESH] - Decentralized Embedded Defense Nodes & Alpha Stack Hardening
+
+**Vector de Ataque Analizado:**
+1. **Embedded Hardware Probing & Side-Channel Analysis:** Intencionales intentos de sondeo, depuración JTAG y análisis de canal lateral sobre nodos de defensa en sistemas embebidos (terminales portátiles MC9300, gateways de borde ARM64 / RISC-V).
+2. **Ensemble Threshold Disconnection:** Error de ámbito/variable no definida (`current_threshold`) en la orquestación del ensamble de detección que impedía el retorno correcto del umbral adaptativo.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Node-10 EMBEDDED_NODE_DEFENDER (Rust Metal Layer):**
+   - Implementación de `detect_embedded_node_tampering` en `defense_nodes.rs` para capturar probing de firmware, sondeos JTAG y análisis de canal lateral en telemetría embebida.
+   - Integración completa en el pipeline `analyze_all_nodes` de Rust.
+2. **Ensemble Pipeline Repair (Python):**
+   - Corrección de la asignación `current_threshold` en `python/models/ensemble.py`, garantizando un retorno continuo y preciso del umbral adaptativo.
+3. **SAC_OS Embedded Mesh Dashboard (React):**
+   - Nueva vista táctica "📡 Embedded Mesh" con tokens visuales SAC_OS para el monitoreo en tiempo real de nodos de defensa descentralizados (Handhelds MC9300, Jetson Orin ARM64, RISC-V) en CEDIS Cancún 427.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - La detección de sondeos de hardware activa el aislamiento automático del firewall perimetral y la inyección de punteros venenosos para frustrar intentos de volcado de memoria.
+
+**Estado de la Misión:**
+- Node-10 Defender: ARMED & ACTIVE
+- Ensemble Pipeline: VERIFIED (34 tests pass)
+- SAC_OS Embedded Mesh UI: INTEGRATED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
