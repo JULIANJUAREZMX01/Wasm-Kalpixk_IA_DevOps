@@ -43,5 +43,5 @@ class DetectionEnsemble:
             ensemble_scores.tolist(),
             methods,
             confidences,
-            current_threshold,
+            self.drift_guard.current_threshold,
         )
