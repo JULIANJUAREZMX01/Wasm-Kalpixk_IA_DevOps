@@ -144,3 +144,31 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_NODES] - Decentralized Embedded Node Hardening & Tactical Edge Defense
+
+**Vector de Ataque Analizado:**
+1. **Embedded Edge Probing & Tampering:** Intento de desestabilización o suplantación de identidad en terminales portátiles/handhelds de almacén (e.g., Zebra MC9300) y nodos embebidos periféricos.
+2. **Rogue Node Mesh Synchronization:** Inyección de paquetes de sincronización de malla falsificados para corrompir el mapa de nodos activos y desviar firmas de amenazas.
+3. **Firmware Integrity Override:** Manipulación de binarios en borde (edge binaries) para intentar evadir los detectores de la capa Alpha Stack.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (Rust):**
+   - Incorporación de la función `detect_embedded_node_defender` en `defense_nodes.rs` para capturar sondeos de firmware, suplantaciones de dispositivos de mano y manipulaciones de nodo periférico.
+   - Integración nativa dentro del pipeline global de `analyze_all_nodes`.
+2. **SAC_OS Embedded Tactical Telemetry (Dashboard UI):**
+   - Actualización del monitor KynicOS Nodes en `Dashboard.tsx` para incorporar el nodo de defensa periférico `NODE-10_EDGE` y la matriz de cobertura MITRE ATT&CK (T1200 / T1496).
+3. **Rust Core Robustness:**
+   - Implementación de `Default` para `KalpixkEvent` facilitando instanciaciones seguras y tipadas en micro-controladores y sandboxes WASM en borde.
+
+**Contra-Ataque (Fase Negra):**
+1. **Decentralized Edge Isolation & Retaliation:**
+   - Inserción automática de firmas de amenaza para dispositivos periféricos en el `GLOBAL_THREAT_REGISTRY`.
+   - Aislamiento inmediato de tráfico malicioso en el canal de borde con inyección de trampas de memoria para neutralizar cualquier intento de persistencia local.
+
+**Estado de la Misión:**
+- Node-10 Defender: ENGAGED & ACTIVE
+- Tactical Edge Mesh: SYNCHRONIZED
+- SAC_OS Embedded Telemetry: ONLINE
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*

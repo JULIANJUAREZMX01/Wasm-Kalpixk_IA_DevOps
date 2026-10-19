@@ -330,12 +330,13 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
   const metrics = useMetricsStore();
 
   const NODES = [
-    { id: "NEXUS",    desc: "ETL · Shadow Index", load: 34, port: 8081, status: "ACTIVE" },
-    { id: "SENTINEL", desc: "Audit · Defense",    load: metrics.gpuLoadPct, port: 8082, status: "ACTIVE" },
-    { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
-    { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
-    { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
-    { id: "VANGUARD", desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "NEXUS",       desc: "ETL · Shadow Index", load: 34, port: 8081, status: "ACTIVE" },
+    { id: "SENTINEL",    desc: "Audit · Defense",    load: metrics.gpuLoadPct, port: 8082, status: "ACTIVE" },
+    { id: "FORGE",       desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
+    { id: "CHRONOS",     desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
+    { id: "UPLINK",      desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
+    { id: "VANGUARD",    desc: "Handhelds MC9300",   load: 0,  port: 8086, status: "MAINT"  },
+    { id: "NODE-10_EDGE", desc: "Embedded Node Defender", load: 18, port: 8087, status: "ACTIVE" },
   ];
 
   const HONEYPOTS = [
@@ -830,8 +831,8 @@ const MitreTab = React.memo(function MitreTab() {
     { id: "T1133",   name: "External Remote Services",   tactic: "Initial Access",    count: 6,  severity: 0.78 },
     { id: "T1070",   name: "Indicator Removal",          tactic: "Defense Evasion",   count: 2,  severity: 0.82 },
     { id: "T1021",   name: "Remote Services",            tactic: "Lateral Movement",  count: 4,  severity: 0.88 },
-    { id: "T1053",   name: "Scheduled Task/Job",         tactic: "Persistence",       count: 1,  severity: 0.79 },
-    { id: "T1136",   name: "Create Account",             tactic: "Persistence",       count: 2,  severity: 0.75 },
+    { id: "T1200",   name: "Hardware Probing/Tamper",    tactic: "Initial Access",    count: 7,  severity: 0.95 },
+    { id: "T1496",   name: "Rogue Embedded Node Sync",   tactic: "Impact",            count: 3,  severity: 0.98 },
     { id: "T1005",   name: "Data from Local System",     tactic: "Collection",        count: 3,  severity: 0.83 },
     { id: "T1071",   name: "App Layer Protocol",         tactic: "C2",                count: 2,  severity: 0.88 },
   ];
