@@ -144,3 +144,27 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Decentralized Embedded Node Hardening & Ensemble Fix
+
+**Vector de Ataque Analizado:**
+1. **Uncaught Anomaly Score Variable Execution:** A NameError in the ensemble score pipeline caused threshold lookups to fail when updating model drift state.
+2. **Embedded Defense Tampering:** Physical and network probing against decentralized edge nodes operating in embedded ARM/RISC-V environments attempting side-channel analysis and firmware tampering.
+
+**Defensa Implementada (v10.0-ORDNANCE):**
+1. **Ensemble Pipeline Repair:**
+   - Corrected `current_threshold` variable assignment in `python/models/ensemble.py` when invoking `AdversarialDriftGuard.update()`.
+2. **Node-10 Embedded Node Defender (crates/kalpixk-core/src/defense_nodes.rs):**
+   - Implemented `NODE-10: EMBEDDED_NODE_DEFENDER` for detecting side-channel attacks, JTAG intrusion, firmware probes, and physical hardware tampering against decentralized embedded defense nodes.
+   - Integrated Node-10 into `analyze_all_nodes` and added unit test coverage in Rust.
+
+**Contra-Ataque (Fase Negra):**
+1. **DECENTRALIZED_EMBEDDED_RETALIATION:**
+   - Immediate blacklisting and spectral mesh isolation of probing sources targeting embedded defense nodes across the ATLATL-ORDNANCE mesh network.
+
+**Estado de la Misión:**
+- Ensemble Drift Guard: REPAIRED & VERIFIED
+- Node-10 Embedded Defender: ARMED & ENGAGED
+- Test Suite: 100% PASSING
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
