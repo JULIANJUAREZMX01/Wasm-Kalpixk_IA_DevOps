@@ -5,7 +5,7 @@
     "Julián Juárez <julianjuarezmx01@gmail.com>"
   ],
   "description": "WASM-native log parser and feature extractor for Blue Team SIEM",
-  "version": "0.1.0",
+  "version": "8.0.0",
   "license": "MIT",
   "files": [
     "kalpixk_core_bg.wasm",
