@@ -29,3 +29,7 @@
 ## 2026-08-14 - [React useMemo Optimization for Array Derivations]
 **Learning:** Found unnecessary recalculations of derived states (`strikes` and `targetedAlerts`) during re-renders in `WarRoomTab` inside `Dashboard.tsx`. These recalcs were triggered on every render cycle.
 **Action:** Always wrap derived state calculations that iterate over large arrays in `useMemo` hooks using the original arrays (e.g. `terminalOutput`, `alerts`) as the dependency array. This prevents performance degradation when the component re-renders.
+
+## 2024-05-18 - [Fix React Re-renders in Dashboard]
+**Learning:** High-frequency `setInterval` updates in the main Dashboard component (for clock and scanline effects) were causing the entire dashboard (including graphs, alerts, and multiple tabs) to re-render every 70ms and 1000ms.
+**Action:** Extract the clock and scanline state into separate `React.memo` components (`ClockDisplay` and `CRTScanline`) so their internal interval updates do not cascade top-down through the whole 700+ line component tree.
