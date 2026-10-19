@@ -144,3 +144,29 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Decentralized Embedded Node Hardening & SAC_OS Defense Matrix
+
+**Vector de Ataque Analizado:**
+1. **Physical & Firmware Probing on Edge Nodes:** Inyección de fallos por bus snooping, firmware probing, o GPIO/side-channel manipulation en nodos descentralizados de defensa desplegados en hardware embebido.
+2. **Model State Unbound Threshold Resolution:** Discrepancia en la actualización y retorno del umbral adaptativo en el ensamble de inferencia que podría generar lecturas inconsistentes de alerta.
+
+**Defensa Implementada (v10.0-XOCHIMILCO):**
+1. **Node-10: EMBEDDED_NODE_DEFENDER (Rust/WASM):**
+   - Implementación de `detect_embedded_node_defender` en `defense_nodes.rs` para capturar firmas de ataques contra hardware embebido (`embedded_node_tamper`, `firmware_probe`, `gpio_injection`, `side_channel`, `bus_snooping`).
+   - Integración completa en el pipeline multitienda de análisis de eventos (`analyze_all_nodes`).
+2. **Detection Ensemble Threshold Alignment (Python):**
+   - Corrección de la resolución de umbral adaptativo en `DetectionEnsemble.predict` asegurando la captura exacta de `current_threshold` desde `AdversarialDriftGuard`.
+3. **SAC_OS Military UI Integration (Web Dashboard):**
+   - Incorporación de `NODE-10: Embedded Node Defender` dentro de la cuadrícula de monitoreo táctico SAC_OS del Live Command Center.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_TRAP_RETALIATION:**
+   - Trampas de memoria con auto-rotación XOR y aislamiento inmediato de bus ante detección de manipulación física o tampering en nodos edge.
+
+**Estado de la Misión:**
+- Node-10 Defender: ARMED & ACTIVE
+- Ensemble Threshold: SYNCHRONIZED
+- SAC_OS Command UI: DEPLOYED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
