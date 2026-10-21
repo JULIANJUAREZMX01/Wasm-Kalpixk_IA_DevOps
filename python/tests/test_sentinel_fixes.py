@@ -88,3 +88,37 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_simulate_start_backend_url_validation(monkeypatch):
+    from httpx import ASGITransport, AsyncClient
+
+    from python.api.kalpixk_api import app
+
+    monkeypatch.setenv("KALPIXK_BACKEND_URL", "gopher://malicious-host:1234")
+
+    headers = {"X-Kalpixk-Key": "development_secret"}
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post("/api/simulate/start", headers=headers)
+        assert res.status_code == 400
+        assert "Invalid KALPIXK_BACKEND_URL scheme" in res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_insert_alert_timestamp_utc_isoformat(tmp_db):
+    await init_db()
+
+    alert_dict = {
+        "ip": "1.1.1.1",
+        "anomaly_score": 0.5,
+        "event_type": "test_utc"
+    }
+
+    await insert_alert(alert_dict)
+    alerts, _ = await get_alerts(limit=1)
+
+    assert len(alerts) == 1
+    ts = alerts[0]["ts"]
+    # ISO8601 UTC timestamp should contain +00:00 or Z
+    assert "+00:00" in ts or ts.endswith("Z")
