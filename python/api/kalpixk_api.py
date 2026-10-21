@@ -16,7 +16,8 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 import msgpack
 import numpy as np
@@ -326,7 +327,7 @@ async def analyze_detect(request: Request, req: LogRequest, api_key: str = Depen
             )
             # Persist alert
             alert_data = {
-                "ts": datetime.utcnow().isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "ip": request.client.host if request.client else "unknown",
                 "anomaly_score": score,
                 "event_type": req.source_type,
@@ -377,7 +378,7 @@ async def analyze(request: Request, req: LogRequest, api_key: str = Depends(veri
     # Persist alert if anomaly
     if is_anomaly:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": float(score),
             "event_type": req.source_type,
@@ -465,7 +466,7 @@ async def ws_stream(ws: WebSocket, token: str | None = None):
 
                 if is_anomaly:
                     alert_data = {
-                        "ts": datetime.utcnow().isoformat(),
+                        "ts": datetime.now(UTC).isoformat(),
                         "ip": ws.client.host if ws.client else "unknown",
                         "anomaly_score": score,
                         "event_type": "websocket_stream",
@@ -529,6 +530,13 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
     sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
     sim_script = os.path.abspath(sim_script)
     backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+
+    if not os.path.exists(sim_script):
+        raise HTTPException(status_code=404, detail="Simulation script not found")
+
+    parsed_url = urlparse(backend_url)
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+        raise HTTPException(status_code=400, detail="Invalid KALPIXK_BACKEND_URL scheme")
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],
