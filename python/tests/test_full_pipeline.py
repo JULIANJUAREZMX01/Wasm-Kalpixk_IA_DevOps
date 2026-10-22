@@ -182,6 +182,32 @@ async def test_mismatched_counts_rejected():
     assert r.status_code in (400, 422)
 
 
+# ── Embedded Node API Sync ───────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_sync_embedded_node_endpoint():
+    payload = {
+        "node_id": "embedded-01",
+        "firmware_hash": "a1b2c3d4e5f67890",
+        "tamper_detected": True,
+        "probe_attempts": 3,
+        "voltage_mv": 3250.0,
+        "metrics": {"cpu_temp": 42.5}
+    }
+    async with httpx.AsyncClient(
+        headers={"X-Kalpixk-Key": "development_secret"},
+        transport=httpx.ASGITransport(app=app),
+        base_url=BASE
+    ) as c:
+        r = await c.post("/api/v1/guerrilla/embedded_node/sync", json=payload)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "synced"
+    assert data["node_id"] == "embedded-01"
+    assert data["severity"] == "CRITICAL"
+    assert data["lockdown"] is True
+
+
 # ── Metrics endpoint ──────────────────────────────────────────────────────────
 
 

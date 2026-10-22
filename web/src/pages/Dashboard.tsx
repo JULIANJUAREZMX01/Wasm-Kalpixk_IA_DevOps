@@ -96,7 +96,7 @@ export default function Dashboard() {
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
   const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v9.0.0-XOCHIMILCO initialized.", "[SYSTEM] Mesh operating in GHOST MESH MODE v9.", "[SYSTEM] Node-10: EMBEDDED_NODE_DEFENDER online.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -170,7 +170,7 @@ export default function Dashboard() {
               ATLATL-ORDNANCE
             </div>
             <div style={{ color: T.dim, fontSize: 8, letterSpacing: 2 }}>
-              GUERRILLA ALGORÍTMICA · v8.0.0-GUERRILLA · AMD MI300X MESH
+              GUERRILLA ALGORÍTMICA · v9.0.0-XOCHIMILCO · AMD MI300X & EMBEDDED MESH
             </div>
           </div>
         </div>
@@ -332,6 +332,7 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
   const NODES = [
     { id: "NEXUS",    desc: "ETL · Shadow Index", load: 34, port: 8081, status: "ACTIVE" },
     { id: "SENTINEL", desc: "Audit · Defense",    load: metrics.gpuLoadPct, port: 8082, status: "ACTIVE" },
+    { id: "NODE-10",  desc: "Embedded Defender",  load: 18, port: 8087, status: "ACTIVE" },
     { id: "FORGE",    desc: "WASM Build",         load: 12, port: 8083, status: "ACTIVE" },
     { id: "CHRONOS",  desc: "Workers",            load: 45, port: 8084, status: "ACTIVE" },
     { id: "UPLINK",   desc: "Alerts / Telegram",  load: 8,  port: 8085, status: "ACTIVE" },
