@@ -88,3 +88,22 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+@pytest.mark.asyncio
+async def test_alert_timestamp_is_utc_timezone_aware(tmp_db):
+    await init_db()
+
+    alert_dict = {
+        "ip": "4.4.4.4",
+        "anomaly_score": 0.95,
+        "event_type": "test_utc",
+        "severity": "CRITICAL"
+    }
+
+    await insert_alert(alert_dict)
+    alerts, total = await get_alerts(limit=10)
+
+    assert total == 1
+    ts_str = alerts[0]["ts"]
+    # Verify timestamp string contains +00:00 indicating explicit UTC offset
+    assert "+00:00" in ts_str or ts_str.endswith("Z")
