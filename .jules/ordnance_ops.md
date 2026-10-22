@@ -144,3 +144,30 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V9_EMBEDDED_MESH] - Decentralized Embedded Node Defense & Hardware Tamper Shield
+
+**Vector de Ataque Analizado:**
+1. **Physical & Serial Probing:** Atacantes sondeando buses físicos (UART/SPI/I2C) mediante herramientas como Bus Pirate para inyectar comandos en nodos embebidos.
+2. **Firmware Tampering & Glitch Attacks:** Inyección de fallos de voltaje/reloj para eludir verificaciones de firma de firmware y parchear binarios de telemetría en tiempo real.
+3. **Unauthenticated Telemetry Hijacking:** Intentos de desincronización o suplantación de nodos periféricos en la red de defensa descentralizada.
+
+**Defensa Implementada (v9.0.0-XOCHIMILCO Embedded Extension):**
+1. **Rust Metal Layer (defense_nodes.rs):**
+   - `Node-10: EMBEDDED_NODE_DEFENDER`: Detección en tiempo real de firmas de sondeo físico (Bus Pirate, UART tamper, glitching) y alteración de firmware asociadas a MITRE ATT&CK T1200 / T1495.
+2. **Python Backend Sync API (kalpixk_api.py):**
+   - Endpoint `POST /api/v1/guerrilla/embedded_node/sync` con validación estricta Pydantic (`EmbeddedNodeTelemetry`) que registra alertas críticas y activa respuesta inmediata ante manipulación de voltaje o intentos de sonda.
+3. **SAC_OS UI Integration (Dashboard.tsx):**
+   - Integración de telemetría de Node-10 en el panel principal para monitoreo descentralizado de nodos embebidos y visibilidad táctica en tiempo real.
+
+**Contra-Ataque (Fase Negra):**
+1. **v9_EMBEDDED_HARDWARE_LOCKDOWN:**
+   - Bloqueo instantáneo y reporte crítico al detectar manipulación física de voltaje o sondeo en puertos serie.
+   - Aislamiento inmediato del nodo comprometido en la malla Ghost Mesh para evitar propagación lateral.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ENGAGED
+- Embedded Sync Endpoint: ACTIVE & HARDENED
+- SAC_OS Mesh Monitoring: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: La defensa periférica es letal; la malla embebida colapsará al agresor antes de que toque el núcleo.*

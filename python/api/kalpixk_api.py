@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -215,6 +215,15 @@ class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_hash: str = Field(..., max_length=128)
+    tamper_detected: bool = False
+    probe_attempts: int = Field(0, ge=0)
+    voltage_mv: float = Field(3300.0, ge=0.0, le=5000.0)
+    metrics: dict | None = Field(None)
+
+
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
@@ -231,9 +240,9 @@ async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -574,3 +583,35 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def sync_embedded_node(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key)
+):
+    """[ATLATL-ORDNANCE] Synchronize decentralized embedded defense node telemetry (Node-10)."""
+    severity = "CRITICAL" if payload.tamper_detected or payload.probe_attempts > 0 else "CLEAN"
+
+    if payload.tamper_detected or payload.probe_attempts > 0:
+        alert_data = {
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0 if payload.tamper_detected else 0.85,
+            "event_type": "embedded_node_probe",
+            "severity": severity,
+            "technique": "T1200",
+            "features_json": [payload.voltage_mv, float(payload.probe_attempts)],
+            "source": f"embedded-node-{payload.node_id}"
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": "synced",
+        "node_id": payload.node_id,
+        "severity": severity,
+        "lockdown": payload.tamper_detected,
+        "timestamp": datetime.now(UTC).isoformat()
+    }
