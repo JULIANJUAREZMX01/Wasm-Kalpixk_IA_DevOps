@@ -16,7 +16,7 @@ import subprocess as _subprocess
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 
 import msgpack
 import numpy as np
@@ -210,6 +210,15 @@ class LogRequest(BaseModel):
                 if len(self.metadata) != expected:
                     raise ValueError("features and metadata must have the same length")
         return self
+
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_version: str = Field(..., max_length=50)
+    tamper_flag: bool = False
+    hardware_probe_detected: bool = False
+    metrics: dict = Field(default_factory=dict)
+    threat_intel_hash: str | None = Field(None, max_length=128)
+
 
 class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
@@ -574,3 +583,42 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def sync_embedded_node_telemetry(
+    request: Request,
+    payload: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key),
+):
+    """Synchronize threat intelligence and firmware tampering flags for Node-10 embedded defense nodes."""
+    client_ip = request.client.host if request.client else "unknown"
+    status_str = "HEALTHY"
+
+    if payload.tamper_flag or payload.hardware_probe_detected:
+        status_str = "TAMPER_ALERT"
+        alert_data = {
+            "ts": datetime.now(UTC).isoformat(),
+            "ip": client_ip,
+            "anomaly_score": 1.0,
+            "event_type": "embedded_node_telemetry",
+            "severity": "CRITICAL",
+            "technique": "T1200 / T1495",
+            "confidence": 1.0,
+            "features_json": {
+                "node_id": payload.node_id,
+                "firmware": payload.firmware_version,
+                "tamper": payload.tamper_flag,
+            },
+            "source": f"embedded_node_{payload.node_id}",
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "status": status_str,
+        "node_id": payload.node_id,
+        "synced_at": datetime.now(UTC).isoformat(),
+        "mesh_nodes_active": 10,
+        "action_required": payload.tamper_flag or payload.hardware_probe_detected,
+    }

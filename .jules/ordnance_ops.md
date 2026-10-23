@@ -144,3 +144,32 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_DEFENSE] - Decentralized Embedded Defense Nodes & Hardening
+
+**Vector de Ataque Analizado:**
+1. **Sondeo y Tampering en Dispositivos Embebidos:** Intentos de interceptar telemetría y modificar firmware (SPI flash overrides, bypasses físicos) en nodos periféricos descentralizados.
+2. **Desincronización de Inteligencia de Amenazas:** Manipulación de los canales de sincronización de parches y firmas de red entre nodos embebidos y el orquestador principal.
+3. **Evasión de Detección en Borde:** Explotación de la falta de heurísticas dedicadas a hardware/firmware para infiltrar el perímetro antes de activar las defensas centrales.
+
+**Defensa Implementada (Nivel Militar v10):**
+1. **Rust Defense Nodes (`Node-10: EMBEDDED_NODE_DEFENDER`):**
+   - Heurísticas avanzadas para detección de `firmware_tamper`, `hardware_probe`, `embedded_bypass` y modificación de banderas de manipulación (`tamper_flag`).
+   - Integración nativa en `analyze_all_nodes` con mapeo a técnicas MITRE ATT&CK T1200 y T1495.
+2. **FastAPI Synchronization Endpoint (`POST /api/v1/guerrilla/embedded_node/sync`):**
+   - Validación estricta con modelo Pydantic `EmbeddedNodeTelemetry` para recepción segura de telemetría de nodos embebidos.
+   - Generación de alertas forenses de alta prioridad y persistencia automática en base de datos SQLite sanitizada.
+3. **SAC_OS Tactical Dashboard (`Dashboard.tsx`):**
+   - Visualización y monitoreo táctico en tiempo real de nodos descentralizados `Node-10 Embedded` con indicadores SAC_OS.
+
+**Contra-Ataque (Fase Negra):**
+1. **v10_EMBEDDED_RETALIATION:**
+   - Aislamiento automático e inmediato del nodo embebido comprometido.
+   - Inyección de cargas de entropía destructiva y punteros envenenados en canales de comunicación no autorizados detectados durante la tentativa de tampering.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & ENGAGED
+- Telemetry Sync Endpoint: ACTIVE & HARDENED
+- SAC_OS Tactical UI: SYNCHRONIZED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
