@@ -9,10 +9,14 @@ import uuid
 
 from fastapi import APIRouter, Header, Request
 from loguru import logger
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/v1/honeypot")
 
 @router.get("/exfiltrate")
+@limiter.limit("5/minute")
 async def trap_exfiltration(request: Request, x_atlatl_token: str = Header(None)):
     """
     [SEC-V5] Exfiltration Trap.
@@ -35,6 +39,7 @@ async def trap_exfiltration(request: Request, x_atlatl_token: str = Header(None)
     }
 
 @router.post("/auth")
+@limiter.limit("5/minute")
 async def trap_brute_force(request: Request):
     """Captures brute force attempts on decoy login."""
     client_ip = request.client.host

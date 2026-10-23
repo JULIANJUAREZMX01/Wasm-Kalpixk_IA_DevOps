@@ -43,6 +43,7 @@ sys.path.insert(0, "/app/wasm_kalpixk")
 
 from src.retaliation.atlatl import atlatl
 
+from python.api.honeypot import router as honeypot_router
 from python.db.database import get_alerts, init_db, insert_alert, insert_alerts
 from python.models.ensemble import DetectionEnsemble
 from python.utils.device import get_rocm_device, log_gpu_info
@@ -69,6 +70,7 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.include_router(honeypot_router)
 
 # -- Security & Rate Limiting --
 API_KEY_NAME = "X-Kalpixk-Key"
