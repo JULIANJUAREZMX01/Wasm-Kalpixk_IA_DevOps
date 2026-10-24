@@ -144,3 +144,27 @@
 - WASM Core: FULLY PORTABLE
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_EMBEDDED_NODES] - Decentralized Embedded Defense Nodes & Node-10 Protection
+
+**Vector de Ataque Analizado:**
+1. **Physical & Bus Sniffing Probing:** Sondeos físicos, análisis de bus SPI/I2C y ataques de canal lateral dirigidos a nodos de defensa embebidos desplegados en infraestructura de borde.
+2. **Firmware Tampering Evasion:** Inyección de firmware alterado en nodos embebidos periféricos para evadir la recolección de eventos y falsificar métricas de telemetría hacia el centro de mando.
+
+**Defensa Implementada (v10.0-EMBEDDED):**
+1. **Rust Node-10 Defender (defense_nodes.rs):**
+   - Implementación de `NODE-10: EMBEDDED_NODE_DEFENDER` para detectar firmas de manipulación de firmware (`firmware_tamper`), olfateo de buses (`bus_sniffing`), depuración JTAG (`jtag_probe`) y ataques de canal lateral (`side_channel`).
+2. **Embedded Telemetry & Synchronization (kalpixk_api.py):**
+   - Modelo Pydantic `EmbeddedNodeTelemetry` con validación estricta de límites para CPU/RAM y logs.
+   - Endpoint `/api/v1/guerrilla/embedded_node/sync` con autenticación por clave API, tasa límite de peticiones e ingestión automatizada de alertas de alteración física.
+
+**Contra-Ataque (Fase Negra):**
+1. **AUTOMATED_NODE_ISOLATION & MESH RETALIATION:**
+   - Ante la detección de manipulación de firmware o sondeos físicos en cualquier nodo embebido, la malla Guerrilla aísla dinámicamente el nodo afectado (`REISOLATE_NODE`) e inyecta alertas críticas en la base de datos de forense.
+
+**Estado de la Misión:**
+- Node-10 Embedded Defender: ARMED & INTEGRATED
+- Telemetry Sync Endpoint: ACTIVE
+- Decentralized Mesh Isolation: OPERATIONAL
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
