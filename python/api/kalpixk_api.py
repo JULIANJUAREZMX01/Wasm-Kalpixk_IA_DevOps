@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Wasm-Kalpixk_IA_DevOps API",
     description="SIEM portátil — AMD MI300X + WASM Edge Detection",
-    version="8.0.0-GUERRILLA",
+    version="9.0.0-XOCHIMILCO",
     docs_url="/docs",
     lifespan=lifespan,
 )
@@ -243,9 +243,9 @@ async def health(request: Request):
     # SECURITY: ensure_ensemble() removed to prevent unauthenticated DoS from triggering GPU training
     return {
         "status": "healthy",
-        "version": "8.0.0-GUERRILLA",
+        "version": "9.0.0-XOCHIMILCO",
         "device": str(_device) if _device is not None else "not_initialized",
-        "ensemble_version": "8.0.0-GUERRILLA",
+        "ensemble_version": "9.0.0-XOCHIMILCO",
     }
 
 
@@ -540,7 +540,12 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
 
     sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
     sim_script = os.path.abspath(sim_script)
+    if not os.path.isfile(sim_script):
+        raise HTTPException(status_code=400, detail="Simulator script not found")
+
     backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+    if not backend_url.startswith(("http://", "https://")) or any(c in backend_url for c in " \t\r\n"):
+        raise HTTPException(status_code=400, detail="Invalid backend URL")
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],
