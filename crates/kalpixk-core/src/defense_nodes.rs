@@ -52,6 +52,63 @@ impl SeverityScore {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_node_10_embedded_defender_tamper() {
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            "firmware_tampered".to_string(),
+            serde_json::Value::Bool(true),
+        );
+
+        let event = KalpixkEvent {
+            timestamp_ms: 0,
+            event_type: crate::event::EventType::Unknown,
+            local_severity: 0.8,
+            source: "sensor-01".to_string(),
+            destination: None,
+            user: None,
+            process: None,
+            metadata,
+            raw: "Hardware alert".to_string(),
+            source_type: "embedded_node_probe".to_string(),
+            fingerprint: "fp123".to_string(),
+        };
+
+        let res = detect_embedded_node_defender(&event);
+        assert_eq!(res.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+        assert_eq!(res.score, 1.0);
+        assert_eq!(res.level, SeverityLevel::Critical);
+        assert!(res.mitre_techniques.contains(&"T1275".to_string()));
+    }
+
+    #[test]
+    fn test_node_10_embedded_defender_bus_sniffing() {
+        let event = KalpixkEvent {
+            timestamp_ms: 0,
+            event_type: crate::event::EventType::Unknown,
+            local_severity: 0.8,
+            source: "sensor-02".to_string(),
+            destination: None,
+            user: None,
+            process: None,
+            metadata: HashMap::new(),
+            raw: "Detected bus_sniffing attempt on SPI interface".to_string(),
+            source_type: "system".to_string(),
+            fingerprint: "fp124".to_string(),
+        };
+
+        let res = detect_embedded_node_defender(&event);
+        assert_eq!(res.node, "NODE-10: EMBEDDED_NODE_DEFENDER");
+        assert!(res.score >= 0.95);
+        assert_eq!(res.level, SeverityLevel::Critical);
+        assert!(res.mitre_techniques.contains(&"T1200".to_string()));
+    }
+}
+
 pub fn process_ghost_signal(node_id: &str, _payload: &str) {
     if let Ok(mut nodes) = MESH_NODES.lock() {
         nodes.insert(
@@ -434,6 +491,43 @@ pub fn detect_xochimilco_adversarial(event: &KalpixkEvent) -> NodeResult {
     }
 }
 
+pub fn detect_embedded_node_defender(event: &KalpixkEvent) -> NodeResult {
+    let mut score = 0.0;
+    let mut techniques = Vec::new();
+    let raw = event.raw.to_lowercase();
+
+    if raw.contains("firmware_tamper")
+        || raw.contains("bus_sniffing")
+        || raw.contains("jtag_probe")
+        || raw.contains("side_channel")
+    {
+        score += 0.95;
+        techniques.push("T1200".to_string());
+    }
+
+    if event.source_type == "embedded_node_probe" || event.source_type == "embedded_telemetry" {
+        if event
+            .metadata
+            .get("firmware_tampered")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            score = 1.0;
+            techniques.push("T1275".to_string());
+        } else if score == 0.0 {
+            score = 0.1;
+        }
+    }
+
+    NodeResult {
+        node: "NODE-10: EMBEDDED_NODE_DEFENDER".to_string(),
+        score,
+        level: SeverityScore::new(score).as_level(),
+        mitre_techniques: techniques,
+        description: "Detection of probing, hardware side-channel, and firmware tampering attacks on embedded defense nodes".to_string(),
+    }
+}
+
 pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
     let raw_lower = event.raw.to_lowercase();
     let user_lower = event.user.as_deref().unwrap_or("").to_lowercase();
@@ -449,6 +543,7 @@ pub fn analyze_all_nodes(event: &KalpixkEvent) -> Vec<NodeResult> {
         detect_mesh_integrity(event),
         detect_guerrilla_threat(event),
         detect_xochimilco_adversarial(event),
+        detect_embedded_node_defender(event),
     ]
 }
 

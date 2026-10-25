@@ -215,6 +215,16 @@ class TrainPayload(BaseModel):
     n_samples: int = Field(1000, ge=1, le=10000)
 
 
+class EmbeddedNodeTelemetry(BaseModel):
+    node_id: str = Field(..., max_length=100)
+    firmware_version: str = Field(..., max_length=50)
+    firmware_tampered: bool = False
+    bus_sniffing_detected: bool = False
+    cpu_usage_pct: float = Field(0.0, ge=0.0, le=100.0)
+    ram_usage_pct: float = Field(0.0, ge=0.0, le=100.0)
+    raw_logs: list[str] | None = Field(default_factory=list, max_length=100)
+
+
 class AnomalyResponse(BaseModel):
     anomaly_score: float
     is_anomaly: bool
@@ -574,3 +584,36 @@ async def v8_strike(request: Request, api_key: str = Depends(verify_api_key)):
     target = request.client.host if request.client else "unknown"
     result = atlatl.v8_algorithmic_guillotine(target)
     return result
+
+
+@app.post("/api/v1/guerrilla/embedded_node/sync")
+@limiter.limit("30/minute")
+async def embedded_node_sync(
+    request: Request,
+    telemetry: EmbeddedNodeTelemetry,
+    api_key: str = Depends(verify_api_key)
+):
+    """[ATLATL-ORDNANCE] Embedded Node Telemetry Sync & Node-10 Defense Coordination."""
+    is_compromised = telemetry.firmware_tampered or telemetry.bus_sniffing_detected
+    status = "CRITICAL_TAMPER_ALERT" if is_compromised else "OK"
+
+    if is_compromised:
+        alert_data = {
+            "ts": datetime.utcnow().isoformat(),
+            "ip": request.client.host if request.client else "unknown",
+            "anomaly_score": 1.0,
+            "event_type": "embedded_node_probe",
+            "severity": "CRITICAL",
+            "technique": "T1275" if telemetry.firmware_tampered else "T1200",
+            "features_json": [1.0] * 32,
+            "source": f"embedded-node-{telemetry.node_id}"
+        }
+        await insert_alert(alert_data)
+
+    return {
+        "node_id": telemetry.node_id,
+        "status": status,
+        "tamper_detected": is_compromised,
+        "retaliation_armed": is_compromised,
+        "mesh_action": "REISOLATE_NODE" if is_compromised else "NODE_HEALTHY"
+    }
