@@ -47,3 +47,11 @@ async def test_embedded_node_sync_tamper_detected():
         assert data["tamper_detected"] is True
         assert data["retaliation_armed"] is True
         assert data["mesh_action"] == "REISOLATE_NODE"
+
+        # Verify alert was persisted with timezone-aware ISO8601 UTC timestamp
+        from python.db.database import get_alerts
+        alerts, total = await get_alerts(limit=1, severity_filter="CRITICAL")
+        assert total >= 1
+        latest_alert = alerts[0]
+        assert latest_alert["event_type"] == "embedded_node_probe"
+        assert latest_alert["ts"].endswith("+00:00")
