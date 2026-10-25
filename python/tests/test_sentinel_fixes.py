@@ -88,3 +88,27 @@ async def test_insert_alerts_batch_sql_injection_protection(tmp_db):
     assert "2.2.2.2" in ips
     assert "3.3.3.3" in ips
     assert "8.8.8.8" not in ips, "Batch SQL Injection was NOT blocked!"
+
+
+@pytest.mark.asyncio
+async def test_alert_timestamp_utc_timezone_aware(tmp_db):
+    await init_db()
+    from datetime import datetime
+
+    # Insert alert without explicit 'ts' so database.py auto-generates it using datetime.now(UTC)
+    alert_dict = {
+        "ip": "10.0.0.1",
+        "anomaly_score": 0.95,
+        "event_type": "security_test",
+        "severity": "CRITICAL",
+    }
+    await insert_alert(alert_dict)
+
+    alerts, total = await get_alerts(limit=1)
+    assert total == 1
+    ts_str = alerts[0]["ts"]
+
+    # Verify timestamp parsing and timezone presence
+    parsed_dt = datetime.fromisoformat(ts_str)
+    assert parsed_dt.tzinfo is not None, "Timestamp string must be timezone-aware"
+    assert ts_str.endswith("+00:00") or ts_str.endswith("Z"), f"Timestamp '{ts_str}' missing UTC timezone designator"

@@ -4,7 +4,7 @@ Escucha en puerto 2222, registra intentos de autenticación reales.
 """
 import socket, threading, logging, json
 from pathlib import Path
-from datetime import datetime
+from datetime import UTC, datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [HONEYPOT] %(message)s")
 log = logging.getLogger("honeypot")
@@ -12,7 +12,7 @@ LOGS_DIR = Path("/sandbox/logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 def emit(event_type: str, details: dict):
-    event = {"ts": datetime.utcnow().isoformat(), "event": event_type, **details}
+    event = {"ts": datetime.now(UTC).isoformat(), "event": event_type, **details}
     with open(LOGS_DIR / "events.jsonl", "a") as f:
         f.write(json.dumps(event) + "\n")
 
