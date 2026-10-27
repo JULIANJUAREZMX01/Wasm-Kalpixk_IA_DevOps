@@ -23,7 +23,7 @@ async def trap_exfiltration(request: Request, x_atlatl_token: str = Header(None)
     Captures headers, IP, and behavior when an attacker tries to access a sensitive-looking endpoint.
     """
     event_id = str(uuid.uuid4())
-    client_ip = request.client.host
+    client_ip = request.client.host if request.client else "unknown"
 
     logger.critical(f"🪤  TRAP TRIGGERED: IP={client_ip} EventID={event_id}")
 
@@ -42,6 +42,6 @@ async def trap_exfiltration(request: Request, x_atlatl_token: str = Header(None)
 @limiter.limit("5/minute")
 async def trap_brute_force(request: Request):
     """Captures brute force attempts on decoy login."""
-    client_ip = request.client.host
+    client_ip = request.client.host if request.client else "unknown"
     logger.warning(f"🪤  AUTH TRAP: IP={client_ip} attempted unauthorized authentication.")
     return {"status": "success", "message": "Authenticated"} # Misleading success
