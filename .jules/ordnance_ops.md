@@ -168,3 +168,29 @@
 - Decentralized Mesh Isolation: OPERATIONAL
 
 *ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
+
+## [OP_V10_SAC_OS_INTEGRATION] - SAC_OS Military UI Design & Embedded Node Orchestration
+
+**Vector de Ataque Analizado:**
+1. **Blind Spots en Nodos Periféricos:** Los atacantes intentan aislar o alterar sensores embebidos (ARM/ESP32/Qualcomm) sin que la consola central registre anomalías visuales ni disparadores de represalia.
+2. **Inconsistencia de Fechas/Horas UTC:** Evasión de auditoría forense mediante stamps ilícitos sin zona horaria en payloads de sincronización.
+
+**Defensa Implementada (SAC_OS v10 / ATLATL-ORDNANCE):**
+1. **Paleta Militar SAC_OS (Dashboard.tsx):**
+   - Integración de tokens de diseño militares v9/v10 de SAC_OS: Absolute Black (#000000), High-vis Amber (#FFD700), Toxic Green (#39FF14), Plasma Red (#FF003F) y Electric Blue (#00FFFF).
+2. **Modulo de Malla de Nodos Embebidos (NodesTab):**
+   - Incorporación de la pestaña "Nodos Embebidos" en el Command Dashboard para monitoreo en tiempo real de nodos periféricos (CEDIS Cancún 427, Handhelds MC9300, Raspberry Pi 4 Guard, ESP32-S3 Micro-Node).
+   - Simulación de sabotaje SPI/I2C y sincronización bidireccional de telemetría con el backend `/api/v1/guerrilla/embedded_node/sync`.
+3. **Hardening de Marcas Temporales UTC:**
+   - Estandarización de `datetime.now(UTC).isoformat()` en la API REST de Python para garantizar trazabilidad forense inalterable.
+
+**Contra-Ataque (Fase Negra):**
+1. **EMBEDDED_RETALIATION_ISOLATION:**
+   - La consola detecta variaciones en la telemetría del bus SPI/I2C y emite respuestas de aislamiento inmediato (`REISOLATE_NODE`), registrando el intento de sabotaje en el diario forense.
+
+**Estado de la Misión:**
+- SAC_OS Design System: FULLY INTEGRATED
+- Embedded Nodes UI: OPERATIONAL & SYNCED
+- Forensic UTC Timestamps: VERIFIED
+
+*ATLATL-ORDNANCE: Tu filosofía no es proteger la puerta, es colapsar el sistema respiratorio de quien intente tocarla.*
