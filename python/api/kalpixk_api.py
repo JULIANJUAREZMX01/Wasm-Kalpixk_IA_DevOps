@@ -601,7 +601,7 @@ async def embedded_node_sync(
 
     if is_compromised:
         alert_data = {
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "ip": request.client.host if request.client else "unknown",
             "anomaly_score": 1.0,
             "event_type": "embedded_node_probe",

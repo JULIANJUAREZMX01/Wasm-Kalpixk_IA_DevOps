@@ -47,3 +47,12 @@ async def test_embedded_node_sync_tamper_detected():
         assert data["tamper_detected"] is True
         assert data["retaliation_armed"] is True
         assert data["mesh_action"] == "REISOLATE_NODE"
+
+        # Verify alert stored in DB has timezone-aware ISO8601 UTC timestamp
+        alerts_res = await client.get("/api/alerts?limit=10")
+        assert alerts_res.status_code == 200
+        alerts = alerts_res.json()["alerts"]
+        tamper_alerts = [a for a in alerts if a.get("source") == "embedded-node-embedded-beta-02"]
+        assert len(tamper_alerts) == 1
+        ts_str = tamper_alerts[0]["ts"]
+        assert ts_str.endswith("+00:00") or ts_str.endswith("Z"), f"Timestamp '{ts_str}' must be timezone-aware UTC"
