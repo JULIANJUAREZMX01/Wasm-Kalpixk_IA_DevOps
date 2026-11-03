@@ -112,3 +112,30 @@ async def test_alert_timestamp_utc_timezone_aware(tmp_db):
     parsed_dt = datetime.fromisoformat(ts_str)
     assert parsed_dt.tzinfo is not None, "Timestamp string must be timezone-aware"
     assert ts_str.endswith("+00:00") or ts_str.endswith("Z"), f"Timestamp '{ts_str}' missing UTC timezone designator"
+
+
+def test_validate_backend_url_security():
+    from python.api.kalpixk_api import validate_backend_url
+
+    # Valid URLs
+    assert validate_backend_url("http://localhost:8000") == "http://localhost:8000"
+    assert validate_backend_url("https://127.0.0.1:8000/api") == "https://127.0.0.1:8000/api"
+    assert validate_backend_url("http://internal-api.cluster.local:9000") == "http://internal-api.cluster.local:9000"
+
+    # Malicious or invalid URLs
+    invalid_urls = [
+        "ftp://localhost:8000",
+        "file:///etc/passwd",
+        "javascript:alert(1)",
+        "http://",
+        "http://localhost:8000; rm -rf /",
+        "http://localhost:8000 & whoami",
+        "http://localhost:8000 | cat /etc/passwd",
+        "http://localhost:8000\nrm -rf /",
+        "http://localhost:8000`id`",
+        "http://localhost:8000$PATH",
+    ]
+
+    for url in invalid_urls:
+        with pytest.raises(ValueError):
+            validate_backend_url(url)
