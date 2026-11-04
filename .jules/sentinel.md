@@ -9,3 +9,8 @@
 **Vulnerability:** JIT Spraying and Buffer Deduplication Evasion in decentralized nodes.
 **Learning:** Standard entropy storms can be mitigated by deduplicating network appliances. JIT probing requires polymorphic instruction noise to disrupt shellcode alignment.
 **Prevention:** Implement non-linear chaotic entropy (Logistic Map) and polymorphic instruction padding (JIT Shield) at the metal layer (Zig/Rust).
+
+## 2026-10-31 - [Honeypot Client Host Null Dereference DoS]
+**Vulnerability:** Unchecked access to `request.client.host` in FastAPI honeypot routes causing `AttributeError` runtime crash when `request.client` is `None`.
+**Learning:** Reverse proxies, test harnesses, or ASGI protocol edge cases can omit client network attributes. Direct property access without a fallback crashes request handling with HTTP 500.
+**Prevention:** Guard all client address resolution with `request.client.host if request.client else "unknown"` across telemetry, SIEM logging, and deception endpoints.
