@@ -9,16 +9,16 @@ import { useWasmStore }    from "../stores/wasmStore";
 import React from 'react';
 import AttackSimulator from '../components/AttackSimulator';
 
-// ── Design tokens (SAC_OS Military Grade) ──────────────────────────────────────
+// ── Design tokens (SAC_OS Military Grade v9.0.0-XOCHIMILCO) ──────────────────────
 const T = {
-  bg:      "#020202", // Absolute black
+  bg:      "#000000", // Absolute Black
   panel:   "#080808",
   surface: "#0c0c0c",
   border:  "#1a1a1a",
-  amber:   "#ffb800", // High-vis amber
-  green:   "#00ffa3", // Toxic green
-  red:     "#ff0044", // Plasma red
-  blue:    "#00e1ff",
+  amber:   "#FFD700", // High-vis Amber
+  green:   "#39FF14", // Toxic Green
+  red:     "#FF003F", // Plasma Red
+  blue:    "#00FFFF", // Electric Blue
   purple:  "#bc00ff",
   dim:     "#333333",
   text:    "#e0e0e0",
@@ -95,7 +95,7 @@ export default function Dashboard() {
   const [clock, setClock]     = useState(new Date());
   const [chart, setChart]     = useState(seedChart);
   const [scan,  setScan]      = useState(0);
-  const [tab,   setTab]       = useState<"realtime"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
+  const [tab,   setTab]       = useState<"realtime"|"nodos"|"parsers"|"benchmark"|"mitre"|"warroom"|"simulacion">("realtime");
   const [terminalOutput, setTerminalOutput] = useState<string[]>(["[SYSTEM] ATLATL-ORDNANCE v8.0.0-GUERRILLA initialized.", "[SYSTEM] Mesh operating in GHOST MODE v8.", "[SYSTEM] Awaiting aggressor vectors..."]);
   const prevLen               = useRef(0);
 
@@ -217,9 +217,10 @@ export default function Dashboard() {
       }}>
         {([
           ["realtime",  "⚡ Real-Time"],
+          ["nodos",     "🛡 Nodos Embebidos"],
           ["parsers",   "⚙ WASM Parsers"],
           ["benchmark", "📊 Benchmark"],
-          ["mitre",     "🛡 MITRE ATT&CK"],
+          ["mitre",     "🎯 MITRE ATT&CK"],
           ["warroom",   "💀 War Room"],
           ["simulacion","🎯 Simulación"],
         ] as const).map(([key, label]) => (
@@ -293,6 +294,7 @@ export default function Dashboard() {
       {/* ═══ CONTENT ═════════════════════════════════════════════════════════ */}
       <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
         {tab === "realtime" && <RealtimeTab chart={chart} terminalOutput={terminalOutput} />}
+        {tab === "nodos"    && <NodesTab setTerminalOutput={setTerminalOutput} />}
         {tab === "parsers"  && <ParsersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "mitre"    && <MitreTab />}
@@ -558,6 +560,146 @@ const RealtimeTab = React.memo(function RealtimeTab({ chart, terminalOutput }: {
   );
 }, (prevProps, nextProps) => {
   return prevProps.chart === nextProps.chart && prevProps.terminalOutput === nextProps.terminalOutput;
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAB: DECENTRALIZED EMBEDDED DEFENSE NODES (Node-10: EMBEDDED_NODE_DEFENDER)
+// ═══════════════════════════════════════════════════════════════════════════════
+const NodesTab = React.memo(function NodesTab({ setTerminalOutput }: { setTerminalOutput: React.Dispatch<React.SetStateAction<string[]>> }) {
+  const [nodes, setNodes] = useState([
+    { id: "NODE-10-CANCUN-427", location: "CEDIS Cancún 427", arch: "ARM64 Edge Sensor", firmware: "v10.0.0-EMBEDDED", busStatus: "SPI/I2C VERIFIED", tamper: false, cpu: 18.4, ram: 32.1, status: "HEALTHY", ip: "10.4.27.101" },
+    { id: "NODE-10-MC9300-HUB", location: "Handheld MC9300 Edge", arch: "Qualcomm Snapdragon WASM", firmware: "v10.0.0-EMBEDDED", busStatus: "CANBUS SECURE", tamper: false, cpu: 24.8, ram: 41.5, status: "HEALTHY", ip: "10.4.27.105" },
+    { id: "NODE-10-RPI-GUARD", location: "Perimeter Barrier Gate", arch: "Raspberry Pi 4 WASM Node", firmware: "v10.0.0-EMBEDDED", busStatus: "GPIO TAMPER GUARD", tamper: false, cpu: 12.0, ram: 28.3, status: "HEALTHY", ip: "10.4.27.112" },
+    { id: "NODE-10-SPI-SNIFFER", location: "Dock Terminal 04", arch: "ESP32-S3 Micro-Node", firmware: "v10.0.0-EMBEDDED", busStatus: "BUS_SNIFFING_PROBE", tamper: true, cpu: 94.2, ram: 88.0, status: "TAMPER_ALERT", ip: "10.4.27.199" },
+  ]);
+
+  const triggerSync = async (nodeId: string, isTamperedSim: boolean) => {
+    try {
+      const apiKey = (import.meta as any).env.VITE_KALPIXK_KEY || "development_secret";
+      const res = await fetch("/api/v1/guerrilla/embedded_node/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Kalpixk-Key": apiKey
+        },
+        body: JSON.stringify({
+          node_id: nodeId,
+          firmware_version: "v10.0.0-EMBEDDED",
+          firmware_tampered: isTamperedSim,
+          bus_sniffing_detected: isTamperedSim,
+          cpu_usage_pct: isTamperedSim ? 98.5 : 19.2,
+          ram_usage_pct: isTamperedSim ? 91.0 : 33.0,
+          raw_logs: [isTamperedSim ? "CRITICAL: Bus sniffing on SPI interface detected" : "OK: Node heartbeat synced"]
+        })
+      });
+      const data = await res.json();
+      setTerminalOutput(prev => [
+        ...prev,
+        `[NODE-10] SYNC response for ${nodeId}: status=${data.status} action=${data.mesh_action}`
+      ]);
+      setNodes(prev => prev.map(n => n.id === nodeId ? {
+        ...n,
+        tamper: data.tamper_detected,
+        status: data.status,
+        cpu: isTamperedSim ? 98.5 : 19.2
+      } : n));
+    } catch (e) {
+      console.error("Node sync error", e);
+    }
+  };
+
+  return (
+    <div style={{ flex: 1, padding: 20, overflow: "auto", background: T.panel }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, borderBottom: `2px solid ${T.blue}`, paddingBottom: 10 }}>
+          <div>
+            <h2 style={{ fontFamily: T.display, color: T.blue, fontSize: 24, fontWeight: 900, letterSpacing: 4 }}>
+              NODOS DE DEFENSA EMBEBIDOS DECENTRALIZADOS
+            </h2>
+            <p style={{ color: T.dim, fontSize: 10, letterSpacing: 2 }}>
+              Malla Guerrilla Node-10: EMBEDDED_NODE_DEFENDER · Detección de Modificación de Firmware y Bus Sniffing
+            </p>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ color: T.green, fontSize: 10, fontWeight: 700, padding: "2px 8px", border: `1px solid ${T.green}`, background: `${T.green}11` }}>
+              NODE-10 MESH: ACTIVE (4 NODES)
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+          {nodes.map(n => (
+            <div key={n.id} style={{
+              background: n.tamper ? `${T.red}10` : T.surface,
+              border: `1px solid ${n.tamper ? T.red : T.border}`,
+              borderLeft: `4px solid ${n.tamper ? T.red : T.green}`,
+              padding: 14, position: "relative"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <div>
+                  <span style={{ color: n.tamper ? T.red : T.blue, fontWeight: 800, fontSize: 13 }}>{n.id}</span>
+                  <div style={{ color: T.dim, fontSize: 9 }}>{n.location} ({n.ip})</div>
+                </div>
+                <span style={{
+                  fontSize: 9, fontWeight: 800, padding: "2px 8px",
+                  color: n.tamper ? T.red : T.green,
+                  border: `1px solid ${n.tamper ? T.red : T.green}`,
+                  background: n.tamper ? `${T.red}20` : `${T.green}11`,
+                  animation: n.tamper ? "pulse 0.8s infinite" : "none"
+                }}>
+                  {n.status}
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12, background: T.panel, padding: 8, border: `1px solid ${T.border}` }}>
+                <div>
+                  <span style={{ color: T.dim, fontSize: 8 }}>ARQUITECTURA</span>
+                  <div style={{ color: T.text, fontSize: 9 }}>{n.arch}</div>
+                </div>
+                <div>
+                  <span style={{ color: T.dim, fontSize: 8 }}>ESTADO DE BUS/SPI</span>
+                  <div style={{ color: n.tamper ? T.red : T.amber, fontSize: 9 }}>{n.busStatus}</div>
+                </div>
+                <div>
+                  <span style={{ color: T.dim, fontSize: 8 }}>USO CPU EMBEBIDA</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Bar pct={n.cpu} color={n.cpu > 70 ? T.red : T.green} />
+                    <span style={{ color: n.cpu > 70 ? T.red : T.text, fontSize: 9 }}>{n.cpu}%</span>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ color: T.dim, fontSize: 8 }}>USO RAM EMBEBIDA</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Bar pct={n.ram} color={n.ram > 70 ? T.amber : T.blue} />
+                    <span style={{ color: T.text, fontSize: 9 }}>{n.ram}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => triggerSync(n.id, false)}
+                  style={{
+                    flex: 1, padding: "5px 10px", background: `${T.green}15`, border: `1px solid ${T.green}`,
+                    color: T.green, fontSize: 9, fontFamily: T.font, cursor: "pointer", fontWeight: 700
+                  }}>
+                  ✓ SYNC TELEMETRÍA OK
+                </button>
+                <button
+                  onClick={() => triggerSync(n.id, true)}
+                  style={{
+                    flex: 1, padding: "5px 10px", background: `${T.red}15`, border: `1px solid ${T.red}`,
+                    color: T.red, fontSize: 9, fontFamily: T.font, cursor: "pointer", fontWeight: 700
+                  }}>
+                  ⚠️ SIMULAR SABOTAJE SPI/I2C
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
