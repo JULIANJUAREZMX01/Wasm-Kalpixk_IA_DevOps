@@ -10,11 +10,13 @@ Endpoints:
 
 import json
 import os
+import re
 import secrets
 import signal as _signal
 import subprocess as _subprocess
 import sys
 import time
+import urllib.parse
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
@@ -529,6 +531,17 @@ async def get_feature_names(request: Request, api_key: str = Depends(verify_api_
 # ---------------------------------------------------------------------------
 
 _sim_state: dict = {"proc": None, "phase": "idle"}
+_BACKEND_URL_REGEX = re.compile(r"^https?://[a-zA-Z0-9_\-\.:]+(/[a-zA-Z0-9_\-\./~]*)?$")
+
+
+def validate_backend_url(url: str) -> str:
+    """Validate backend URL to prevent command injection and SSRF in simulator launcher."""
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError("Invalid backend URL: scheme must be http or https with valid host")
+    if not _BACKEND_URL_REGEX.match(url):
+        raise ValueError("Backend URL contains illegal characters")
+    return url
 
 
 @app.post("/api/simulate/start")
@@ -540,7 +553,14 @@ async def simulate_start(request: Request, api_key: str = Depends(verify_api_key
 
     sim_script = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "simulate_attack.py")
     sim_script = os.path.abspath(sim_script)
-    backend_url = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+    if not os.path.isfile(sim_script):
+        raise HTTPException(status_code=500, detail="Simulator script not found")
+
+    backend_url_raw = os.getenv("KALPIXK_BACKEND_URL", "http://localhost:8000")
+    try:
+        backend_url = validate_backend_url(backend_url_raw)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid backend URL: {e}") from e
 
     proc = _subprocess.Popen(  # noqa: S603
         [sys.executable, sim_script, "--backend-url", backend_url, "--no-cleanup"],

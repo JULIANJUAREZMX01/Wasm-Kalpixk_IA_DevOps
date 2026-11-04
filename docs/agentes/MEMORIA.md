@@ -10,3 +10,4 @@
 | 2025-04-15 | Python/ML | Listas por comprensión en bucles de predicción. | Vectorizar con NumPy (`np.clip`, `np.abs`). | Mayor throughput en MI300X. |
 | 2024-05-18 | Seguridad | Ruido adversarial (FGSM/PGD) puede cegar autoencoders. | Auditar rugosidad del tensor (`v7_audit_tensor`) antes de inferir. | Detectable a nivel de bit. |
 | 2024-05-22 | Seguridad | JIT spraying y evasión por deduplicación de buffers. | Entropía caótica no lineal y relleno polimórfico (JIT Shield). | Alineación de shellcode interrumpida. |
+| 2026-11-04 | Seguridad/API | Subproceso de simulador vulnerable a argumentos maliciosos de backend URL y SSRF. | Validación estricta de esquema (`http`/`https`), regex de caracteres seguros y verificación de ruta de archivo. | Lanzamiento de simulador seguro y sin riesgo de SSRF/inyección. |
