@@ -25,6 +25,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Query,
     Request,
     Security,
     WebSocket,
@@ -280,15 +281,14 @@ async def get_metrics(request: Request, api_key: str = Depends(verify_api_key)):
 @limiter.limit("30/minute")
 async def get_kalpixk_alerts(
     request: Request,
-    limit: int = 100,
-    severity: str | None = None,
-    since: str | None = None,
-    api_key: str = Depends(verify_api_key)
+    limit: int = Query(100, ge=1, le=500, description="Max alerts to return (1-500)"),
+    severity: str | None = Query(None, max_length=20),
+    since: str | None = Query(None, max_length=50),
+    api_key: str = Depends(verify_api_key),
 ):
-    if limit > 500:
-        limit = 500
-
-    alerts, total = await get_alerts(limit=limit, severity_filter=severity, since_ts=since)
+    # SECURITY: Enforce defensive bounds to prevent SQLite LIMIT -1 bypass and DoS
+    clamped_limit = max(1, min(limit, 500))
+    alerts, total = await get_alerts(limit=clamped_limit, severity_filter=severity, since_ts=since)
     return {"alerts": alerts, "total": total}
 
 
