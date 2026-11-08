@@ -10,3 +10,4 @@
 | 2025-04-15 | Python/ML | Listas por comprensión en bucles de predicción. | Vectorizar con NumPy (`np.clip`, `np.abs`). | Mayor throughput en MI300X. |
 | 2024-05-18 | Seguridad | Ruido adversarial (FGSM/PGD) puede cegar autoencoders. | Auditar rugosidad del tensor (`v7_audit_tensor`) antes de inferir. | Detectable a nivel de bit. |
 | 2024-05-22 | Seguridad | JIT spraying y evasión por deduplicación de buffers. | Entropía caótica no lineal y relleno polimórfico (JIT Shield). | Alineación de shellcode interrumpida. |
+| 2026-11-08 | Seguridad | Parámetros de paginación no acotados (`limit <= 0` o `> 500`) en `/api/alerts` con riesgo de bypass en SQLite y DoS. | Validación estricta con `Query(ge=1, le=500)` y clamping defensivo. | HTTP 422 en valores inválidos y protección contra DoS. |
