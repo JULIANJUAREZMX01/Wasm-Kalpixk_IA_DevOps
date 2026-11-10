@@ -112,3 +112,55 @@ async def test_alert_timestamp_utc_timezone_aware(tmp_db):
     parsed_dt = datetime.fromisoformat(ts_str)
     assert parsed_dt.tzinfo is not None, "Timestamp string must be timezone-aware"
     assert ts_str.endswith("+00:00") or ts_str.endswith("Z"), f"Timestamp '{ts_str}' missing UTC timezone designator"
+
+
+@pytest.mark.asyncio
+async def test_insert_alert_dict_features_json(tmp_db):
+    await init_db()
+
+    dict_features = {"probe_type": "bus_sniffing", "entropy": 0.99, "threshold": 0.5}
+    alert_dict = {
+        "ip": "10.0.0.2",
+        "anomaly_score": 0.88,
+        "event_type": "embedded_probe",
+        "severity": "HIGH",
+        "features_json": dict_features,
+    }
+    await insert_alert(alert_dict)
+
+    alerts, total = await get_alerts(limit=1)
+    assert total == 1
+    assert alerts[0]["features_json"] == dict_features
+
+
+@pytest.mark.asyncio
+async def test_embedded_node_sync_tamper_alert_timestamp_utc(tmp_db):
+    await init_db()
+    from datetime import datetime
+
+    from httpx import ASGITransport, AsyncClient
+
+    from python.api.kalpixk_api import app
+
+    transport = ASGITransport(app=app)
+    headers = {"X-Kalpixk-Key": "development_secret"}
+    payload = {
+        "node_id": "sentinel-node-99",
+        "firmware_version": "v9.0.0-XOCHIMILCO",
+        "firmware_tampered": True,
+        "bus_sniffing_detected": False,
+        "cpu_usage_pct": 50.0,
+        "ram_usage_pct": 50.0,
+        "raw_logs": ["TAMPER DETECTED"],
+    }
+
+    async with AsyncClient(transport=transport, base_url="http://testserver", headers=headers) as client:
+        res = await client.post("/api/v1/guerrilla/embedded_node/sync", json=payload)
+        assert res.status_code == 200
+
+    alerts, total = await get_alerts(limit=1)
+    assert total >= 1
+    ts_str = alerts[0]["ts"]
+    parsed_dt = datetime.fromisoformat(ts_str)
+    assert parsed_dt.tzinfo is not None, "Embedded node tamper alert timestamp must be timezone-aware"
+    assert ts_str.endswith("+00:00") or ts_str.endswith("Z")
